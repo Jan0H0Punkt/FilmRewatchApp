@@ -114,6 +114,7 @@ async function renderSassStylesheet(request) {
             warnings,
             result: {
                 ...result,
+                sourceMap: result.sourceMap,
                 // URL is not serializable so to convert to string here and back to URL in the parent.
                 loadedUrls: result.loadedUrls.map((p) => (0, node_url_1.fileURLToPath)(p)),
             },

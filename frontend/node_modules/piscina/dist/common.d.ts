@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import type { Histogram } from 'node:perf_hooks';
 import type { HistogramSummary } from './types';
 export declare const READY = "_WORKER_READY";

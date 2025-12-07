@@ -88,5 +88,12 @@ class MemoryCache extends Cache {
     values() {
         return this.store.values();
     }
+    /**
+     * Provides all the keys/values currently present in the cache instance.
+     * @returns An iterable of all key/value pairs in the cache.
+     */
+    entries() {
+        return this.store.entries();
+    }
 }
 exports.MemoryCache = MemoryCache;

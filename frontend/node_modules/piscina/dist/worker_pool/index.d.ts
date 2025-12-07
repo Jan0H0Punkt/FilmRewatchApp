@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import { Worker, MessagePort } from 'node:worker_threads';
 import { ResponseMessage } from '../types';
 import { TaskInfo } from '../task_queue';
@@ -20,7 +18,7 @@ export declare class AsynchronouslyCreatedResourcePool<T extends AsynchronouslyC
     add(item: T): void;
     delete(item: T): void;
     findAvailable(): T | null;
-    [Symbol.iterator](): Generator<T, void, undefined>;
+    [Symbol.iterator](): Generator<T, void, unknown>;
     get size(): number;
     maybeAvailable(item: T): void;
     onAvailable(fn: (item: T) => void): void;

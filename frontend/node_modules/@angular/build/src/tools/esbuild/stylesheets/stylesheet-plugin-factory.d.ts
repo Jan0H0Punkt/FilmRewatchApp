@@ -6,8 +6,13 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 import type { OnLoadResult, Plugin, PluginBuild } from 'esbuild';
+import type { Options } from 'sass';
 import type { PostcssConfiguration } from '../../../utils/postcss-configuration';
 import { LoadResultCache } from '../load-result-cache';
+/**
+ * Configuration options for handling Sass-specific deprecations in a stylesheet plugin.
+ */
+export type StylesheetPluginsass = Pick<Options<'async'>, 'futureDeprecations' | 'fatalDeprecations' | 'silenceDeprecations'>;
 /**
  * An object containing the plugin options to use when processing stylesheets.
  */
@@ -42,6 +47,10 @@ export interface StylesheetPluginOptions {
      * and any tailwind usage must be manually configured in the custom postcss usage.
      */
     postcssConfiguration?: PostcssConfiguration;
+    /**
+     * Optional Options for configuring Sass behavior.
+     */
+    sass?: StylesheetPluginsass;
 }
 export interface StylesheetLanguage {
     name: string;

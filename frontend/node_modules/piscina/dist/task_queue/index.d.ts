@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import type { MessagePort } from 'node:worker_threads';
 import { AsyncResource } from 'node:async_hooks';
 import type { WorkerInfo } from '../worker_pool';

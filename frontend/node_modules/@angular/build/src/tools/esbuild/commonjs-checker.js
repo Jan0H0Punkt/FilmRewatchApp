@@ -42,9 +42,9 @@ function checkCommonJSModules(metafile, allowedCommonJsDependencies) {
     // using `provideHttpClient(withFetch())`.
     allowedRequests.add('xhr2');
     // Packages used by @angular/ssr.
-    // While critters is ESM it has a number of direct and transtive CJS deps.
+    // While beasties is ESM it has a number of direct and transtive CJS deps.
     allowedRequests.add('express');
-    allowedRequests.add('critters');
+    allowedRequests.add('beasties');
     // Find all entry points that contain code (JS/TS)
     const files = [];
     for (const { entryPoint } of Object.values(metafile.outputs)) {

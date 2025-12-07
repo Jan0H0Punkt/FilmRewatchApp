@@ -86,6 +86,27 @@ var exports = (() => {
     }
     return false;
   }
+  function normalizeStringifyOptions(optionsOrReplacer, space) {
+    if (optionsOrReplacer === null || Array.isArray(optionsOrReplacer) || typeof optionsOrReplacer !== "object") {
+      optionsOrReplacer = {
+        replacer: optionsOrReplacer,
+        space
+      };
+    }
+    let replacer = normalizeReplacer(optionsOrReplacer.replacer);
+    let getKeys = Object.keys;
+    if (Array.isArray(replacer)) {
+      const allowlist = replacer;
+      getKeys = () => allowlist;
+      replacer = null;
+    }
+    return {
+      ...optionsOrReplacer,
+      replacer,
+      getKeys,
+      space: normalizeSpace(optionsOrReplacer.space)
+    };
+  }
 
   // src/parse-chunked.js
   var STACK_OBJECT = 1;
@@ -290,6 +311,7 @@ var exports = (() => {
             this.stack[this.flushDepth++] = STACK_ARRAY;
             break;
           case 93:
+          /* ] */
           case 125:
             flushPoint = i + 1;
             this.flushDepth--;
@@ -299,8 +321,11 @@ var exports = (() => {
             }
             break;
           case 9:
+          /* \t */
           case 10:
+          /* \n */
           case 13:
+          /* \r */
           case 32:
             if (lastFlushPoint === i) {
               lastFlushPoint++;
@@ -339,18 +364,11 @@ var exports = (() => {
     }
     return '"' + value + '"';
   }
-  function* stringifyChunked(value, optionsOrReplacer, space) {
-    if (optionsOrReplacer === null || Array.isArray(optionsOrReplacer) || typeof optionsOrReplacer !== "object") {
-      optionsOrReplacer = {
-        replacer: optionsOrReplacer,
-        space
-      };
-    }
-    const highWaterMark = Number(optionsOrReplacer.highWaterMark) || 16384;
-    let replacer = normalizeReplacer(optionsOrReplacer.replacer);
-    space = normalizeSpace(optionsOrReplacer.space);
+  function* stringifyChunked(value, ...args) {
+    const { replacer, getKeys, space, ...options } = normalizeStringifyOptions(...args);
+    const highWaterMark = Number(options.highWaterMark) || 16384;
     const keyStrings = /* @__PURE__ */ new Map();
-    const visited = [];
+    const stack = [];
     const rootValue = { "": value };
     let prevState = null;
     let state = () => printEntry("", value);
@@ -359,12 +377,6 @@ var exports = (() => {
     let stateKeys = [""];
     let stateIndex = 0;
     let buffer = "";
-    let getKeys = Object.keys;
-    if (Array.isArray(replacer)) {
-      const allowlist = replacer;
-      getKeys = () => allowlist;
-      replacer = null;
-    }
     while (true) {
       state();
       if (buffer.length >= highWaterMark || prevState === null) {
@@ -382,7 +394,7 @@ var exports = (() => {
       }
       if (stateIndex === stateKeys.length) {
         buffer += space && !stateEmpty ? `
-${space.repeat(visited.length - 1)}}` : "}";
+${space.repeat(stack.length - 1)}}` : "}";
         popState();
         return;
       }
@@ -395,7 +407,7 @@ ${space.repeat(visited.length - 1)}}` : "}";
       }
       if (stateIndex === stateValue.length) {
         buffer += space && !stateEmpty ? `
-${space.repeat(visited.length - 1)}]` : "]";
+${space.repeat(stack.length - 1)}]` : "]";
         popState();
         return;
       }
@@ -409,7 +421,7 @@ ${space.repeat(visited.length - 1)}]` : "]";
       }
       if (space && prevState !== null) {
         buffer += `
-${space.repeat(visited.length)}`;
+${space.repeat(stack.length)}`;
       }
       if (state === printObject) {
         let keyString = keyStrings.get(key);
@@ -427,11 +439,11 @@ ${space.repeat(visited.length)}`;
           pushPrimitive(value2);
         }
       } else {
-        if (visited.includes(value2)) {
+        if (stack.includes(value2)) {
           throw new TypeError("Converting circular structure to JSON");
         }
         printEntryPrelude(key);
-        visited.push(value2);
+        stack.push(value2);
         pushState();
         state = Array.isArray(value2) ? printArray : printObject;
         stateValue = value2;
@@ -466,8 +478,8 @@ ${space.repeat(visited.length)}`;
       };
     }
     function popState() {
-      visited.pop();
-      const value2 = visited.length > 0 ? visited[visited.length - 1] : rootValue;
+      stack.pop();
+      const value2 = stack.length > 0 ? stack[stack.length - 1] : rootValue;
       state = Array.isArray(value2) ? printArray : printObject;
       stateValue = value2;
       stateEmpty = false;
@@ -556,44 +568,31 @@ ${space.repeat(visited.length)}`;
       case "undefined":
       case "object":
         return 4;
+      /* null */
       default:
         return 0;
     }
   }
-  function spaceLength(space) {
-    space = normalizeSpace(space);
-    return typeof space === "string" ? space.length : 0;
-  }
-  function stringifyInfo(value, optionsOrReplacer, space) {
-    if (optionsOrReplacer === null || Array.isArray(optionsOrReplacer) || typeof optionsOrReplacer !== "object") {
-      optionsOrReplacer = {
-        replacer: optionsOrReplacer,
-        space
-      };
-    }
-    const continueOnCircular = Boolean(optionsOrReplacer.continueOnCircular);
-    let replacer = normalizeReplacer(optionsOrReplacer.replacer);
-    let getKeys = Object.keys;
-    if (Array.isArray(replacer)) {
-      const allowlist = replacer;
-      getKeys = () => allowlist;
-      replacer = null;
-    }
-    space = spaceLength(space);
+  function stringifyInfo(value, ...args) {
+    const { replacer, getKeys, ...options } = normalizeStringifyOptions(...args);
+    const continueOnCircular = Boolean(options.continueOnCircular);
+    const space = options.space?.length || 0;
     const keysLength = /* @__PURE__ */ new Map();
     const visited = /* @__PURE__ */ new Map();
-    const stack = [];
     const circular = /* @__PURE__ */ new Set();
+    const stack = [];
     const root = { "": value };
     let stop = false;
     let bytes = 0;
+    let spaceBytes = 0;
     let objects = 0;
     walk(root, "", value);
     if (bytes === 0) {
       bytes += 9;
     }
     return {
-      bytes: isNaN(bytes) ? Infinity : bytes,
+      bytes: isNaN(bytes) ? Infinity : bytes + spaceBytes,
+      spaceBytes: space > 0 && isNaN(bytes) ? Infinity : spaceBytes,
       circular: [...circular]
     };
     function walk(holder, key, value2) {
@@ -635,7 +634,7 @@ ${space.repeat(visited.length)}`;
             if (prevLength !== bytes) {
               let keyLen = keysLength.get(key2);
               if (keyLen === void 0) {
-                keysLength.set(key2, keyLen = stringLength(key2) + (space > 0 ? 2 : 1));
+                keysLength.set(key2, keyLen = stringLength(key2) + 1);
               }
               bytes += keyLen;
               valueLength++;
@@ -645,8 +644,13 @@ ${space.repeat(visited.length)}`;
         }
         bytes += valueLength === 0 ? 2 : 1 + valueLength;
         if (space > 0 && valueLength > 0) {
-          bytes += (1 + stack.length * space) * valueLength + // for each key-value: \n{space}
-          1 + (stack.length - 1) * space;
+          spaceBytes += // a space between ":" and a value for each object entry
+          (Array.isArray(value2) ? 0 : valueLength) + // the formula results from folding the following components:
+          // - for each key-value or element: ident + newline
+          //   (1 + stack.length * space) * valueLength
+          // - ident (one space less) before "}" or "]" + newline
+          //   (stack.length - 1) * space + 1
+          (1 + stack.length * space) * (valueLength + 1) - space;
         }
         stack.pop();
         if (prevObjects !== objects) {

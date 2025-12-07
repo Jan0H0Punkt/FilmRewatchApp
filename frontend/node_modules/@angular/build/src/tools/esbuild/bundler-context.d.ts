@@ -31,9 +31,10 @@ export interface InitialFileRecord {
     depth: number;
 }
 export declare enum BuildOutputFileType {
-    Browser = 1,
-    Media = 2,
-    Server = 3,
+    Browser = 0,
+    Media = 1,
+    ServerApplication = 2,
+    ServerRoot = 3,
     Root = 4
 }
 export interface BuildOutputFile extends OutputFile {
@@ -57,10 +58,11 @@ export declare class BundlerContext {
      * All builds use the `write` option with a value of `false` to allow for the output files
      * build result array to be populated.
      *
+     * @param force If true, always rebundle.
      * @returns If output files are generated, the full esbuild BuildResult; if not, the
      * warnings and errors for the attempted build.
      */
-    bundle(): Promise<BundleContextResult>;
+    bundle(force?: boolean): Promise<BundleContextResult>;
     /**
      * Invalidate a stored bundler result based on the previous watch files
      * and a list of changed files.

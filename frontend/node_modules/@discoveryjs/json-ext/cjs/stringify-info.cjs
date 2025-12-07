@@ -122,39 +122,19 @@ function primitiveLength(value) {
     }
 }
 
-function spaceLength(space) {
-    space = utils.normalizeSpace(space);
-    return typeof space === 'string' ? space.length : 0;
-}
-
-function stringifyInfo(value, optionsOrReplacer, space) {
-    if (optionsOrReplacer === null || Array.isArray(optionsOrReplacer) || typeof optionsOrReplacer !== 'object') {
-        optionsOrReplacer = {
-            replacer: optionsOrReplacer,
-            space
-        };
-    }
-
-    const continueOnCircular = Boolean(optionsOrReplacer.continueOnCircular);
-    let replacer = utils.normalizeReplacer(optionsOrReplacer.replacer);
-    let getKeys = Object.keys;
-
-    if (Array.isArray(replacer)) {
-        const allowlist = replacer;
-
-        getKeys = () => allowlist;
-        replacer = null;
-    }
-
-    space = spaceLength(space);
+function stringifyInfo(value, ...args) {
+    const { replacer, getKeys, ...options } = utils.normalizeStringifyOptions(...args);
+    const continueOnCircular = Boolean(options.continueOnCircular);
+    const space = options.space?.length || 0;
 
     const keysLength = new Map();
     const visited = new Map();
-    const stack = [];
     const circular = new Set();
+    const stack = [];
     const root = { '': value };
     let stop = false;
     let bytes = 0;
+    let spaceBytes = 0;
     let objects = 0;
 
     walk(root, '', value);
@@ -165,7 +145,8 @@ function stringifyInfo(value, optionsOrReplacer, space) {
     }
 
     return {
-        bytes: isNaN(bytes) ? Infinity : bytes,
+        bytes: isNaN(bytes) ? Infinity : bytes + spaceBytes,
+        spaceBytes: space > 0 && isNaN(bytes) ? Infinity : spaceBytes,
         circular: [...circular]
     };
 
@@ -229,7 +210,7 @@ function stringifyInfo(value, optionsOrReplacer, space) {
                         let keyLen = keysLength.get(key);
 
                         if (keyLen === undefined) {
-                            keysLength.set(key, keyLen = stringLength(key) + (space > 0 ? 2 : 1)); // "key":
+                            keysLength.set(key, keyLen = stringLength(key) + 1); // "key":
                         }
 
                         // value is printed
@@ -245,9 +226,15 @@ function stringifyInfo(value, optionsOrReplacer, space) {
                 : 1 + valueLength; // {} or [] + commas
 
             if (space > 0 && valueLength > 0) {
-                bytes +=
-                    (1 + stack.length * space) * valueLength + // for each key-value: \n{space}
-                    1 + (stack.length - 1) * space; // for }
+                spaceBytes +=
+                    // a space between ":" and a value for each object entry
+                    (Array.isArray(value) ? 0 : valueLength) +
+                    // the formula results from folding the following components:
+                    // - for each key-value or element: ident + newline
+                    //   (1 + stack.length * space) * valueLength
+                    // - ident (one space less) before "}" or "]" + newline
+                    //   (stack.length - 1) * space + 1
+                    (1 + stack.length * space) * (valueLength + 1) - space;
             }
 
             stack.pop();

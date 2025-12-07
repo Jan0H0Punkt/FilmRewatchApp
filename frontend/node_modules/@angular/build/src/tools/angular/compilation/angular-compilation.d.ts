@@ -30,6 +30,8 @@ export declare abstract class AngularCompilation {
         affectedFiles: ReadonlySet<ts.SourceFile>;
         compilerOptions: ng.CompilerOptions;
         referencedFiles: readonly string[];
+        externalStylesheets?: ReadonlyMap<string, string>;
+        templateUpdates?: ReadonlyMap<string, string>;
     }>;
     abstract emitAffectedFiles(): Iterable<EmitFileResult> | Promise<Iterable<EmitFileResult>>;
     protected abstract collectDiagnostics(modes: DiagnosticModes): Iterable<ts.Diagnostic> | Promise<Iterable<ts.Diagnostic>>;

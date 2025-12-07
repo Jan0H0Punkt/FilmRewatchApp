@@ -7,7 +7,7 @@
  */
 export declare class FileReferenceTracker {
     #private;
-    get referencedFiles(): IterableIterator<string>;
+    get referencedFiles(): MapIterator<string>;
     add(containingFile: string, referencedFiles: Iterable<string>): void;
     /**
      *

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onabort = exports.AbortError = void 0;
+exports.AbortError = void 0;
+exports.onabort = onabort;
 class AbortError extends Error {
     constructor(reason) {
         // TS does not recognizes the cause clause
@@ -20,5 +21,4 @@ function onabort(abortSignal, listener) {
         abortSignal.once('abort', listener);
     }
 }
-exports.onabort = onabort;
 //# sourceMappingURL=abort.js.map

@@ -84,5 +84,10 @@ export declare class MemoryCache<V> extends Cache<V, Map<string, V>> {
      * Provides all the values currently present in the cache instance.
      * @returns An iterable of all values in the cache.
      */
-    values(): IterableIterator<V>;
+    values(): MapIterator<V>;
+    /**
+     * Provides all the keys/values currently present in the cache instance.
+     * @returns An iterable of all key/value pairs in the cache.
+     */
+    entries(): MapIterator<[string, V]>;
 }

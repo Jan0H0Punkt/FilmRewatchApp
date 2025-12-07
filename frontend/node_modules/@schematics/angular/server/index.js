@@ -83,11 +83,14 @@ function updateConfigFileApplicationBuilder(options) {
             return;
         }
         const buildTarget = project.targets.get('build');
-        if (buildTarget?.builder !== workspace_models_1.Builders.Application) {
-            throw new schematics_1.SchematicsException(`This schematic requires "${workspace_models_1.Builders.Application}" to be used as a build builder.`);
+        if (!buildTarget) {
+            return;
         }
         buildTarget.options ??= {};
         buildTarget.options['server'] = node_path_1.posix.join(project.sourceRoot ?? node_path_1.posix.join(project.root, 'src'), serverMainEntryName);
+        if (options.serverRouting) {
+            buildTarget.options['outputMode'] = 'static';
+        }
     });
 }
 function updateTsConfigFile(tsConfigPath) {
@@ -111,6 +114,10 @@ function addDependencies(skipInstall) {
         }
         const install = skipInstall ? utility_1.InstallBehavior.None : utility_1.InstallBehavior.Auto;
         return (0, schematics_1.chain)([
+            (0, utility_1.addDependency)('@angular/ssr', latest_versions_1.latestVersions.AngularSSR, {
+                type: utility_1.DependencyType.Default,
+                install,
+            }),
             (0, utility_1.addDependency)('@angular/platform-server', coreDep.version, {
                 type: utility_1.DependencyType.Default,
                 install,
@@ -123,7 +130,7 @@ function addDependencies(skipInstall) {
     };
 }
 function default_1(options) {
-    return async (host, context) => {
+    return async (host) => {
         const workspace = await (0, workspace_1.getWorkspace)(host);
         const clientProject = workspace.projects.get(options.project);
         if (clientProject?.extensions.projectType !== 'application') {
@@ -133,7 +140,8 @@ function default_1(options) {
         if (!clientBuildTarget) {
             throw (0, project_targets_1.targetBuildNotFoundError)();
         }
-        const isUsingApplicationBuilder = clientBuildTarget.builder === workspace_models_1.Builders.Application;
+        const isUsingApplicationBuilder = clientBuildTarget.builder === workspace_models_1.Builders.Application ||
+            clientBuildTarget.builder === workspace_models_1.Builders.BuildApplication;
         if (clientProject.targets.has('server') ||
             (isUsingApplicationBuilder && clientBuildTarget.options?.server !== undefined)) {
             // Server has already been added.
@@ -142,12 +150,18 @@ function default_1(options) {
         const clientBuildOptions = clientBuildTarget.options;
         const browserEntryPoint = await (0, util_1.getMainFilePath)(host, options.project);
         const isStandalone = (0, ng_ast_utils_1.isStandaloneApp)(host, browserEntryPoint);
-        const templateSource = (0, schematics_1.apply)((0, schematics_1.url)(isStandalone ? './files/standalone-src' : './files/src'), [
+        const sourceRoot = clientProject.sourceRoot ?? (0, core_1.join)((0, core_1.normalize)(clientProject.root), 'src');
+        let filesUrl = `./files/${isUsingApplicationBuilder ? 'application-builder/' : 'server-builder/'}`;
+        filesUrl += isStandalone ? 'standalone-src' : 'ngmodule-src';
+        const templateSource = (0, schematics_1.apply)((0, schematics_1.url)(filesUrl), [
+            options.serverRouting
+                ? (0, schematics_1.noop)()
+                : (0, schematics_1.filter)((path) => !path.endsWith('app.routes.server.ts.template')),
             (0, schematics_1.applyTemplates)({
                 ...schematics_1.strings,
                 ...options,
             }),
-            (0, schematics_1.move)((0, core_1.join)((0, core_1.normalize)(clientProject.root), 'src')),
+            (0, schematics_1.move)(sourceRoot),
         ]);
         const clientTsConfig = (0, core_1.normalize)(clientBuildOptions.tsConfig);
         const tsConfigExtends = (0, core_1.basename)(clientTsConfig);
@@ -160,7 +174,7 @@ function default_1(options) {
                     updateTsConfigFile(clientBuildOptions.tsConfig),
                 ]
                 : [
-                    (0, schematics_1.mergeWith)((0, schematics_1.apply)((0, schematics_1.url)('./files/root'), [
+                    (0, schematics_1.mergeWith)((0, schematics_1.apply)((0, schematics_1.url)('./files/server-builder/root'), [
                         (0, schematics_1.applyTemplates)({
                             ...schematics_1.strings,
                             ...options,
@@ -174,7 +188,7 @@ function default_1(options) {
                     updateConfigFileBrowserBuilder(options, tsConfigDirectory),
                 ]),
             addDependencies(options.skipInstall),
-            (0, utility_1.addRootProvider)(options.project, ({ code, external }) => code `${external('provideClientHydration', '@angular/platform-browser')}()`),
+            (0, utility_1.addRootProvider)(options.project, ({ code, external }) => code `${external('provideClientHydration', '@angular/platform-browser')}(${external('withEventReplay', '@angular/platform-browser')}())`),
         ]);
     };
 }

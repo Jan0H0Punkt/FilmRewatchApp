@@ -9,6 +9,7 @@ import type { BuildOptions } from 'esbuild';
 import { NormalizedCachedOptions } from '../../../utils/normalize-cache';
 import { PostcssConfiguration } from '../../../utils/postcss-configuration';
 import { LoadResultCache } from '../load-result-cache';
+import { StylesheetPluginsass } from './stylesheet-plugin-factory';
 export interface BundleStylesheetOptions {
     workspaceRoot: string;
     optimization: boolean;
@@ -20,6 +21,7 @@ export interface BundleStylesheetOptions {
         media: string;
     };
     includePaths?: string[];
+    sass?: StylesheetPluginsass;
     externalDependencies?: string[];
     target: string[];
     tailwindConfiguration?: {

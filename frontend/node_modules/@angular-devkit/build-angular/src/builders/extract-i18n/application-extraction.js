@@ -31,9 +31,11 @@ async function extractMessages(options, builderName, context, extractorConstruct
     buildOptions.budgets = undefined;
     buildOptions.index = false;
     buildOptions.serviceWorker = false;
+    buildOptions.server = undefined;
     buildOptions.ssr = false;
-    buildOptions.appShell = false;
-    buildOptions.prerender = false;
+    buildOptions.appShell = undefined;
+    buildOptions.prerender = undefined;
+    buildOptions.outputMode = undefined;
     const builderResult = await first((0, private_1.buildApplicationInternal)(buildOptions, context));
     let success = false;
     if (!builderResult || builderResult.kind === private_1.ResultKind.Failure) {

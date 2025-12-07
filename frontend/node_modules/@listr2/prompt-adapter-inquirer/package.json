@@ -1,6 +1,6 @@
 {
   "name": "@listr2/prompt-adapter-inquirer",
-  "version": "2.0.15",
+  "version": "2.0.18",
   "description": "Listr2 prompt adapter for inquirer.",
   "license": "MIT",
   "repository": "https://github.com/listr2/listr2",
@@ -70,14 +70,14 @@
     "idle"
   ],
   "dependencies": {
-    "@inquirer/type": "^1.5.1"
+    "@inquirer/type": "^1.5.5"
   },
   "devDependencies": {
-    "@inquirer/input": "^2.1.9",
-    "@inquirer/prompts": "^5.0.5",
-    "listr2": "8.2.4"
+    "@inquirer/input": "^3.0.1",
+    "@inquirer/prompts": "^6.0.1",
+    "listr2": "8.2.5"
   },
   "peerDependencies": {
-    "@inquirer/prompts": ">= 3 < 6"
+    "@inquirer/prompts": ">= 3 < 8"
   }
 }

@@ -17,8 +17,7 @@ const node_worker_threads_1 = require("node:worker_threads");
  */
 const { assetFiles } = node_worker_threads_1.workerData;
 const assetsCache = new Map();
-const RESOLVE_PROTOCOL = 'resolve:';
-function patchFetchToLoadInMemoryAssets() {
+function patchFetchToLoadInMemoryAssets(baseURL) {
     const originalFetch = globalThis.fetch;
     const patchedFetch = async (input, init) => {
         let url;
@@ -26,17 +25,17 @@ function patchFetchToLoadInMemoryAssets() {
             url = input;
         }
         else if (typeof input === 'string') {
-            url = new URL(input, RESOLVE_PROTOCOL + '//');
+            url = new URL(input, baseURL);
         }
         else if (typeof input === 'object' && 'url' in input) {
-            url = new URL(input.url, RESOLVE_PROTOCOL + '//');
+            url = new URL(input.url, baseURL);
         }
         else {
             return originalFetch(input, init);
         }
-        const { protocol } = url;
+        const { hostname } = url;
         const pathname = decodeURIComponent(url.pathname);
-        if (protocol !== RESOLVE_PROTOCOL || !assetFiles[pathname]) {
+        if (hostname !== baseURL.hostname || !assetFiles[pathname]) {
             // Only handle relative requests or files that are in assets.
             return originalFetch(input, init);
         }

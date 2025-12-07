@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import { Worker, MessagePort } from 'node:worker_threads';
 import { EventEmitterAsyncResource } from 'node:events';
 import { version } from '../package.json';

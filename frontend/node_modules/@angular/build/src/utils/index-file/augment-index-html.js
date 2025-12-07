@@ -21,7 +21,7 @@ const valid_self_closing_tags_1 = require("./valid-self-closing-tags");
  */
 // eslint-disable-next-line max-lines-per-function
 async function augmentIndexHtml(params) {
-    const { loadOutputFile, files, entrypoints, sri, deployUrl = '', lang, baseHref, html, imageDomains, } = params;
+    const { loadOutputFile, files, entrypoints, sri, deployUrl, lang, baseHref, html, imageDomains } = params;
     const warnings = [];
     const errors = [];
     let { crossOrigin = 'none' } = params;
@@ -57,7 +57,7 @@ async function augmentIndexHtml(params) {
     }
     let scriptTags = [];
     for (const [src, isModule] of scripts) {
-        const attrs = [`src="${deployUrl}${src}"`];
+        const attrs = [`src="${generateUrl(src, deployUrl)}"`];
         // This is also need for non entry-points as they may contain problematic code.
         if (isModule) {
             attrs.push('type="module"');
@@ -77,7 +77,7 @@ async function augmentIndexHtml(params) {
     let headerLinkTags = [];
     let bodyLinkTags = [];
     for (const src of stylesheets) {
-        const attrs = [`rel="stylesheet"`, `href="${deployUrl}${src}"`];
+        const attrs = [`rel="stylesheet"`, `href="${generateUrl(src, deployUrl)}"`];
         if (crossOrigin !== 'none') {
             attrs.push(`crossorigin="${crossOrigin}"`);
         }
@@ -89,7 +89,7 @@ async function augmentIndexHtml(params) {
     }
     if (params.hints?.length) {
         for (const hint of params.hints) {
-            const attrs = [`rel="${hint.mode}"`, `href="${deployUrl}${hint.url}"`];
+            const attrs = [`rel="${hint.mode}"`, `href="${generateUrl(hint.url, deployUrl)}"`];
             if (hint.mode !== 'modulepreload' && crossOrigin !== 'none') {
                 // Value is considered anonymous by the browser when not present or empty
                 attrs.push(crossOrigin === 'anonymous' ? 'crossorigin' : `crossorigin="${crossOrigin}"`);
@@ -214,6 +214,16 @@ function generateSriAttributes(content) {
     const algo = 'sha384';
     const hash = (0, node_crypto_1.createHash)(algo).update(content, 'utf8').digest('base64');
     return `integrity="${algo}-${hash}"`;
+}
+function generateUrl(value, deployUrl) {
+    if (!deployUrl) {
+        return value;
+    }
+    // Skip if root-relative, absolute or protocol relative url
+    if (/^((?:\w+:)?\/\/|data:|chrome:|\/)/.test(value)) {
+        return value;
+    }
+    return `${deployUrl}${value}`;
 }
 function updateAttribute(tag, name, value) {
     const index = tag.attrs.findIndex((a) => a.name === name);

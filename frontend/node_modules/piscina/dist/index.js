@@ -553,8 +553,8 @@ class Piscina extends node_events_1.EventEmitterAsyncResource {
             throw new TypeError('options.taskQueue must be a TaskQueue object');
         }
         if (options.niceIncrement !== undefined &&
-            (typeof options.niceIncrement !== 'number' || options.niceIncrement < 0)) {
-            throw new TypeError('options.niceIncrement must be a non-negative integer');
+            (typeof options.niceIncrement !== 'number' || (options.niceIncrement < 0 && process.platform !== 'win32'))) {
+            throw new TypeError('options.niceIncrement must be a non-negative integer on Unix systems');
         }
         if (options.trackUnmanagedFds !== undefined &&
             typeof options.trackUnmanagedFds !== 'boolean') {

@@ -20,6 +20,9 @@ export interface IndexHtmlGeneratorProcessOptions {
         as?: string;
     }[];
 }
+export interface AutoCspOptions {
+    unsafeEval: boolean;
+}
 export interface IndexHtmlGeneratorOptions {
     indexPath: string;
     deployUrl?: string;
@@ -31,6 +34,7 @@ export interface IndexHtmlGeneratorOptions {
     cache?: NormalizedCachedOptions;
     imageDomains?: string[];
     generateDedicatedSSRContent?: boolean;
+    autoCsp?: AutoCspOptions;
 }
 export type IndexHtmlTransform = (content: string) => Promise<string>;
 export interface IndexHtmlPluginTransformResult {

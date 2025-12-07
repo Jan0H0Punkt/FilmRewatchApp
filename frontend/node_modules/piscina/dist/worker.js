@@ -86,10 +86,8 @@ node_worker_threads_1.parentPort.on('message', (message) => {
     const { port, sharedBuffer, filename, name, niceIncrement } = message;
     (async function () {
         try {
-            if (niceIncrement !== 0 && process.platform === 'linux') {
-                // ts-ignore because the dependency is not installed on Windows.
-                // @ts-ignore
-                (await Promise.resolve().then(() => __importStar(require('nice-napi')))).default(niceIncrement);
+            if (niceIncrement !== 0) {
+                (await Promise.resolve().then(() => __importStar(require('@napi-rs/nice')))).nice(niceIncrement);
             }
         }
         catch { }

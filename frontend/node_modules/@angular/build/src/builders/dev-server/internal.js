@@ -7,7 +7,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildApplicationInternal = exports.transformSupportedBrowsersToTargets = exports.getSupportedBrowsers = exports.purgeStaleBuildCache = exports.renderPage = exports.isZonelessApp = exports.getFeatureSupport = exports.JavaScriptTransformer = exports.createRxjsEsmResolutionPlugin = exports.BuildOutputFileType = void 0;
+exports.buildApplicationInternal = exports.transformSupportedBrowsersToTargets = exports.getSupportedBrowsers = exports.purgeStaleBuildCache = exports.isZonelessApp = exports.getFeatureSupport = exports.JavaScriptTransformer = exports.createRxjsEsmResolutionPlugin = exports.BuildOutputFileType = void 0;
 var build_1 = require("@angular/build");
 Object.defineProperty(exports, "BuildOutputFileType", { enumerable: true, get: function () { return build_1.BuildOutputFileType; } });
 var rxjs_esm_resolution_plugin_1 = require("../../tools/esbuild/rxjs-esm-resolution-plugin");
@@ -17,8 +17,6 @@ Object.defineProperty(exports, "JavaScriptTransformer", { enumerable: true, get:
 var utils_1 = require("../../tools/esbuild/utils");
 Object.defineProperty(exports, "getFeatureSupport", { enumerable: true, get: function () { return utils_1.getFeatureSupport; } });
 Object.defineProperty(exports, "isZonelessApp", { enumerable: true, get: function () { return utils_1.isZonelessApp; } });
-var render_page_1 = require("../../utils/server-rendering/render-page");
-Object.defineProperty(exports, "renderPage", { enumerable: true, get: function () { return render_page_1.renderPage; } });
 var purge_cache_1 = require("../../utils/purge-cache");
 Object.defineProperty(exports, "purgeStaleBuildCache", { enumerable: true, get: function () { return purge_cache_1.purgeStaleBuildCache; } });
 var supported_browsers_1 = require("../../utils/supported-browsers");

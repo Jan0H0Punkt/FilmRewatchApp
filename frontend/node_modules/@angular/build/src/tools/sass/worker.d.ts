@@ -5,6 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.dev/license
  */
+import { RawSourceMap } from '@ampproject/remapping';
 import { MessagePort } from 'node:worker_threads';
 import { SourceSpan, StringOptions } from 'sass';
 import type { SerializableWarningMessage } from './sass-service';
@@ -38,45 +39,25 @@ interface RenderRequestMessage {
      */
     rebase: boolean;
 }
-export default function renderSassStylesheet(request: RenderRequestMessage): Promise<{
+interface RenderResult {
     warnings: SerializableWarningMessage[] | undefined;
     result: {
-        loadedUrls: string[];
         css: string;
-        sourceMap?: import("source-map-js").RawSourceMap;
+        loadedUrls: string[];
+        sourceMap?: RawSourceMap;
     };
-    error?: undefined;
-} | {
+}
+interface RenderError {
     warnings: SerializableWarningMessage[] | undefined;
     error: {
-        span: Omit<SourceSpan, "url"> & {
+        message: string;
+        stack?: string;
+        span?: Omit<SourceSpan, 'url'> & {
             url?: string;
         };
-        message: string;
-        stack: string | undefined;
-        sassMessage: string;
-        sassStack: string;
+        sassMessage?: string;
+        sassStack?: string;
     };
-    result?: undefined;
-} | {
-    warnings: SerializableWarningMessage[] | undefined;
-    error: {
-        message: string;
-        stack: string | undefined;
-        span?: undefined;
-        sassMessage?: undefined;
-        sassStack?: undefined;
-    };
-    result?: undefined;
-} | {
-    warnings: SerializableWarningMessage[] | undefined;
-    error: {
-        message: string;
-        span?: undefined;
-        stack?: undefined;
-        sassMessage?: undefined;
-        sassStack?: undefined;
-    };
-    result?: undefined;
-}>;
+}
+export default function renderSassStylesheet(request: RenderRequestMessage): Promise<RenderResult | RenderError>;
 export {};

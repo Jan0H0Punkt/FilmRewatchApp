@@ -16,7 +16,7 @@ import { HostDirectivesResolver, MetadataReader, MetadataRegistry, ResourceRegis
 import { PartialEvaluator } from '../../../partial_evaluator';
 import { PerfRecorder } from '../../../perf';
 import { ClassDeclaration, Decorator, ReflectionHost } from '../../../reflection';
-import { ComponentScopeReader, DtsModuleScopeResolver, LocalModuleScopeRegistry, TypeCheckScopeRegistry } from '../../../scope';
+import { ComponentScopeReader, LocalModuleScopeRegistry, TypeCheckScopeRegistry } from '../../../scope';
 import { AnalysisOutput, CompilationMode, CompileResult, DecoratorHandler, DetectResult, HandlerPrecedence, ResolveResult } from '../../../transform';
 import { TypeCheckContext } from '../../../typecheck/api';
 import { ExtendedTemplateChecker } from '../../../typecheck/extended/api';
@@ -35,7 +35,7 @@ export declare class ComponentDecoratorHandler implements DecoratorHandler<Decor
     private metaRegistry;
     private metaReader;
     private scopeReader;
-    private dtsScopeReader;
+    private compilerHost;
     private scopeRegistry;
     private typeCheckScopeRegistry;
     private resourceRegistry;
@@ -66,10 +66,14 @@ export declare class ComponentDecoratorHandler implements DecoratorHandler<Decor
     private readonly forbidOrphanRendering;
     private readonly enableBlockSyntax;
     private readonly enableLetSyntax;
+    private readonly externalRuntimeStyles;
     private readonly localCompilationExtraImportsTracker;
     private readonly jitDeclarationRegistry;
     private readonly i18nPreserveSignificantWhitespace;
-    constructor(reflector: ReflectionHost, evaluator: PartialEvaluator, metaRegistry: MetadataRegistry, metaReader: MetadataReader, scopeReader: ComponentScopeReader, dtsScopeReader: DtsModuleScopeResolver, scopeRegistry: LocalModuleScopeRegistry, typeCheckScopeRegistry: TypeCheckScopeRegistry, resourceRegistry: ResourceRegistry, isCore: boolean, strictCtorDeps: boolean, resourceLoader: ResourceLoader, rootDirs: ReadonlyArray<string>, defaultPreserveWhitespaces: boolean, i18nUseExternalIds: boolean, enableI18nLegacyMessageIdFormat: boolean, usePoisonedData: boolean, i18nNormalizeLineEndingsInICUs: boolean, moduleResolver: ModuleResolver, cycleAnalyzer: CycleAnalyzer, cycleHandlingStrategy: CycleHandlingStrategy, refEmitter: ReferenceEmitter, referencesRegistry: ReferencesRegistry, depTracker: DependencyTracker | null, injectableRegistry: InjectableClassRegistry, semanticDepGraphUpdater: SemanticDepGraphUpdater | null, annotateForClosureCompiler: boolean, perf: PerfRecorder, hostDirectivesResolver: HostDirectivesResolver, importTracker: ImportedSymbolsTracker, includeClassMetadata: boolean, compilationMode: CompilationMode, deferredSymbolTracker: DeferredSymbolTracker, forbidOrphanRendering: boolean, enableBlockSyntax: boolean, enableLetSyntax: boolean, localCompilationExtraImportsTracker: LocalCompilationExtraImportsTracker | null, jitDeclarationRegistry: JitDeclarationRegistry, i18nPreserveSignificantWhitespace: boolean);
+    private readonly strictStandalone;
+    private readonly enableHmr;
+    private readonly implicitStandaloneValue;
+    constructor(reflector: ReflectionHost, evaluator: PartialEvaluator, metaRegistry: MetadataRegistry, metaReader: MetadataReader, scopeReader: ComponentScopeReader, compilerHost: Pick<ts.CompilerHost, 'getCanonicalFileName'>, scopeRegistry: LocalModuleScopeRegistry, typeCheckScopeRegistry: TypeCheckScopeRegistry, resourceRegistry: ResourceRegistry, isCore: boolean, strictCtorDeps: boolean, resourceLoader: ResourceLoader, rootDirs: ReadonlyArray<string>, defaultPreserveWhitespaces: boolean, i18nUseExternalIds: boolean, enableI18nLegacyMessageIdFormat: boolean, usePoisonedData: boolean, i18nNormalizeLineEndingsInICUs: boolean, moduleResolver: ModuleResolver, cycleAnalyzer: CycleAnalyzer, cycleHandlingStrategy: CycleHandlingStrategy, refEmitter: ReferenceEmitter, referencesRegistry: ReferencesRegistry, depTracker: DependencyTracker | null, injectableRegistry: InjectableClassRegistry, semanticDepGraphUpdater: SemanticDepGraphUpdater | null, annotateForClosureCompiler: boolean, perf: PerfRecorder, hostDirectivesResolver: HostDirectivesResolver, importTracker: ImportedSymbolsTracker, includeClassMetadata: boolean, compilationMode: CompilationMode, deferredSymbolTracker: DeferredSymbolTracker, forbidOrphanRendering: boolean, enableBlockSyntax: boolean, enableLetSyntax: boolean, externalRuntimeStyles: boolean, localCompilationExtraImportsTracker: LocalCompilationExtraImportsTracker | null, jitDeclarationRegistry: JitDeclarationRegistry, i18nPreserveSignificantWhitespace: boolean, strictStandalone: boolean, enableHmr: boolean, implicitStandaloneValue: boolean);
     private literalCache;
     private elementSchemaRegistry;
     /**
@@ -79,6 +83,8 @@ export declare class ComponentDecoratorHandler implements DecoratorHandler<Decor
      */
     private preanalyzeTemplateCache;
     private preanalyzeStylesCache;
+    /** Whether generated code for a component can defer its dependencies. */
+    private readonly canDeferDeps;
     private extractTemplateOptions;
     readonly precedence = HandlerPrecedence.PRIMARY;
     readonly name = "ComponentDecoratorHandler";
@@ -97,6 +103,7 @@ export declare class ComponentDecoratorHandler implements DecoratorHandler<Decor
     compileFull(node: ClassDeclaration, analysis: Readonly<ComponentAnalysisData>, resolution: Readonly<ComponentResolutionData>, pool: ConstantPool): CompileResult[];
     compilePartial(node: ClassDeclaration, analysis: Readonly<ComponentAnalysisData>, resolution: Readonly<ComponentResolutionData>): CompileResult[];
     compileLocal(node: ClassDeclaration, analysis: Readonly<ComponentAnalysisData>, resolution: Readonly<Partial<ComponentResolutionData>>, pool: ConstantPool): CompileResult[];
+    compileHmrUpdateDeclaration(node: ClassDeclaration, analysis: Readonly<ComponentAnalysisData>, resolution: Readonly<ComponentResolutionData>): ts.FunctionDeclaration | null;
     /**
      * Locates defer blocks in case scope information is not available.
      * For example, this happens in the local compilation mode.

@@ -34,17 +34,22 @@ var __disposeResources = (this && this.__disposeResources) || (function (Suppres
             env.error = env.hasError ? new SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
             env.hasError = true;
         }
+        var r, s = 0;
         function next() {
-            while (env.stack.length) {
-                var rec = env.stack.pop();
+            while (r = env.stack.pop()) {
                 try {
-                    var result = rec.dispose && rec.dispose.call(rec.value);
-                    if (rec.async) return Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+                    if (r.dispose) {
+                        var result = r.dispose.call(r.value);
+                        if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    }
+                    else s |= 1;
                 }
                 catch (e) {
                     fail(e);
                 }
             }
+            if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
             if (env.hasError) throw env.error;
         }
         return next();
@@ -61,8 +66,8 @@ exports.SassWorkerImplementation = void 0;
 const node_assert_1 = __importDefault(require("node:assert"));
 const node_url_1 = require("node:url");
 const node_worker_threads_1 = require("node:worker_threads");
-const piscina_1 = require("piscina");
 const environment_options_1 = require("../../utils/environment-options");
+const worker_pool_1 = require("../../utils/worker-pool");
 // Polyfill Symbol.dispose if not present
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 Symbol.dispose ??= Symbol('Symbol Dispose');
@@ -85,16 +90,9 @@ class SassWorkerImplementation {
         this.maxThreads = maxThreads;
     }
     #ensureWorkerPool() {
-        this.#workerPool ??= new piscina_1.Piscina({
+        this.#workerPool ??= new worker_pool_1.WorkerPool({
             filename: require.resolve('./worker'),
-            minThreads: 1,
             maxThreads: this.maxThreads,
-            // Web containers do not support transferable objects with receiveOnMessagePort which
-            // is used when the Atomics based wait loop is enable.
-            useAtomics: !process.versions.webcontainer,
-            // Shutdown idle threads after 1 second of inactivity
-            idleTimeout: 1000,
-            recordTiming: false,
         });
         return this.#workerPool;
     }

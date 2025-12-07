@@ -15,6 +15,7 @@ const node_fs_1 = require("node:fs");
 const node_path_1 = __importDefault(require("node:path"));
 const application_1 = require("../application");
 const results_1 = require("../application/results");
+const schema_1 = require("../application/schema");
 async function extractMessages(options, builderName, context, extractorConstructor, extensions) {
     const messages = [];
     // Setup the build options for the application based on the buildTarget option
@@ -25,9 +26,8 @@ async function extractMessages(options, builderName, context, extractorConstruct
     buildOptions.budgets = undefined;
     buildOptions.index = false;
     buildOptions.serviceWorker = false;
-    buildOptions.ssr = false;
-    buildOptions.appShell = false;
-    buildOptions.prerender = false;
+    buildOptions.outputMode = schema_1.OutputMode.Static;
+    buildOptions.server = undefined;
     // Build the application with the build options
     const builderResult = await first((0, application_1.buildApplicationInternal)(buildOptions, context, extensions));
     let success = false;

@@ -28,7 +28,7 @@ function generateBudgetStats(metafile, outputFiles, initialFiles) {
             continue;
         }
         // Exclude server bundles
-        if (type === bundler_context_1.BuildOutputFileType.Server) {
+        if (type === bundler_context_1.BuildOutputFileType.ServerApplication || type === bundler_context_1.BuildOutputFileType.ServerRoot) {
             continue;
         }
         const initialRecord = initialFiles.get(file);

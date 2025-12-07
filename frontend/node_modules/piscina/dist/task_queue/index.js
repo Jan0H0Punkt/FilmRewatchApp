@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TaskInfo = exports.isTaskQueue = exports.FixedQueue = exports.ArrayTaskQueue = void 0;
+exports.TaskInfo = exports.FixedQueue = exports.ArrayTaskQueue = void 0;
+exports.isTaskQueue = isTaskQueue;
 const node_perf_hooks_1 = require("node:perf_hooks");
 const node_async_hooks_1 = require("node:async_hooks");
 const common_1 = require("../common");
@@ -24,7 +25,6 @@ function isTaskQueue(value) {
         typeof value.remove === 'function' &&
         typeof value.push === 'function');
 }
-exports.isTaskQueue = isTaskQueue;
 let taskIdCounter = 0;
 // Extend AsyncResource so that async relations between posting a task and
 // receiving its result are visible to diagnostic tools.

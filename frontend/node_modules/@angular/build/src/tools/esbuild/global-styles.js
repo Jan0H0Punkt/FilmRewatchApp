@@ -45,12 +45,15 @@ function createGlobalStylesBundleOptions(options, target, initial) {
                     bundles: '[name]',
                 },
             includePaths: stylePreprocessorOptions?.includePaths,
+            // string[] | undefined' is not assignable to type '(Version | DeprecationOrId)[] | undefined'.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            sass: stylePreprocessorOptions?.sass,
             tailwindConfiguration,
             postcssConfiguration,
             cacheOptions,
         }, loadCache);
         // Keep special CSS comments `/*! comment */` in place when `removeSpecialComments` is disabled.
-        // These comments are special for a number of CSS tools such as Critters and PurgeCSS.
+        // These comments are special for a number of CSS tools such as Beasties and PurgeCSS.
         buildOptions.legalComments = optimizationOptions.styles?.removeSpecialComments
             ? 'none'
             : 'inline';

@@ -14,6 +14,7 @@ interface JavaScriptTransformRequest {
     skipLinker?: boolean;
     sideEffects?: boolean;
     jit: boolean;
+    instrumentForCoverage?: boolean;
 }
 export default function transformJavaScript(request: JavaScriptTransformRequest): Promise<unknown>;
 export {};
