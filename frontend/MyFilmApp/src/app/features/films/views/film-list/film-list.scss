@@ -1,0 +1,41 @@
+:host {
+    display: block;
+    padding-bottom: 56px; /* Leave space for the fixed toolbar */
+
+    .film-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        align-items: start;
+    }
+
+    .film-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px;
+        background-color: var(--mat-sys-surface-container);
+    }
+
+    .poster {
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        border-radius: 4px;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .rating {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+            color: #FFD700; /* gold */
+            font-size: 18px;
+        }
+    }
+}
