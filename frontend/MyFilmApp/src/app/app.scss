@@ -1,11 +1,21 @@
-mat-toolbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+:host {
     display: flex;
-    justify-content: space-around;
+    flex-direction: column;
+    height: 100%;
 
-    background: var(--mat-sys-surface-container);
-    color: var(--mat-sys-on-surface-container);
+    .view-content {
+        padding: 16px 16px;;
+    }
+
+    .mat-toolbar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-around;
+
+        background: var(--mat-sys-surface-container);
+        color: var(--mat-sys-on-surface-container);
+    }
 }
