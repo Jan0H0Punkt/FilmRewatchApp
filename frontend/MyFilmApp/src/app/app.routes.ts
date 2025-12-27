@@ -13,8 +13,6 @@ export const routes: Routes = [
     path: 'films',
     loadChildren: () => import('./features/films/films.routes').then(m => m.FILMS_ROUTES),
   },
-
-  // 404 Not Found
   {
     path: '**',
     redirectTo: '/films',
