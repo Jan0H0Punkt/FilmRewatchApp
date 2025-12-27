@@ -77,7 +77,43 @@ export class FilmList {
       releaseYear: 1957,
       rating: 0.5,
       posterUrl: 'https://a.ltrbxd.com/resized/film-poster/5/1/7/0/0/51700-12-angry-men-0-2000-0-3000-crop.jpg?v=b8aaf291a9',
-    }
+    },
+    {
+      title: 'The Room',
+      releaseYear: 2003,
+      rating: 0,
+      posterUrl: 'https://a.ltrbxd.com/resized/sm/upload/qq/yi/i3/dk/aUC39cFC2KO8CJ0EV0ijIJRr3PT-0-2000-0-3000-crop.jpg?v=95164ef310',
+    },
+    {
+      title: 'The Godfather',
+      releaseYear: 1972,
+      rating: 5,
+      posterUrl: 'https://a.ltrbxd.com/resized/film-poster/5/1/8/1/8/51818-the-godfather-0-2000-0-3000-crop.jpg?v=bca8b67402',
+    },
+    {
+      title: 'Pulp Fiction',
+      releaseYear: 1994,
+      rating: 4.5,
+      posterUrl: 'https://a.ltrbxd.com/resized/film-poster/5/1/4/4/4/51444-pulp-fiction-0-2000-0-3000-crop.jpg?v=dee19a8077',
+    },
+    {
+      title: 'The Dark Knight',
+      releaseYear: 2008,
+      rating: 4,
+      posterUrl: 'https://a.ltrbxd.com/resized/sm/upload/78/y5/zg/ej/oefdD26aey8GPdx7Rm45PNncJdU-0-2000-0-3000-crop.jpg?v=2d0ce4be25',
+    },
+    {
+      title: 'Forrest Gump',
+      releaseYear: 1994,
+      rating: 3.5,
+      posterUrl: 'https://a.ltrbxd.com/resized/film-poster/2/7/0/4/2704-forrest-gump-0-2000-0-3000-crop.jpg?v=173bc04cf0',
+    },
+    {
+      title: 'The Shawshank Redemption',
+      releaseYear: 1994,
+      rating: 3,
+      posterUrl: 'https://a.ltrbxd.com/resized/sm/upload/7l/hn/46/uz/zGINvGjdlO6TJRu9wESQvWlOKVT-0-2000-0-3000-crop.jpg?v=8736d1c395',
+    },
   ];
 
 }

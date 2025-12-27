@@ -6,11 +6,11 @@
 
         <div class="rating" aria-label="Rating: {{ film.rating }} out of 5">
             @for (star of (film.rating | ratingStars:5); track $index) {
-            @switch (star) {
-            @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
-            @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
-            @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
-            }
+              @switch (star) {
+                @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
+                @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
+                @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
+              }
             }
         </div>
     </mat-card>

@@ -4,7 +4,7 @@
 
     .film-list {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 8px;
         align-items: start;
     }
@@ -31,7 +31,6 @@
         margin-top: 8px;
         display: flex;
         align-items: center;
-        gap: 8px;
 
         mat-icon {
             color: #FFD700; /* gold */
