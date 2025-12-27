@@ -1,0 +1,53 @@
+<div class="film-details">
+    <div class="hero" role="img" aria-label="Poster of {{ film().title }}">
+        <div class="fade">
+            <img [src]="film().posterUrl" alt="Poster of {{ film().title }}" class="poster">
+        </div>
+        <h2 class="title">{{ film().title }} <small>({{ film().releaseYear }})</small></h2>
+    </div>
+
+
+
+    <div>
+        <div class="rating" aria-label="Rating: {{ film().rating }} out of 5">
+            @for (star of (film().rating | ratingStars:5); track $index) {
+            @switch (star) {
+            @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
+            @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
+            @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
+            }
+            }
+            <span class="numeric">{{ film().rating }}/5</span>
+        </div>
+
+        <div class="meta-row">
+            <div class="meta-item"><strong>Runtime:</strong> {{ film().runtime + ' min' }}</div>
+            <div class="meta-item"><strong>Ends at:</strong> {{ endTime() }}</div>
+        </div>
+
+        <h3>Watch history</h3>
+        @if (film().watchHistory && film().watchHistory.length > 0) {
+        <ul class="history">
+            @for (entry of film().watchHistory; track $index) {
+            <li>
+                <span class="date">{{ entry.date }}</span>
+                <span class="entry-rating">
+                    <span class="stars">
+                        @for (star of (entry.rating | ratingStars:5); track star) {
+                        @switch (star) {
+                        @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
+                        @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
+                        @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
+                        }
+                        }
+                    </span>
+                    <span class="numeric">{{ entry.rating }}/5</span>
+                </span>
+            </li>
+            }
+        </ul>
+        } @else {
+        <div>No watch history yet.</div>
+        }
+    </div>
+</div>

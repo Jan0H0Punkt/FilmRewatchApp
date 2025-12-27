@@ -1,7 +1,7 @@
 @if (films.length > 0) {
 <div class="film-list">
     @for (film of films; track $index) {
-    <mat-card class="film-card" appearance="outlined">
+    <mat-card class="film-card" appearance="outlined" [routerLink]="['/films/', $index]" tabindex="0" role="link">
         <img [src]="film.posterUrl" alt="Poster of {{ film.title }}" class="poster">
 
         <div class="rating" aria-label="Rating: {{ film.rating }} out of 5">

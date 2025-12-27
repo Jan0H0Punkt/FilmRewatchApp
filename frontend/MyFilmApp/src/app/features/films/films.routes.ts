@@ -14,5 +14,18 @@ export const FILMS_ROUTES: Routes = [
     loadComponent: () => import('./views/film-list/film-list')
       .then(m => m.FilmList),
     title: 'My Films'
+  },
+
+  // /films/:id - Film details
+  {
+    path: ':id',
+    loadComponent: () => import('./views/film-details/film-details')
+      .then(m => m.FilmDetails),
+    title: 'Film Details'
+  },
+  {
+    path: '**',
+    redirectTo: '/films',
+    pathMatch: 'full'
   }
 ];
