@@ -1,20 +1,20 @@
 @if (films.length > 0) {
 <div class="film-list">
-    @for (film of films; track $index) {
-    <mat-card class="film-card" appearance="outlined" [routerLink]="['/films/', $index]" tabindex="0" role="link">
-        <img [src]="film.posterUrl" alt="Poster of {{ film.title }}" class="poster">
+  @for (film of films; track $index) {
+  <mat-card class="film-card" appearance="outlined" [routerLink]="['/films/', $index]" tabindex="0" role="link">
+    <img [src]="film.posterUrl" alt="Poster of {{ film.title }}" class="poster">
 
-        <div class="rating" aria-label="Rating: {{ film.rating }} out of 5">
-            @for (star of (film.rating | ratingStars:5); track $index) {
-              @switch (star) {
-                @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
-                @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
-                @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
-              }
-            }
-        </div>
-    </mat-card>
-    }
+    <div class="rating" aria-label="Rating: {{ film.rating }} out of 5">
+      @for (star of (film.rating | ratingStars:5); track $index) {
+      @switch (star) {
+      @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
+      @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
+      @default { <mat-icon aria-hidden="true">star_border</mat-icon> }
+      }
+      }
+    </div>
+  </mat-card>
+  }
 </div>
 } @else {
 <!-- TODO: Placholder -->

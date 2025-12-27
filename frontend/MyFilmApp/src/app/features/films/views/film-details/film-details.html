@@ -26,14 +26,16 @@
         </div>
 
         <h3>Watch history</h3>
-        @if (film().watchHistory && film().watchHistory.length > 0) {
+    </div>
+    <div class="history-container">
+        @if (film().watchHistory.length > 0) {
         <ul class="history">
             @for (entry of film().watchHistory; track $index) {
             <li>
                 <span class="date">{{ entry.date }}</span>
                 <span class="entry-rating">
                     <span class="stars">
-                        @for (star of (entry.rating | ratingStars:5); track star) {
+                        @for (star of (entry.rating | ratingStars:5); track $index) {
                         @switch (star) {
                         @case ('full') { <mat-icon aria-hidden="true">star</mat-icon> }
                         @case ('half') { <mat-icon aria-hidden="true">star_half</mat-icon> }
