@@ -1,6 +1,8 @@
 :host {
     display: block;
-    padding-bottom: 56px; /* Leave space for the fixed toolbar */
+    padding-top: 8px;
+    padding-bottom: calc(var(--bottom-toolbar-height) + 8px);
+    /* Leave space for the fixed toolbar */
 
     .film-list {
         display: grid;
@@ -15,12 +17,12 @@
         align-items: center;
         padding: 8px;
         background-color: var(--mat-sys-surface-container);
-        text-align: center; /* Center inline content like the rating */
+        text-align: center;
     }
 
     .poster {
         max-width: 100%;
-        height: auto;
+        height: 155px;
         aspect-ratio: 2 / 3;
         object-fit: cover;
         border-radius: 4px;
@@ -32,11 +34,14 @@
         margin-top: 8px;
         display: flex;
         align-items: center;
-        justify-content: center; /* Center icons horizontally */
-        gap: 4px; /* Space between stars */
+        justify-content: center;
+        /* Center icons horizontally */
+        gap: 4px;
+        /* Space between stars */
 
         mat-icon {
-            color: #FFD700; /* gold */
+            color: #FFD700;
+            /* gold */
             font-size: 18px;
             line-height: 1;
             width: 18px;

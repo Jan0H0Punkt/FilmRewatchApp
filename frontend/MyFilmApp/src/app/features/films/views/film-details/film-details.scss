@@ -1,6 +1,7 @@
 :host {
     display: block;
-    padding-bottom: 56px; /* Leave space for the fixed toolbar */
+    padding-bottom: 56px;
+    /* Leave space for the fixed toolbar */
 
     .film-details {
         display: block;
@@ -44,7 +45,7 @@
         .meta-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 48px;
+            margin-bottom: 32px;
         }
     }
 
@@ -94,12 +95,15 @@
             display: flex;
             justify-content: space-between;
             padding: 6px 0;
-            border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
 
             .entry-rating {
                 display: flex;
                 align-items: center;
                 gap: 12px;
+
+                .stars {
+                    color: #FFD700;
+                }
 
                 .numeric {
                     min-width: 34px;
