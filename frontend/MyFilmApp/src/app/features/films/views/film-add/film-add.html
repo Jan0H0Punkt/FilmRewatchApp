@@ -1,0 +1,70 @@
+<form [formGroup]="filmForm" (ngSubmit)="onSubmit()">
+
+  <!-- Film data -->
+  <section>
+    <h2>Add Film</h2>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Title</mat-label>
+      <input matInput formControlName="title" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Release year</mat-label>
+      <input matInput type="number" formControlName="releaseYear" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Runtime (minutes)</mat-label>
+      <input matInput type="number" formControlName="runtime" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Poster URL</mat-label>
+      <input matInput formControlName="posterUrl" />
+    </mat-form-field>
+  </section>
+
+  <mat-divider></mat-divider>
+
+  <!-- Watch history (optional) -->
+  <section class="watch-history-section" formArrayName="watchHistory">
+    <h3>Watch history (optional)</h3>
+
+    <div *ngFor="let watch of watchHistory.controls; let i = index" [formGroupName]="i">
+      <mat-form-field appearance="outline">
+        <mat-label>Watched at</mat-label>
+        <input matInput type="datetime-local" formControlName="watchedAt" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Notes</mat-label>
+        <textarea matInput formControlName="notes"></textarea>
+      </mat-form-field>
+
+      <div class="watch-history-actions">
+        <button class="remove-button" mat-icon-button type="button" (click)="removeWatchEntry(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <mat-divider></mat-divider>
+    </div>
+
+    <div class="watch-history-actions" >
+      <button class="add-button" mat-icon-button type="button" (click)="addWatchEntry()">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  <mat-divider></mat-divider>
+
+  <!-- Actions -->
+  <section class="action-section">
+    <button mat-button class="save-button" type="submit" [disabled]="filmForm.invalid">
+      Save film
+    </button>
+  </section>
+
+</form>

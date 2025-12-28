@@ -18,5 +18,10 @@
 
         background: var(--mat-sys-surface-container);
         color: var(--mat-sys-on-surface-container);
+
+        .mdc-icon-button.cdk-focused {
+            background-color: var(--mat-sys-secondary);
+            color: var(--mat-sys-on-secondary);
+        }
     }
 }
