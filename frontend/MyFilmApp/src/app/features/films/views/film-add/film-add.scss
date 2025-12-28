@@ -1,0 +1,33 @@
+:host {
+    .mat-mdc-form-field {
+        width: 100%;
+    }
+
+    .watch-history-section {
+        .watch-history-actions {
+            display: flex;
+            justify-content: center;
+
+            .remove-button {
+                margin-bottom: 8px;
+                color: var(--mat-sys-error);
+            }
+        }
+
+        .add-button {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+    }
+
+    .action-section {
+        display: flex;
+        justify-content: center;
+
+        .save-button {
+            margin-top: 16px;
+            background-color: var(--mat-sys-primary);
+            color: var(--mat-sys-on-primary);
+        }
+    }
+}

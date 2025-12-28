@@ -16,6 +16,13 @@ export const FILMS_ROUTES: Routes = [
     title: 'My Films'
   },
 
+  {
+    path: 'add',
+    loadComponent: () => import('./views/film-add/film-add')
+      .then(m => m.FilmAdd),
+    title: 'Add New Film'
+  },
+
   // /films/:id - Film details
   {
     path: ':id',
