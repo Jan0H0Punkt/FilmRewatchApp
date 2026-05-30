@@ -1,8 +1,10 @@
 # Requirements Document — Film Tracker Web Application
 
-**Version:** 1.0  
-**Date:** 2026-05-15  
-**Status:** Draft  
+**Version:** 1.1  
+**Status:** Approved  
+**Created:** 2026-05-15  
+**Last updated:** 2026-06-05  
+**Companion to:** [DESIGN_V1.md](./DESIGN_V1.md) · [FUTURE_WORK_V1.md](./FUTURE_WORK_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
 
 ---
 
@@ -56,15 +58,14 @@ The following capabilities are **in scope**:
 - Offline-capable frontend: browsing and viewing cached data remain functional without a network connection; operations that cannot be
   answered from cache surface a neutral, non-blocking "currently unavailable" message (see FR-OFF-04) rather than failing silently.
 - Write operations performed while offline are queued locally and synced to the backend when connectivity is restored.
-- Deployment-agnostic architecture: the application shall run without code changes in at least the following deployment topologies:
-  - **Local laptop** — backend runs on the user's laptop; mobile browser syncs only when the device is on the same network and the laptop is
-    running.
-  - **Always-on server** — backend runs on a remotely hosted server, always reachable.
+- Single local deployment: the backend and database run on the user's laptop; the mobile browser syncs only when the device is on the same
+  network and the laptop is running.
 
 The following are explicitly **out of scope** for this version:
 
 - User authentication and multi-user support.
 - Integration with external film databases or metadata APIs.
+- Always-on / remote-server deployment and multi-topology hosting (the application targets a single local-laptop deployment; see §3.6).
 - Social or sharing features.
 - Native mobile applications (iOS / Android).
 - Export or import of data.
@@ -135,13 +136,13 @@ No layer shall directly call into a non-adjacent layer (e.g. the presentation la
   environment variables), not hardcoded in application logic.
 - Feature flags shall be usable to enable or disable new or experimental features at configuration time without a code deployment.
 
-### 3.6 Deployment-Agnostic Design
+### 3.6 Single Local Deployment
 
-- The application shall make **no assumptions** about the network topology between the frontend and the backend. The backend's base URL
-  shall be the only required configuration value for the frontend.
-- Switching between deployment topologies (local laptop, always-on remote server, or any other hosting arrangement) shall require only a
-  change to this configuration value — no code changes in either the frontend or the backend.
-- The backend shall not embed or hard-code any client origin URLs. CORS and network access rules shall be fully configurable.
+- The application targets a **single deployment**: the backend and database run on the user's laptop. Always-on remote-server hosting and
+  multi-topology switching are out of scope for this version.
+- The frontend is configured with the backend's base URL when the client is built. Pointing it at a different backend is a build/config
+  change, not a source-code change.
+- The backend shall not embed or hard-code any client origin URLs; CORS / allowed-origin rules shall be configurable.
 
 ### 3.7 Cache-First Client with Offline Write Queue
 
@@ -175,13 +176,13 @@ same film can only exist once in the library).
 | `titles`         | List\<Title\>       | Yes                | 1–∞ titles; exactly one primary            | All titles for the film (main + alternatives); see the Title Object below                                |
 | `release_year`   | Integer             | Yes                | 1888–current year                          | Year the film was first released                                                                         |
 | `director`       | String              | Yes                | 1–255 characters; anyUnicode(any language) | Name of the director(s)                                                                                  |
-| `genre`          | List\<String\>      | Yes                | 1–∞ genres; 1–100 characters per genre     | Genres assigned to the film (free text, not an enum); at least one is required                           |
+| `genre`          | List\<Genre\>       | Yes                | 1–∞ genres                                 | Genres assigned to the film; at least one is required. Free text, not an enum; see the Genre entity (§4.4) |
 | `poster_image`   | URL                 | No                 | Valid URL; max 2048 characters             | URL pointing to a poster image; entered by the user                                                      |
 | `tags`           | List\<Tag\>         | Yes                | 1–∞ tags                                   | User-defined tags assigned to this film; at least one is required                                        |
 | `is_favorite`    | Boolean             | Yes                | Default `false`                            | Whether the user has marked this film as a favourite                                                     |
 | `delay_days`     | Integer             | Yes                | ≥ 0; default `0`                           | User-set delay (in days) to defer the next rewatch suggestion; passed as a hint to the rewatch algorithm |
-| `rating_history` | List\<RatingEntry\> | Yes (can be empty) | —                                          | Ordered list of all ratings given to this film                                                           |
-| `average_rating` | Decimal (computed)  | —                  | 0.5–5.0; 1 decimal place                   | Computed as the arithmetic mean of all `RatingEntry.value` values; `null` if history is empty            |
+| `rating_history` | List\<RatingEntry\> | Yes (≥ 1)          | At least one entry                         | Ordered list of all ratings given to this film; never empty (every film has been watched at least once)  |
+| `average_rating` | Decimal (computed)  | —                  | 0.5–5.0; 1 decimal place                   | Arithmetic mean of all `RatingEntry.value` values; always present (history is never empty)               |
 | `created_at`     | ISO 8601 DateTime   | Yes (system)       | Immutable                                  | Timestamp when the film record was created                                                               |
 | `updated_at`     | ISO 8601 DateTime   | Yes (system)       | —                                          | Timestamp of the last modification to any field                                                          |
 
@@ -238,20 +239,37 @@ A Tag is a user-defined label used to categorise films.
 | `created_at` | ISO 8601 DateTime | Yes (system) | Immutable                                  | Timestamp when the tag was first created |
 
 > **Note:** A Tag cannot exist independently of films. Every Tag must be assigned to at least one Film at all times; a Tag that would
-> otherwise have no film associations is automatically deleted (see FR-TAG-04 and Section 4.4).
+> otherwise have no film associations is automatically deleted (see FR-TAG-04 and Section 4.5).
 
-### 4.4 Entity Relationships
+### 4.4 Genre
+
+A Genre is a free-text label describing a film's genre. Genres are modelled **identically to Tags**: a Genre is a shared entity, created
+implicitly when a film is saved, deduplicated by name, and automatically removed when no film references it.
+
+| Field        | Type              | Required     | Constraints                                 | Description                                |
+| ------------ | ----------------- | ------------ | ------------------------------------------- | ------------------------------------------ |
+| `id`         | UUID              | Yes (system) | Unique, immutable                           | System-generated identifier                |
+| `name`       | String            | Yes          | 1–100 characters; unique (case-insensitive) | The genre label (free text, not an enum)   |
+| `created_at` | ISO 8601 DateTime | Yes (system) | Immutable                                   | Timestamp when the genre was first created |
+
+> **Note:** Like a Tag, a Genre cannot exist independently of films. Every Genre must be assigned to at least one Film; a Genre left with no
+> film associations is automatically deleted. Genres are created implicitly while assigning them to a film (never as standalone entities),
+> are unique case-insensitively, and support autocomplete — mirroring the Tag rules (§5.3).
+
+### 4.5 Entity Relationships
 
 ```
-Film  1      ──── *      RatingEntry
+Film  1      ──── 1..*   RatingEntry
 Film  1..*   ──── 1..*   Tag
+Film  1..*   ──── 1..*   Genre
 ```
 
-- A Film can have zero or more RatingEntries. A RatingEntry belongs to exactly one Film.
-- A Film must have **at least one** Tag, and a Tag must be assigned to **at least one** Film. Both sides of the relationship are mandatory
-  (many-to-many); orphan (unused) tags are not permitted.
-- Deleting a Film cascades to delete all its associated RatingEntries. Tag associations are also removed; any Tag left with no remaining
-  Film associations is automatically deleted.
+- A Film has **one or more** RatingEntries — never zero (the library holds only watched films; see FR-LIB-03). A RatingEntry belongs to
+  exactly one Film.
+- A Film must have **at least one** Tag, and a Tag must be assigned to **at least one** Film (many-to-many); orphan (unused) tags are not
+  permitted. **Genres follow the same many-to-many rule**, with the same orphan-deletion behaviour.
+- Deleting a Film cascades to delete all its associated RatingEntries. Tag and genre associations are also removed; any Tag or Genre left
+  with no remaining Film associations is automatically deleted.
 
 ---
 
@@ -268,8 +286,9 @@ Film  1..*   ──── 1..*   Tag
 - **FR-LIB-02:** Several fields are not required input at creation time: `poster_image` is optional and may be omitted entirely;
   `is_favorite` and `delay_days` are not asked for in the create form and are defaulted by the system to `false` and `0` respectively. All
   three can be set or changed later through edit.
-- **FR-LIB-03:** The first `RatingEntry` may optionally be created together with the film in the same operation (combined "log a watched
-  film" flow).
+- **FR-LIB-03:** The library holds **only films the user has actually watched**, so the first `RatingEntry` is **mandatory** at creation: a
+  film is created together with its first rating in one operation (the "log a watched film" flow). Every film therefore always has at least
+  one rating (see also FR-RAT-07 and FR-RAT-11).
 - **FR-LIB-04:** Upon creation, `created_at` and `updated_at` shall be set automatically by the system to the current UTC timestamp, and
   `natural_key` shall be derived automatically from the film's primary title, `release_year`, and `director` (see Section 4.1). The user
   shall never enter or see the `natural_key` directly.
@@ -295,8 +314,8 @@ Film  1..*   ──── 1..*   Tag
 
 - **FR-LIB-10:** The user shall be able to delete a film record.
 - **FR-LIB-11:** Deleting a film shall require an explicit confirmation step before the operation is executed (e.g. a confirmation dialog).
-- **FR-LIB-12:** Deletion shall cascade: all associated `RatingEntry` records are permanently deleted. Tag associations are also removed;
-  any Tag left with no remaining Film associations is automatically deleted (consistent with FR-TAG-04 and Section 4.4).
+- **FR-LIB-12:** Deletion shall cascade: all associated `RatingEntry` records are permanently deleted. Tag and genre associations are also
+  removed; any Tag or Genre left with no remaining Film associations is automatically deleted (consistent with FR-TAG-04 and Section 4.5).
 
 #### 5.1.4 Poster Image
 
@@ -342,7 +361,10 @@ Film  1..*   ──── 1..*   Tag
 
 - **FR-RAT-05:** The full `RatingEntry` history of a film shall be viewable, ordered by `watch_date` descending (most recent first).
 - **FR-RAT-06:** Each entry in the history view shall display: `value`, `watch_date`, and `created_at`.
-- **FR-RAT-07:** The user shall be able to delete a specific `RatingEntry` from the history. Deletion shall require confirmation.
+- **FR-RAT-07:** The user shall be able to delete a specific `RatingEntry` from the history. Deletion shall require confirmation. Because a
+  film must always have at least one rating (FR-LIB-03), deleting a film's **last** remaining rating deletes the **whole film** — the
+  confirmation shall make this clear (it names the film, not just the rating). (To correct a film's only rating, add the corrected entry
+  first, then delete the wrong one.)
 - **FR-RAT-08:** The user shall **not** be able to edit the `value` or `watch_date` of an existing `RatingEntry`. To correct an entry, they
   must delete it and create a new one.
 
@@ -351,8 +373,8 @@ Film  1..*   ──── 1..*   Tag
 - **FR-RAT-09:** The system shall compute `average_rating` as the arithmetic mean of all `RatingEntry.value` values for that film, rounded
   to one decimal place.
 - **FR-RAT-10:** The `average_rating` shall be recomputed automatically whenever a `RatingEntry` is added or deleted.
-- **FR-RAT-11:** If a film has no `RatingEntry` records, the `average_rating` shall be displayed as "Not yet rated" (or equivalent neutral
-  indicator), never as zero.
+- **FR-RAT-11:** Every film has at least one rating (FR-LIB-03), so `average_rating` is always a real value — there is no "not yet rated" or
+  empty-history state, and it shall never be displayed as zero.
 
 ---
 
@@ -365,9 +387,15 @@ Film  1..*   ──── 1..*   Tag
 - **FR-TAG-03:** The user shall be able to assign one or more existing tags to a film.
 - **FR-TAG-04:** The user shall be able to remove a tag from a film. If, after removal, the tag is no longer assigned to any film, the
   system shall automatically delete the now-orphaned tag. Tags still assigned to other films are unaffected.
-- **FR-TAG-05:** The user shall be able to delete a tag globally. Deleting a tag shall remove it from all films it was assigned to. This
-  action shall require confirmation and display the number of films that will be affected.
+- **FR-TAG-05** *(deferred to a later version)***:** Global tag delete — removing a tag from all films in one action — is **out of scope for
+  this version**: it requires a management/settings screen the three-view UI does not include. Tags still disappear through the per-film
+  removal + orphan-cleanup path (FR-TAG-04).
 - **FR-TAG-06:** The tag input on a film shall support autocomplete, suggesting existing tags as the user types.
+
+**Genres** behave **identically to tags** (see the Genre entity, §4.4): they are created implicitly while assigning them to a film, are
+unique case-insensitively (FR-TAG-02 analogue), are automatically deleted when no film references them (FR-TAG-04 analogue), and support
+autocomplete (FR-TAG-06 analogue). At least one genre is required per film (FR-LIB-01). Global genre delete is deferred for the same reason
+as global tag delete (FR-TAG-05).
 
 ---
 
@@ -417,23 +445,26 @@ application must honour when integrating it.
 | Input Field         | Source                                          | Description                                                                                            |
 | ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `film_id`           | Film.id                                         | Unique identifier                                                                                      |
-| `average_rating`    | Computed                                        | Arithmetic mean of all rating entries; `null` if the film has never been rated                         |
-| `watch_count`       | Computed (length of `rating_history`)           | Number of times the film has been watched (i.e. number of `RatingEntry` records); `0` if never watched |
-| `last_watched_date` | Computed (max `watch_date` in `rating_history`) | Date of the most recent watch; `null` if the film has never been watched                               |
+| `average_rating`    | Computed                                        | Arithmetic mean of all rating entries (always present — every film has ≥ 1 rating)                     |
+| `watch_count`       | Computed (length of `rating_history`)           | Number of times the film has been watched (number of `RatingEntry` records); always ≥ 1               |
+| `last_watched_date` | Computed (max `watch_date` in `rating_history`) | Date of the most recent watch (always present)                                                        |
 | `is_favorite`       | Film.is_favorite                                | Whether the user has marked this film as a favourite                                                   |
 | `delay_days`        | Film.delay_days                                 | User-set delay before the next rewatch suggestion                                                      |
 
-- **FR-RW-03:** The algorithm shall return an **ordered list** of objects. Each object in the list must contain at minimum:
+- **FR-RW-03:** The algorithm shall return an **ordered list of currently-due films only**. Each object in the list must contain at minimum:
 
-| Output Field              | Type    | Description                                                                                                                                 |
-| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `film_id`                 | UUID    | Identifies which film the suggestion is for                                                                                                 |
-| `days_until_next_rewatch` | Integer | Number of days from today until this film should next be suggested for rewatch. Never negative — the minimum is `0`, which means "due now." |
+| Output Field              | Type    | Description                                                                                                                                                                  |
+| ------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `film_id`                 | UUID    | Identifies which film the suggestion is for                                                                                                                                |
+| `days_until_next_rewatch` | Integer | Days relative to today: `0` = due today, a **negative** value = overdue by that many days. Only films with a value `≤ 0` (due or overdue) are returned; not-yet-due films are omitted. |
 
-- **FR-RW-04:** The algorithm shall return the list ordered ascending by `days_until_next_rewatch` (smallest first; films with `0` appear
-  first as "due now"). The application shall not modify this order.
-- **FR-RW-05:** The algorithm shall be re-invoked whenever the underlying film data changes (new rating added, film deleted, etc.), so that
-  the suggestion list remains current.
+- **FR-RW-04:** The algorithm shall return the list ordered ascending by `days_until_next_rewatch` — the **most overdue** (most negative)
+  first, down to those just becoming due (`0`). The application shall not re-sort this order. (The view may *filter* the list to a subset
+  without re-sorting; see §7.1.)
+- **FR-RW-05:** The algorithm runs on the backend as a **once-daily scheduled job**; its result is stored and served to the client, which
+  caches it. An up-to-one-day lag is accepted: a film that becomes newly due purely by the passage of time appears at the next daily run, and
+  changes to `delay_days` / `is_favorite` take effect at the next run. The one exception is handled immediately on the client — a film the
+  user has just watched is removed from the displayed list at once, without waiting for the next run.
 - **FR-RW-06:** If the algorithm returns an empty list (e.g. no films qualify), the view shall display an appropriate empty state message.
 - **FR-RW-07:** If the algorithm throws an error or times out, the view shall display a non-blocking error message. The rest of the
   application shall remain fully functional.
@@ -544,8 +575,9 @@ existing components.
 
 ### 6.6 Deployment & Sync Strategy
 
-- **FR-EXT-13:** The deployment topology (local laptop vs. always-on server vs. any future arrangement) shall be switchable purely through
-  configuration. No code change in the frontend or backend shall be required to move between topologies.
+- **FR-EXT-13** *(out of scope for this version)***:** Multi-topology deployment — switching between local-laptop and always-on-server
+  hosting through configuration — is out of scope; this version targets a single local-laptop deployment (§3.6). The backend stays free of
+  hard-coded client origins so a future revision could revisit this without a rewrite.
 - **FR-EXT-14:** The sync module shall be isolated behind a stable interface so that its internal strategy (e.g. batching, retry/backoff
   policy, or conflict-resolution details) can be changed by swapping the module implementation, with no changes required in the UI or
   business logic layers. Real-time/push-based sync (e.g. WebSockets) is explicitly **not** a goal — the single-user model does not justify
@@ -556,7 +588,7 @@ existing components.
 ## 7. UI / UX Requirements
 
 The application consists of exactly **three views**. Navigation between views shall be possible at all times via a persistent navigation
-element (e.g. top navigation bar or bottom tab bar on mobile).
+element — a **navigation drawer** on desktop and a **bottom navigation bar** on mobile (see §7.4).
 
 ---
 
@@ -567,7 +599,8 @@ element (e.g. top navigation bar or bottom tab bar on mobile).
 **Layout:**
 
 - Displayed as a **responsive card grid**.
-- Cards are ordered strictly by the algorithm's output order (smallest `days_until_next_rewatch` first; films due now appear at the top).
+- The view shows **only currently-due films** (FR-RW-03), ordered strictly by the algorithm's output — **most overdue first**, down to those
+  just becoming due. The client does not re-sort the list (it may filter it to a subset).
 
 **Film Card — Required Elements:**
 
@@ -577,14 +610,14 @@ element (e.g. top navigation bar or bottom tab bar on mobile).
 | Title               | Film primary title                        | Truncated with ellipsis if too long for the card width        |
 | Release year        | Film.release_year                         |                                                               |
 | Average rating      | Film.average_rating                       | Displayed as a star or numeric representation                 |
-| Rewatch status      | RewatchSuggestion.days_until_next_rewatch | Displayed as "Due now" when `0`, otherwise as "Due in N days" |
+| Rewatch status      | RewatchSuggestion.days_until_next_rewatch | "Due now" when `0`; "Overdue by N days" when negative (only due/overdue films are shown) |
 | Favourite indicator | Film.is_favorite                          | Visual marker (e.g. star/heart icon) shown only when `true`   |
 
 **Interactions:**
 
 - Clicking/tapping a card navigates to the **Film Detail View** for that film.
-- A visible **refresh** action shall allow the user to manually re-trigger the algorithm.
-- The view shall display a loading indicator while the algorithm is computing.
+- The suggestion list updates **automatically** (when the view opens and on reconnect); there is no manual refresh action.
+- The view shall display a loading indicator while the suggestion list is being fetched.
 - An **empty state** is shown when no suggestions are returned (FR-RW-06).
 - An **error state** is shown if the algorithm fails (FR-RW-07), without hiding the cards from the previous successful run.
 
@@ -670,7 +703,8 @@ element (e.g. top navigation bar or bottom tab bar on mobile).
 - Each entry has a **Delete** action with confirmation (FR-RAT-07).
 - An **"Add Rating"** action (button) opens an inline form or modal with: `value` (star picker, 0.5–5.0 in 0.5 increments) and `watch_date`
   (date picker, no future dates).
-- If the rating history is empty, a clear empty state is shown with a prompt to add the first rating.
+- The rating history is never empty — a film always has at least one rating (FR-LIB-03) — so no empty-history state is needed. Deleting the
+  last remaining rating deletes the film (FR-RAT-07).
 
 ---
 
@@ -683,7 +717,7 @@ element (e.g. top navigation bar or bottom tab bar on mobile).
   work.
 - Typography, spacing, and layout shall adapt fluidly between breakpoints. No horizontal scrolling shall occur on any view at any supported
   viewport width.
-- The navigation element shall adapt between a top bar (desktop) and a bottom tab bar or hamburger menu (mobile).
+- The navigation element shall adapt between a **navigation drawer** (desktop) and a **bottom navigation bar** (mobile).
 - Images shall be responsive and never cause layout overflow.
 
 ---
@@ -765,7 +799,16 @@ normal use.
 - **NFR-OFF-05:** Sync processing shall be **idempotent**: if the same queued operation is submitted to the backend more than once (e.g. due
   to a network timeout where the first attempt actually succeeded), the backend shall produce the same result without creating duplicate
   records or returning an unrecoverable error.
-- **NFR-OFF-06:** The backend's base URL shall be the **single configuration value** required to point the frontend at a different backend
-  host. No other code or configuration change shall be needed to switch deployment topology.
+- **NFR-OFF-06:** The frontend's backend base URL shall be a single configurable value, set when the client is built. This version targets
+  one local-laptop deployment (§3.6); runtime topology switching is out of scope (FR-EXT-13).
+
+---
+
+## Revision History
+
+| Version | Date       | Summary                                                                                                                                  |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-05-15 | Initial requirements (Draft).                                                                                                           |
+| 1.1     | 2026-06-05 | Reconciled with DESIGN_V1 and approved. Genre is now a first-class entity (§4.4, modelled like Tag). Watched-only library: every film must have ≥ 1 rating — first rating mandatory at create, deleting the last rating deletes the film, no "not yet rated" state (FR-LIB-03, FR-RAT-07/11, §4.1, §4.5, §7.3). Rewatch engine is a once-daily backend job returning only due/overdue films, most-overdue first; no manual refresh (FR-RW-02/03/04/05, §7.1). Navigation is a desktop drawer + mobile bottom bar (§7, §7.4). Deployment narrowed to a single local-laptop target; multi-topology / deployment-agnostic dropped (§1.3, §3.6, FR-EXT-13, NFR-OFF-06). Global tag/genre delete deferred (FR-TAG-05). |
 
 ---
