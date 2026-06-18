@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "film-rewatch-backend"
+version = "1.0.0"
+description = "Backend API for the Film Rewatch application (FastAPI)."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic-settings>=2.2",
+]
+
+# Strict type-safety (pyright) lands in PR3; SQLAlchemy/Alembic in PR4 — each
+# adds its own dependency/tooling block here.
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

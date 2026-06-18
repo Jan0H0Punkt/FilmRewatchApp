@@ -1,0 +1,13 @@
+# Python build/runtime artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local environment configuration — never committed; see .env.example
+.env
+.env.local
