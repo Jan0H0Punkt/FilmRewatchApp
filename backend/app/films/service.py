@@ -1,0 +1,5 @@
+"""Business-logic layer for the films module (DESIGN §5.1).
+
+Validation and the films-specific rules live here, calling ``repository.py``
+through a stable interface; no HTTP, no raw SQL. Empty stub — logic arrives in M1.
+"""

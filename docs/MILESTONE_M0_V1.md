@@ -22,7 +22,7 @@ work items (one PR each).
   - [4. Work Items (PR breakdown)](#4-work-items-pr-breakdown)
     - [4.1 Summary](#41-summary)
     - [4.2 Dependency graph](#42-dependency-graph)
-    - [PR1 — Backend application skeleton \& OpenAPI](#pr1--backend-application-skeleton--openapi)
+    - [PR1 — Backend application skeleton \& OpenAPI ✅](#pr1--backend-application-skeleton--openapi-)
     - [PR2 — Configuration module (config-over-code)](#pr2--configuration-module-config-over-code)
     - [PR3 — Strict type-safety setup](#pr3--strict-type-safety-setup)
     - [PR4 — Database session \& Alembic harness](#pr4--database-session--alembic-harness)
@@ -133,7 +133,7 @@ flowchart LR
 
 ---
 
-### PR1 — Backend application skeleton & OpenAPI
+### PR1 — Backend application skeleton & OpenAPI ✅
 
 **Goal.** Create the `backend/` application exactly in the [§4](./DESIGN_V1.md#4-repository-layout) shape and make
 it serve a versioned, self-documenting API surface — empty but real.
@@ -156,10 +156,10 @@ it serve a versioned, self-documenting API surface — empty but real.
 **Depends on.** —
 
 **Acceptance criteria**
-- [ ] `uvicorn app.main:app` (or the factory entrypoint) starts locally.
-- [ ] `GET /api/v1/health` → `200`.
-- [ ] `/docs` renders Swagger; `/openapi.json` lists the API under the `v1` namespace.
-- [ ] Folder tree matches §4 (a reviewer can map every stub to the diagram).
+- [x] `uvicorn app.main:app` (or the factory entrypoint) starts locally.
+- [x] `GET /api/v1/health` → `200`.
+- [x] `/docs` renders Swagger; `/openapi.json` lists the API under the `v1` namespace.
+- [x] Folder tree matches §4 (a reviewer can map every stub to the diagram).
 
 **Size.** M
 
