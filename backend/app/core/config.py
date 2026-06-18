@@ -36,10 +36,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Feature flags (DESIGN §5.6). The optional TMDB metadata adapter is off by
-    # default; manual entry is fully functional without it.
-    feature_tmdb_adapter: bool = False
-
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
