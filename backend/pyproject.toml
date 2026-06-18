@@ -10,10 +10,11 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
+    "pydantic-settings>=2.2",
 ]
 
-# Strict type-safety (pyright) lands in PR3; config (pydantic-settings) in PR2;
-# SQLAlchemy/Alembic in PR4 — each adds its own dependency/tooling block here.
+# Strict type-safety (pyright) lands in PR3; SQLAlchemy/Alembic in PR4 — each
+# adds its own dependency/tooling block here.
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
