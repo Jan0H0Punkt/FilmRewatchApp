@@ -13,8 +13,22 @@ dependencies = [
     "pydantic-settings>=2.2",
 ]
 
-# Strict type-safety (pyright) lands in PR3; SQLAlchemy/Alembic in PR4 — each
-# adds its own dependency/tooling block here.
+# Developer tooling — not shipped in the wheel. Install with `pip install -e .[dev]`
+# (documented in the README, PR8). SQLAlchemy/Alembic land in PR4.
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.390",
+    "pytest>=8",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+# Strict static type-safety baseline (DESIGN §5.7). Pyright is the checker — the
+# same engine as Pylance in the editor — so `make typecheck` and editor feedback
+# agree. `strict` is enforced over the whole backend from M0's first commit.
+[tool.pyright]
+include = ["app", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+pythonPlatform = "Linux"

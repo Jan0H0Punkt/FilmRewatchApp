@@ -48,4 +48,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return the process-wide settings, instantiated once and cached."""
-    return Settings()
+    # Field values are supplied by the environment / .env at runtime
+    # (pydantic-settings), so pyright's "missing argument" for the required
+    # fields is a false positive here.
+    return Settings()  # pyright: ignore[reportCallIssue]
