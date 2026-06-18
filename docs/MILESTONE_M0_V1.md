@@ -24,7 +24,7 @@ work items (one PR each).
     - [4.2 Dependency graph](#42-dependency-graph)
     - [PR1 — Backend application skeleton \& OpenAPI ✅](#pr1--backend-application-skeleton--openapi-)
     - [PR2 — Configuration module (config-over-code) ✅](#pr2--configuration-module-config-over-code-)
-    - [PR3 — Strict type-safety setup](#pr3--strict-type-safety-setup)
+    - [PR3 — Strict type-safety setup ✅](#pr3--strict-type-safety-setup-)
     - [PR4 — Database session \& Alembic harness](#pr4--database-session--alembic-harness)
     - [PR5 — Error envelope \& exception handler](#pr5--error-envelope--exception-handler)
     - [PR6 — Docker Compose stack](#pr6--docker-compose-stack)
@@ -192,7 +192,7 @@ it serve a versioned, self-documenting API surface — empty but real.
 
 ---
 
-### PR3 — Strict type-safety setup
+### PR3 — Strict type-safety setup ✅
 
 **Goal.** Establish the [§5.7](./DESIGN_V1.md#57-type-safety) baseline **now**, so strictness is enforced from the
 first commit rather than retrofitted. The checker is **pyright** — chosen for its aggressive inference/narrowing
@@ -215,9 +215,9 @@ under strict mode and because it is the same engine as Pylance in VS Code, so ed
 **Depends on.** PR1 (and pairs with PR2 so `Settings` is covered).
 
 **Acceptance criteria**
-- [ ] The strict type-check passes with **zero** errors over the whole backend.
-- [ ] The base schema rejects unknown fields and lossy coercion (a `"1"`-for-`int` test fails as expected).
-- [ ] The check is a one-command target documented for PR8.
+- [x] The strict type-check passes with **zero** errors over the whole backend.
+- [x] The base schema rejects unknown fields and lossy coercion (a `"1"`-for-`int` test fails as expected).
+- [x] The check is a one-command target documented for PR8.
 
 **Size.** S–M
 
