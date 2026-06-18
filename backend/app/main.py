@@ -8,12 +8,14 @@ Run locally with::
 
     uvicorn app.main:app --reload
 
-Later M0 PRs attach to this factory at the marked points: CORS middleware (PR2)
-and the error-envelope exception handler (PR5).
+CORS is wired below from configuration (PR2); the error-envelope exception
+handler (PR5) attaches to this factory later.
 """
 
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import get_settings
 from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
@@ -51,6 +53,7 @@ def build_api_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     """Application factory: build and configure the FastAPI app (DESIGN §5.1)."""
+    settings = get_settings()
     app = FastAPI(
         title="Film Rewatch API",
         version="1.0.0",
@@ -60,7 +63,16 @@ def create_app() -> FastAPI:
             "skeleton and a liveness endpoint; domain endpoints arrive in M1+."
         ),
     )
-    # CORS middleware (PR2) and the error-envelope handler (PR5) register here.
+    # Allowed origins come from config — the backend hardcodes no client origin
+    # (DESIGN §3.6/§8). The app has no auth/cookies, so credentials stay off.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    # The error-envelope exception handler (PR5) registers here later.
     app.include_router(build_api_router())
     return app
 

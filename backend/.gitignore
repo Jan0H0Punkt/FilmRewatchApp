@@ -7,3 +7,7 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+
+# Local environment configuration — never committed; see .env.example
+.env
+.env.local
