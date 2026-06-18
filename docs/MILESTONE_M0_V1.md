@@ -23,7 +23,7 @@ work items (one PR each).
     - [4.1 Summary](#41-summary)
     - [4.2 Dependency graph](#42-dependency-graph)
     - [PR1 — Backend application skeleton \& OpenAPI ✅](#pr1--backend-application-skeleton--openapi-)
-    - [PR2 — Configuration module (config-over-code)](#pr2--configuration-module-config-over-code)
+    - [PR2 — Configuration module (config-over-code) ✅](#pr2--configuration-module-config-over-code-)
     - [PR3 — Strict type-safety setup](#pr3--strict-type-safety-setup)
     - [PR4 — Database session \& Alembic harness](#pr4--database-session--alembic-harness)
     - [PR5 — Error envelope \& exception handler](#pr5--error-envelope--exception-handler)
@@ -165,14 +165,14 @@ it serve a versioned, self-documenting API surface — empty but real.
 
 ---
 
-### PR2 — Configuration module (config-over-code)
+### PR2 — Configuration module (config-over-code) ✅
 
 **Goal.** Centralise all environment-specific values behind `pydantic-settings` so nothing is hardcoded
 ([§3.5](./DESIGN_V1.md#3-system-architecture), `NFR-MAINT-04`).
 
 **In scope**
-- `app/core/config.py`: a typed `Settings` model loading `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, host/port, and
-  feature flags (e.g. `FEATURE_TMDB_ADAPTER`) from the environment.
+- `app/core/config.py`: a typed `Settings` model loading `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, and host/port
+  from the environment.
 - CORS middleware wired in the app factory from `CORS_ALLOWED_ORIGINS` (the backend hardcodes **no** client origin — [§3.6](./DESIGN_V1.md#3-system-architecture)/[§8](./DESIGN_V1.md#8-configuration--deployment)).
 - A committed `backend/.env.example` documenting every variable; real `.env` git-ignored.
 
@@ -183,10 +183,10 @@ it serve a versioned, self-documenting API surface — empty but real.
 **Depends on.** PR1.
 
 **Acceptance criteria**
-- [ ] Settings load from environment; a missing required var fails fast with a clear error.
-- [ ] No environment-specific literal remains in code (grep-clean for URLs/ports/origins).
-- [ ] `.env.example` lists every supported variable with a comment.
-- [ ] CORS allowed origins come from config.
+- [x] Settings load from environment; a missing required var fails fast with a clear error.
+- [x] No environment-specific literal remains in code (grep-clean for URLs/ports/origins).
+- [x] `.env.example` lists every supported variable with a comment.
+- [x] CORS allowed origins come from config.
 
 **Size.** S
 
