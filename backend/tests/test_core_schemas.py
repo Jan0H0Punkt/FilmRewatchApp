@@ -1,8 +1,11 @@
 """Tests for the shared strict base schema (DESIGN §5.7, M0 PR3).
 
-Proves the two strictness guarantees every domain schema inherits — unknown
-fields rejected, lossy primitive coercion rejected — plus that ISO-8601 strings
-still validate for temporal types on the JSON path.
+Proves the strictness guarantees every domain schema inherits — unknown fields
+rejected, lossy primitive coercion rejected — and that the wire-format aliases
+accept ISO-8601 strings on Pydantic's **Python** validation path, which is the
+path FastAPI uses for request bodies (it parses the JSON to a ``dict``, then
+calls ``validate_python``). The tests deliberately use ``model_validate`` (the
+Python path), not ``model_validate_json``, so they reflect real HTTP validation.
 """
 
 from datetime import datetime
@@ -10,15 +13,19 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.core.schemas import StrictSchema
+from app.core.schemas import JsonDateTime, StrictSchema
 
 
 class _Sample(StrictSchema):
     count: int
 
 
-class _Temporal(StrictSchema):
+class _BareTemporal(StrictSchema):
     when: datetime
+
+
+class _Temporal(StrictSchema):
+    when: JsonDateTime
 
 
 def test_rejects_unknown_fields() -> None:
@@ -32,7 +39,14 @@ def test_rejects_lossy_coercion() -> None:
         _Sample.model_validate({"count": "1"})
 
 
-def test_accepts_iso8601_on_json_path() -> None:
-    # Strict mode still accepts ISO-8601 strings for datetime via JSON.
-    model = _Temporal.model_validate_json('{"when": "2026-06-18T12:00:00"}')
+def test_bare_temporal_rejects_iso8601_on_python_path() -> None:
+    # Guards the trap: a bare `datetime` under strict mode rejects ISO strings on
+    # the Python path FastAPI uses — which is why JsonDateTime exists.
+    with pytest.raises(ValidationError):
+        _BareTemporal.model_validate({"when": "2026-06-18T12:00:00"})
+
+
+def test_alias_accepts_iso8601_on_python_path() -> None:
+    # JsonDateTime accepts the ISO-8601 string exactly as a real request body does.
+    model = _Temporal.model_validate({"when": "2026-06-18T12:00:00"})
     assert model.when == datetime(2026, 6, 18, 12, 0, 0)
