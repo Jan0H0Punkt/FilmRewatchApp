@@ -25,6 +25,11 @@ from app.tags.router import router as tags_router
 API_V1_PREFIX = "/api/v1"
 
 
+def health() -> dict[str, str]:
+    """Liveness probe — a placeholder until M1 adds real routes (DESIGN §10, M0)."""
+    return {"status": "ok"}
+
+
 def build_api_router() -> APIRouter:
     """Assemble the versioned ``/api/v1`` router from each feature module.
 
@@ -33,11 +38,9 @@ def build_api_router() -> APIRouter:
     routes inside each module.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
-
-    @api.get("/health", tags=["health"], summary="Liveness probe")
-    def health() -> dict[str, str]:
-        """Liveness placeholder until M1 (DESIGN §10, M0)."""
-        return {"status": "ok"}
+    api.add_api_route(
+        "/health", health, methods=["GET"], tags=["health"], summary="Liveness probe"
+    )
 
     api.include_router(films_router, prefix="/films", tags=["films"])
     api.include_router(ratings_router, prefix="/ratings", tags=["ratings"])
