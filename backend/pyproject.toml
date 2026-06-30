@@ -11,10 +11,16 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic-settings>=2.2",
+    # Data-access plumbing (DESIGN §5.2, M0 PR4). The async-capable psycopg 3
+    # driver matches the `postgresql+psycopg` URL in `.env.example`. No domain
+    # tables yet — those (and their first migration) arrive in M1.
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
 ]
 
 # Developer tooling — not shipped in the wheel. Install with `pip install -e .[dev]`
-# (documented in the README, PR8). SQLAlchemy/Alembic land in PR4.
+# (documented in the README, PR8).
 [project.optional-dependencies]
 dev = [
     "pyright>=1.1.390",
