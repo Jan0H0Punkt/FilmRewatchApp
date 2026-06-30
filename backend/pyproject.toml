@@ -11,10 +11,30 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic-settings>=2.2",
+    # Data-access plumbing (DESIGN §5.2, M0 PR4). The async-capable psycopg 3
+    # driver matches the `postgresql+psycopg` URL in `.env.example`. No domain
+    # tables yet — those (and their first migration) arrive in M1.
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
 ]
 
-# Strict type-safety (pyright) lands in PR3; SQLAlchemy/Alembic in PR4 — each
-# adds its own dependency/tooling block here.
+# Developer tooling — not shipped in the wheel. Install with `pip install -e .[dev]`
+# (documented in the README, PR8).
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.390",
+    "pytest>=8",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+# Strict static type-safety baseline (DESIGN §5.7). Pyright is the checker — the
+# same engine as Pylance in the editor — so `make typecheck` and editor feedback
+# agree. `strict` is enforced over the whole backend from M0's first commit.
+[tool.pyright]
+include = ["app", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+pythonPlatform = "Linux"
