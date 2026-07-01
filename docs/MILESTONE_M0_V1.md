@@ -26,7 +26,7 @@ work items (one PR each).
     - [PR2 — Configuration module (config-over-code) ✅](#pr2--configuration-module-config-over-code-)
     - [PR3 — Strict type-safety setup ✅](#pr3--strict-type-safety-setup-)
     - [PR4 — Database session \& Alembic harness ✅](#pr4--database-session--alembic-harness-)
-    - [PR5 — Error envelope \& exception handler](#pr5--error-envelope--exception-handler)
+    - [PR5 — Error envelope \& exception handler ✅](#pr5--error-envelope--exception-handler-)
     - [PR6 — Docker Compose stack](#pr6--docker-compose-stack)
     - [PR7 — Angular workspace skeleton](#pr7--angular-workspace-skeleton)
     - [PR8 — README \& developer tooling](#pr8--readme--developer-tooling)
@@ -254,7 +254,7 @@ domain tables** (those are M1).
 
 ---
 
-### PR5 — Error envelope & exception handler
+### PR5 — Error envelope & exception handler ✅
 
 **Goal.** Establish the single API error shape so M1's very first endpoint already emits the standard envelope
 (`NFR-MAINT-03`, [§5.4](./DESIGN_V1.md#54-validation--error-handling)).
@@ -277,8 +277,8 @@ features in M1+.
 **Depends on.** PR1.
 
 **Acceptance criteria**
-- [ ] A forced 404 and a request-validation failure both return the exact envelope shape.
-- [ ] No endpoint can bypass the handler to emit a different error format.
+- [x] A forced 404 and a request-validation failure both return the exact envelope shape. *(`tests/test_core_errors.py`: 404 → `NOT_FOUND`, bad query param → `VALIDATION_ERROR`, each asserted to be exactly `{ error: { code, message } }`.)*
+- [x] No endpoint can bypass the handler to emit a different error format. *(Handlers for `AppError`, `RequestValidationError`, `HTTPException`, and a catch-all `Exception` are registered in the app factory, so validation/HTTP/500/domain errors all render the one envelope — covered by the tests, incl. a 500 that leaks nothing.)*
 
 **Size.** S
 
