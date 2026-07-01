@@ -25,7 +25,7 @@ work items (one PR each).
     - [PR1 — Backend application skeleton \& OpenAPI ✅](#pr1--backend-application-skeleton--openapi-)
     - [PR2 — Configuration module (config-over-code) ✅](#pr2--configuration-module-config-over-code-)
     - [PR3 — Strict type-safety setup ✅](#pr3--strict-type-safety-setup-)
-    - [PR4 — Database session \& Alembic harness](#pr4--database-session--alembic-harness)
+    - [PR4 — Database session \& Alembic harness ✅](#pr4--database-session--alembic-harness-)
     - [PR5 — Error envelope \& exception handler](#pr5--error-envelope--exception-handler)
     - [PR6 — Docker Compose stack](#pr6--docker-compose-stack)
     - [PR7 — Angular workspace skeleton](#pr7--angular-workspace-skeleton)
@@ -223,7 +223,7 @@ under strict mode and because it is the same engine as Pylance in VS Code, so ed
 
 ---
 
-### PR4 — Database session & Alembic harness
+### PR4 — Database session & Alembic harness ✅
 
 **Goal.** Stand up the SQLAlchemy 2.x data-access **plumbing** and the Alembic migration harness — **without any
 domain tables** (those are M1).
@@ -244,9 +244,11 @@ domain tables** (those are M1).
 **Depends on.** PR2 (DB URL), PR3 (typed `Base`).
 
 **Acceptance criteria**
-- [ ] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only.
-- [ ] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists).
-- [ ] The session dependency type-checks under `--strict`.
+- [x] The session dependency type-checks under `--strict`. *(pyright strict mode: 0 errors over `app/core/db.py` + `migrations/env.py`.)*
+- [ ] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only. — **Deferred to PR6** (see note); verified offline meanwhile: `alembic upgrade head --sql` emits exactly the `alembic_version` DDL plus the baseline insert, with no domain tables.
+- [ ] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists). — **Deferred to PR6** (see note); `Base.metadata` is empty — guarded by `test_baseline_defines_no_tables` — and `env.py` imports no models, so the diff is necessarily empty.
+
+> **Deferred verification (→ PR6).** The two checks above need a **running** Postgres, and the project's running-Postgres deliverable is **PR6** (Docker Compose), whose container startup already runs `alembic upgrade head`. Both are therefore closed as part of PR6 — see its acceptance criteria. All PR4 *code* (engine, session factory, request-scoped dependency, typed `Base`, Alembic harness, empty baseline) is complete, and everything verifiable without a live DB has been checked (strict type-check, offline SQL, empty-metadata test).
 
 **Size.** M
 
@@ -293,6 +295,9 @@ features in M1+.
   (`DATABASE_URL` → the `postgres` service, `CORS_ALLOWED_ORIGINS`), and a backend healthcheck hitting
   `/api/v1/health`.
 - Startup applies migrations (`alembic upgrade head`) before serving, so a fresh `up` is immediately consistent.
+- **Closes PR4's deferred live-database checks** (PR4 ships no running Postgres of its own): against the composed
+  Postgres, confirm `alembic upgrade head` creates only the `alembic_version` table (no domain tables) and
+  `alembic revision --autogenerate` yields an empty diff.
 
 **Out of scope.** Serving the built frontend (M0 frontend builds standalone; reverse-proxy unification is
 [Future Work](./FUTURE_WORK_V1.md)); the rewatch scheduler container (M4).
@@ -305,6 +310,7 @@ features in M1+.
 - [ ] `docker compose up` from a clean checkout brings up Postgres + a healthy backend.
 - [ ] Swagger is reachable from the host; `GET /api/v1/health` → `200` through the container.
 - [ ] Postgres data survives `docker compose down && up` (named volume).
+- [ ] **(inherited from PR4)** Against the composed Postgres, `alembic upgrade head` creates only the Alembic version table, and `alembic revision --autogenerate` produces an empty diff.
 
 **Size.** M
 
