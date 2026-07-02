@@ -1,0 +1,59 @@
+# Docker Compose stack — backend + PostgreSQL as one `docker compose up`
+# (M0 PR6; DESIGN §8.1 tooling, §8.2 deployment target: the user's laptop).
+#
+# All environment-specific wiring lives HERE, not in code (§3.5 config-over-
+# code, NFR-MAINT-04): DATABASE_URL points the backend at the `postgres`
+# service, and CORS_ALLOWED_ORIGINS carries the frontend origin(s) — override
+# it from the shell (e.g. the LAN origin, §8) without touching any file:
+#     CORS_ALLOWED_ORIGINS=http://192.168.1.10:4200 docker compose up
+
+name: film-rewatch
+
+services:
+  postgres:
+    # The authoritative store (DESIGN §2), pinned to a major version.
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-filmrewatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-filmrewatch}
+      POSTGRES_DB: filmrewatch
+    volumes:
+      # Named volume so data survives `docker compose down && up` (PR6 criteria).
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Published so host-side tools (psql, Alembic run from `backend/`) can
+      # target the composed DB — e.g. PR4's autogenerate-empty-diff check.
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filmrewatch -d filmrewatch"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      # In-network URL — the `postgres` service name, not localhost (see
+      # .env.example). Credentials come from .env (git-ignored, NFR-MAINT-04);
+      # same driver (+psycopg) as documented there.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-filmrewatch}:${POSTGRES_PASSWORD:-filmrewatch}@postgres:5432/filmrewatch
+      # The backend hardcodes no client origin (§3.6/§8); the Angular dev
+      # origin is the default, the LAN origin is supplied per the header note.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        # Wait for a ready DB so the container's startup `alembic upgrade head`
+        # (see backend/Dockerfile CMD) succeeds on the first attempt.
+        condition: service_healthy
+    healthcheck:
+      # Liveness endpoint from PR1; stdlib urllib so the image needs no curl.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:

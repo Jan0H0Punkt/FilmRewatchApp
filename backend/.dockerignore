@@ -1,0 +1,20 @@
+# Kept out of the Docker build context (M0 PR6, DESIGN §8.1) — leaner builds,
+# and critically: the local `.env` never ends up inside the image. All config
+# is injected at runtime via the environment (§3.5, NFR-MAINT-04).
+.env
+.env.local
+
+# Local toolchain & caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Dev-only files — not part of the production image
+tests/
+Makefile
+CLAUDE.md
+.gitignore
+.dockerignore
