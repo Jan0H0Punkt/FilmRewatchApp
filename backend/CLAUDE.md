@@ -2,7 +2,7 @@
 
 Guidance for the FastAPI backend under `backend/`. See the repo-root `CLAUDE.md` for cross-cutting orientation, the design-doc-driven / milestone-sequenced workflow, and the `docs/` map.
 
-**The repo is in M0 ("Scaffolding").** Every feature module under `app/` (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`) is an intentional **empty stub** — the layout exists but there is no domain behaviour, no ORM tables, and no real routes. Those arrive in M1+. Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in `docs/milstones/MILESTONE_M0_V1.md`).
+**The repo is in M0 ("Scaffolding").** Every feature module under `app/` (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`) is an intentional **empty stub** — the layout exists but there is no domain behaviour, no ORM tables, and no real routes. Those arrive in M1+. Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in `docs/milestones/MILESTONE_M0_V1.md`).
 
 ## Commands
 
