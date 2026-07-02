@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 FilmRewatchApp is a two-tier film-tracking app: an Angular PWA client and a FastAPI backend, communicating over a versioned `/api/v1` HTTP/JSON API. Only the **backend** exists so far; the Angular workspace is not yet created.
 
 Development is **design-doc-driven and milestone-sequenced**. Before writing feature code, read the relevant sections of `docs/`:
-- `docs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
-- `docs/MILESTONE_M0_V1.md` — the current milestone (M0, "Scaffolding"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
-- `docs/REQUIEREMENTS_V1.md` (note the spelling), `docs/OPEN_DECISIONS_V1.md`, `docs/FUTURE_WORK_V1.md`.
+- `docs/designs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
+- `docs/milstones/MILESTONE_M0_V1.md` — the current milestone (M0, "Scaffolding"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
+- `docs/requierements/REQUIEREMENTS_V1.md` (note the spelling), `docs/requierements/OPEN_DECISIONS_V1.md`, `docs/requierements/FUTURE_WORK_V1.md`.
 
 **The repo is currently in M0.** Every feature module under `backend/app/` (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`) is an intentional **empty stub** — the layout exists but there is no domain behaviour, no ORM tables, and no real routes. Those arrive in M1+. Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in the milestone doc).
 
