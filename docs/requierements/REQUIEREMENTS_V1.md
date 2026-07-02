@@ -4,7 +4,7 @@
 **Status:** Approved  
 **Created:** 2026-05-15  
 **Last updated:** 2026-06-05  
-**Companion to:** [DESIGN_V1.md](./DESIGN_V1.md) · [FUTURE_WORK_V1.md](./FUTURE_WORK_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
+**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [FUTURE_WORK_V1.md](./FUTURE_WORK_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
 
 ---
 
