@@ -39,7 +39,7 @@ Little to fix in the `CLAUDE.md` files themselves; the static context footprint 
 - **Effort:** S–M.
 
 ### 3. Skill for the repeatable PR workflow — ✅ _done_
-- [x] Encode the "implement PR N from `docs/milstones/MILESTONE_M0_V1.md`" loop as a `.claude/skills/<name>/SKILL.md`.
+- [x] Encode the "implement PR N from `docs/milestones/MILESTONE_M0_V1.md`" loop as a `.claude/skills/<name>/SKILL.md`.
 - **Why:** skills load **on-demand**, keeping the workflow out of the always-loaded `CLAUDE.md`; invokable as `/skill-name`.
 - **Status:** Created `.claude/skills/implement-pr/SKILL.md` (`disable-model-invocation: true`, invoke as `/implement-pr <PR-number>`). It captures the full loop: read the work item + design refs, respect out-of-scope, study conventions, implement per the layered architecture, run the `make typecheck`/`make test` gate (venv-activated, `python3.14`), and update the milestone doc with the same ✅/annotation formatting as the completed PRs.
 - **⚠ Sharing:** currently git-ignored (`.claude/skills` is caught by `.claude/*`), so it works locally but isn't committed/shared. To team-share it, add a `.gitignore` negation like `!.claude/skills/` (see item in Housekeeping).
@@ -61,4 +61,4 @@ Little to fix in the `CLAUDE.md` files themselves; the static context footprint 
 ## Housekeeping (tracked elsewhere, noted here for completeness)
 - The **"repo is in M0"** note in both `CLAUDE.md` files is time-varying — bump it at each milestone boundary (M0 → M1 …).
 - **`frontend/CLAUDE.md`** is intentionally absent — create it with **M0 PR7** (Angular workspace).
-- Misspelled doc folders `docs/milstones/`, `docs/requierements/` are referenced from the `CLAUDE.md` files and inter-doc links — renaming later means updating those references too.
+- ✅ **Spelling fixed:** renamed `docs/milstones/` → `docs/milestones/` and `docs/requierements/` → `docs/requirements/` throughout (via `git mv` + `sed`). Updated all references in `CLAUDE.md` files, `CLAUDE_IMPROVEMENTS.md`, and inter-doc links.

@@ -4,7 +4,7 @@
 **Status:** Draft  
 **Created:** 2026-06-07  
 **Last updated:** 2026-06-07  
-**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIEREMENTS_V1.md](../requierements/REQUIEREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requierements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requierements/FUTURE_WORK_V1.md)  
+**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIEREMENTS_V1.md](../requirements/REQUIEREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
 
 This is the detailed definition of the first milestone in the delivery plan ([DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones)),
 which that table summarises in a single row. It expands M0 into independently reviewable, separately-mergeable
@@ -90,7 +90,7 @@ milestone (per [DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones
 | Offline write queue, auto-drain, idempotency, last-write-wins conflicts                        | **M6**                             |
 | Film merge, inline edit, optional search dimensions, a11y pass                                 | **M7**                             |
 | Error-schema **audit**, responsive/a11y QA                                                     | **M8**                             |
-| TMDB / external-metadata adapter                                                               | [Future Work](../requierements/FUTURE_WORK_V1.md) |
+| TMDB / external-metadata adapter                                                               | [Future Work](../requirements/FUTURE_WORK_V1.md) |
 
 The empty module folders (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`, `adapters/` and their frontend
 mirrors) **are** created in M0 as placeholders so the layout exists — they just contain stubs, not logic.
@@ -300,7 +300,7 @@ features in M1+.
   `alembic revision --autogenerate` yields an empty diff.
 
 **Out of scope.** Serving the built frontend (M0 frontend builds standalone; reverse-proxy unification is
-[Future Work](../requierements/FUTURE_WORK_V1.md)); the rewatch scheduler container (M4).
+[Future Work](../requirements/FUTURE_WORK_V1.md)); the rewatch scheduler container (M4).
 
 **Refs.** [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure), [§8.2](../designs/DESIGN_V1.md#82-deployment-target).
 
@@ -357,7 +357,7 @@ together.
 - Convenience `make`/script targets the README points at: `typecheck` (PR3), `test`, `up` (PR6), `migrate` (PR4).
 - A short "repo layout" pointer to [DESIGN §4](../designs/DESIGN_V1.md#4-repository-layout).
 
-**Out of scope.** CI/CD automation — deferred ([Future Work](../requierements/FUTURE_WORK_V1.md): checks run by hand locally).
+**Out of scope.** CI/CD automation — deferred ([Future Work](../requirements/FUTURE_WORK_V1.md): checks run by hand locally).
 
 **Refs.** `NFR-MAINT-05`, [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure).
 
