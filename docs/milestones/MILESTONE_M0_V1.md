@@ -27,7 +27,7 @@ work items (one PR each).
     - [PR3 — Strict type-safety setup ✅](#pr3--strict-type-safety-setup-)
     - [PR4 — Database session \& Alembic harness ✅](#pr4--database-session--alembic-harness-)
     - [PR5 — Error envelope \& exception handler ✅](#pr5--error-envelope--exception-handler-)
-    - [PR6 — Docker Compose stack](#pr6--docker-compose-stack)
+    - [PR6 — Docker Compose stack ✅](#pr6--docker-compose-stack-)
     - [PR7 — Angular workspace skeleton](#pr7--angular-workspace-skeleton)
     - [PR8 — README \& developer tooling](#pr8--readme--developer-tooling)
   - [5. Suggested Sequencing](#5-suggested-sequencing)
@@ -245,8 +245,8 @@ domain tables** (those are M1).
 
 **Acceptance criteria**
 - [x] The session dependency type-checks under `--strict`. *(pyright strict mode: 0 errors over `app/core/db.py` + `migrations/env.py`.)*
-- [ ] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only. — **Deferred to PR6** (see note); verified offline meanwhile: `alembic upgrade head --sql` emits exactly the `alembic_version` DDL plus the baseline insert, with no domain tables.
-- [ ] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists). — **Deferred to PR6** (see note); `Base.metadata` is empty — guarded by `test_baseline_defines_no_tables` — and `env.py` imports no models, so the diff is necessarily empty.
+- [x] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only. — **Deferred to PR6** (see note); verified offline meanwhile: `alembic upgrade head --sql` emits exactly the `alembic_version` DDL plus the baseline insert, with no domain tables. *(Closed by PR6: the composed stack runs it at startup — only `alembic_version` exists in the composed Postgres.)*
+- [x] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists). — **Deferred to PR6** (see note); `Base.metadata` is empty — guarded by `test_baseline_defines_no_tables` — and `env.py` imports no models, so the diff is necessarily empty. *(Closed by PR6: `--autogenerate` against the composed Postgres produced an empty revision.)*
 
 > **Deferred verification (→ PR6).** The two checks above need a **running** Postgres, and the project's running-Postgres deliverable is **PR6** (Docker Compose), whose container startup already runs `alembic upgrade head`. Both are therefore closed as part of PR6 — see its acceptance criteria. All PR4 *code* (engine, session factory, request-scoped dependency, typed `Base`, Alembic harness, empty baseline) is complete, and everything verifiable without a live DB has been checked (strict type-check, offline SQL, empty-metadata test).
 
@@ -284,7 +284,7 @@ features in M1+.
 
 ---
 
-### PR6 — Docker Compose stack
+### PR6 — Docker Compose stack ✅
 
 **Goal.** Make the whole backend runnable as one command on the laptop
 ([§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure), [§8.2](../designs/DESIGN_V1.md#82-deployment-target)).
@@ -307,10 +307,10 @@ features in M1+.
 **Depends on.** PR2 (config), PR4 (DB + migrations).
 
 **Acceptance criteria**
-- [ ] `docker compose up` from a clean checkout brings up Postgres + a healthy backend.
-- [ ] Swagger is reachable from the host; `GET /api/v1/health` → `200` through the container.
-- [ ] Postgres data survives `docker compose down && up` (named volume).
-- [ ] **(inherited from PR4)** Against the composed Postgres, `alembic upgrade head` creates only the Alembic version table, and `alembic revision --autogenerate` produces an empty diff.
+- [x] `docker compose up` from a clean checkout brings up Postgres + a healthy backend. *(Fresh volume + `--build`: Compose waits on the Postgres healthcheck, the backend applies `alembic upgrade head` before uvicorn serves, and both containers report healthy.)*
+- [x] Swagger is reachable from the host; `GET /api/v1/health` → `200` through the container. *(From the host: `/docs` → 200, `/openapi.json` lists `/api/v1/health` under `v1`, and `GET /api/v1/health` → `200 {"status":"ok"}`.)*
+- [x] Postgres data survives `docker compose down && up` (named volume). *(A probe row written before `down` was still present after `up` — the `pgdata` named volume persists.)*
+- [x] **(inherited from PR4)** Against the composed Postgres, `alembic upgrade head` creates only the Alembic version table, and `alembic revision --autogenerate` produces an empty diff. *(`\dt` after startup shows only `alembic_version`, stamped `0001_baseline`; a host-run `--autogenerate` against the composed DB generated only `pass` bodies — probe revision deleted after inspection.)*
 
 **Size.** M
 
