@@ -6,18 +6,18 @@ Python/FastAPI backend with PostgreSQL — communicating exclusively over a vers
 HTTP/JSON API. It is designed to run entirely on your own machine via Docker Compose, with the PWA
 installable on a phone over the LAN.
 
-> **Status: Milestone M0 — Scaffolding.** The repo currently contains the backend's empty, runnable
-> shell: layout, config, strict typing, migrations harness, error envelope, and the Docker stack.
-> There is deliberately **no domain behaviour yet** (no entities, no business rules, no screens) —
-> that arrives in M1+. The Angular workspace (`frontend/`) is not yet created (M0 PR7).
-> See [docs/milestones/MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md).
+> **Status: Milestone M0 — Scaffolding.** The repo contains the empty, runnable shells of both
+> tiers: the backend's layout, config, strict typing, migrations harness, error envelope, and
+> Docker stack, plus the buildable Angular workspace with the §4 folder skeleton. There is
+> deliberately **no domain behaviour yet** (no entities, no business rules, no real screens) —
+> that arrives in M1+. See [docs/milestones/MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md).
 
 ## Quick start (Docker)
 
 Requires Docker with the Compose plugin.
 
 ```bash
-docker compose up
+docker compose up        # or: make up
 ```
 
 This starts **PostgreSQL 17 + the backend** as one stack. The backend applies database migrations
@@ -53,7 +53,7 @@ cp .env.example .env         # local config — every variable is documented the
 Run the API against the composed Postgres (`docker compose up postgres` gives you just the DB):
 
 ```bash
-alembic upgrade head               # apply migrations (M0: empty baseline)
+make migrate                       # alembic upgrade head (M0: empty baseline)
 uvicorn app.main:app --reload      # Swagger at http://localhost:8000/docs
 ```
 
@@ -70,6 +70,47 @@ Strict type-safety is enforced from the first commit: treat a pyright error as a
 `make typecheck` with the virtualenv **activated**, since pyright resolves types from the active
 environment.
 
+## Local development (frontend)
+
+Requires Node.js ≥ 20. All commands run from `frontend/`.
+
+```bash
+npm install        # one-time setup
+npm start          # dev server at http://localhost:4200 (uses environment.development.ts)
+npm run build      # production build — strict TS type-check included, must be clean
+npm test           # vitest unit tests
+npm run lint       # ESLint, incl. template a11y rules
+```
+
+The API base URL is hard-coded in the build (§8 wiring): `src/environments/environment.ts` is the
+single wiring point (the laptop's LAN address so the mobile PWA can reach it); `ng serve` swaps in
+a localhost variant. The backend's `CORS_ALLOWED_ORIGINS` must include this app's origin.
+
+Once per clone, enable the repo's pre-commit hook (Prettier + lint on staged frontend files):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+## Make targets
+
+All targets run from the repo root; `migrate`, `typecheck`, and `test` also run from `backend/`
+(the root `Makefile` delegates to it; backend targets need the backend virtualenv activated):
+
+| Command          | What it does                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `make dev`       | Start the whole app: Docker stack (detached, waits healthy) + Angular dev server      |
+| `make up`        | Start the backend stack (backend + PostgreSQL) via Docker Compose, in the foreground  |
+| `make down`      | Stop the Docker Compose stack (data survives — named volume)                          |
+| `make check`     | The full local gate: backend typecheck + tests, frontend build + tests + lint         |
+| `make typecheck` | pyright in strict mode over the whole backend — must be zero errors                   |
+| `make test`      | Backend unit tests (frontend tests: `npm test` from `frontend/`)                      |
+| `make migrate`   | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
+
+`make dev` leaves the containers running when you Ctrl+C the dev server — stop them with
+`make down`. `make check` is the everything-bar before merging: it needs both toolchains
+(backend venv active + `frontend/node_modules` installed) and stops at the first failure.
+
 ## Repository layout
 
 The physical layout enforces the three-layer architecture — see
@@ -79,7 +120,8 @@ map.
 ```
 backend/     FastAPI service — app/<feature>/ modules (router → service → repository),
              cross-cutting app/core/, Alembic migrations/, tests/. See backend/CLAUDE.md.
-frontend/    Angular PWA client — not yet created (M0 PR7).
+frontend/    Angular PWA client — views/ → domain/<entity>/ facades → core/, shared/,
+             route-registry stub (§6.5). See frontend/CLAUDE.md.
 docs/        Design doc, milestone plans, requirements — see below.
 ```
 
