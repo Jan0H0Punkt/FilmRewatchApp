@@ -4,6 +4,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    /* TS 6 requires an explicit rootDir wherever outDir is set (the inferred
+       common-source-directory default goes away in TS 7 — see aka.ms/ts6). */
+    "rootDir": "src/app",
     "types": ["vitest/globals"]
   },
   "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]

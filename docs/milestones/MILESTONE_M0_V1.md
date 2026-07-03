@@ -29,7 +29,7 @@ work items (one PR each).
     - [PR5 — Error envelope \& exception handler ✅](#pr5--error-envelope--exception-handler-)
     - [PR6 — Docker Compose stack ✅](#pr6--docker-compose-stack-)
     - [PR7 — Angular workspace skeleton ✅](#pr7--angular-workspace-skeleton-)
-    - [PR8 — README \& developer tooling](#pr8--readme--developer-tooling)
+    - [PR8 — README \& developer tooling ✅](#pr8--readme--developer-tooling-)
   - [5. Suggested Sequencing](#5-suggested-sequencing)
   - [6. Requirement Coverage Matrix](#6-requirement-coverage-matrix)
 
@@ -346,7 +346,7 @@ features in M1+.
 
 ---
 
-### PR8 — README & developer tooling
+### PR8 — README & developer tooling ✅
 
 **Goal.** Satisfy `NFR-MAINT-05` and give the project a single, documented dev loop — the glue that ties M0
 together.
@@ -364,8 +364,8 @@ together.
 **Depends on.** All preceding PRs (it documents what they produced) — lands last.
 
 **Acceptance criteria**
-- [ ] A new contributor can go from clone → running stack → Swagger using only the README.
-- [ ] Each documented command (`up`, `typecheck`, `test`, `migrate`) runs as written.
+- [x] A new contributor can go from clone → running stack → Swagger using only the README. *(Followed the README verbatim: `make up` brings up Postgres + a healthy backend, `GET /api/v1/health` → `200 {"status":"ok"}` and `/docs` → 200 from the host; the README also gained the PR7 frontend loop — `npm install`/`start`/`build`/`test` — and no longer claims `frontend/` doesn't exist.)*
+- [x] Each documented command (`up`, `typecheck`, `test`, `migrate`) runs as written. *(From the repo root, delegating to `backend/Makefile`: `make typecheck` → 0 errors, `make test` → 12 passed, `make up` → both containers healthy, `make migrate` (after the documented `cp .env.example .env`) → `alembic upgrade head` against the composed Postgres with only `alembic_version` present; frontend `npm run build` clean and `npm test` → 2 passed.)*
 
 **Size.** S
 
