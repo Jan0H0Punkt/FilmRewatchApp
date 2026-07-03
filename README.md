@@ -134,7 +134,7 @@ sections (`§5.7`) and requirement IDs (`NFR-MAINT-03`) throughout.
   (stack, architecture, API contract, delivery plan).
 - [docs/milestones/MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md) — the current milestone,
   broken into per-PR work items with acceptance criteria.
-- [docs/requirements/REQUIEREMENTS_V1.md](docs/requirements/REQUIEREMENTS_V1.md) — functional and
+- [docs/requirements/REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) — functional and
   non-functional requirements, with
   [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md) and
   [FUTURE_WORK_V1.md](docs/requirements/FUTURE_WORK_V1.md).

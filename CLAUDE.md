@@ -17,7 +17,7 @@ Development is **design-doc-driven and milestone-sequenced**. Before writing fea
 
 - `docs/designs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
 - `docs/milestones/MILESTONE_M0_V1.md` — the current milestone (M0, "Scaffolding"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
-- `docs/requirements/REQUIEREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
+- `docs/requirements/REQUIREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
 
 **The repo is currently in M0.** M0 delivers *structure without behaviour*: the layout exists, but there is no domain logic, no ORM tables, and no real screens or routes — those arrive in M1+. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the milestone doc). This discipline applies to **both tiers**.
 

@@ -4,7 +4,7 @@
 **Status:** Living  
 **Created:** 2026-06-05  
 **Last updated:** 2026-06-05  
-**Companion to:** [REQUIEREMENTS_V1.md](./REQUIEREMENTS_V1.md) · [DESIGN_V1.md](../designs/DESIGN_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
+**Companion to:** [REQUIREMENTS_V1.md](./REQUIREMENTS_V1.md) · [DESIGN_V1.md](../designs/DESIGN_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
 
 Work intentionally **out of scope for this version** but worth doing later. Nothing here is required for the
 first release; each item notes why it was deferred and where it would slot in. This is a living backlog.

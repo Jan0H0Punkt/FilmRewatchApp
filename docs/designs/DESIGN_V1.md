@@ -4,7 +4,7 @@
 **Status:** Approved  
 **Created:** 2026-05-30  
 **Last updated:** 2026-06-05  
-**Companion to:** [REQUIEREMENTS_V1.md](../requirements/REQUIEREMENTS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md)  
+**Companion to:** [REQUIREMENTS_V1.md](../requirements/REQUIREMENTS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md)  
 
 ---
 
@@ -43,7 +43,7 @@
 
 ## 1. Purpose & Scope of This Document
 
-The [requirements document](../requirements/REQUIEREMENTS_V1.md) defines *what* the application must do and the binding
+The [requirements document](../requirements/REQUIREMENTS_V1.md) defines *what* the application must do and the binding
 architectural principles it must obey. This document defines *how* those requirements are realised: the concrete technology stack, the
 physical code structure that enforces the layering, the API contract, and the sequence in which the system is
 built.
@@ -137,7 +137,7 @@ A single repository with two top-level applications:
 
 ```
 FilmRewatchApp/
-├── docs/                     # REQUIEREMENTS, DESIGN, FUTURE_WORK, OPEN_DECISIONS (+ milestones)
+├── docs/                     # REQUIREMENTS, DESIGN, FUTURE_WORK, OPEN_DECISIONS (+ milestones)
 ├── backend/
 │   ├── app/
 │   │   ├── films/           # one self-contained domain module (shape shown below)
@@ -626,7 +626,7 @@ Deferred work and undecided items are tracked in two dedicated, living documents
 - **[Open Decisions](../requirements/OPEN_DECISIONS_V1.md)** — choices still to make: M0 confirmations (database engine,
   frontend→backend wiring, scheduler mechanism, IndexedDB wrapper), design points the requirements left open
   (search/filter UX, breakpoints, performance targets, rewatch algorithm internals), and requirement deviations
-  to reconcile with REQUIEREMENTS_V1.md (rewatch contract, genre-as-entity, watched-only library, single
+  to reconcile with REQUIREMENTS_V1.md (rewatch contract, genre-as-entity, watched-only library, single
   deployment target, desktop drawer).
 
 Inline `§11` references elsewhere in this document point here — follow the relevant link above.

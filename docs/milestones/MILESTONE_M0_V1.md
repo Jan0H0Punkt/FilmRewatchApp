@@ -4,7 +4,7 @@
 **Status:** Draft  
 **Created:** 2026-06-07  
 **Last updated:** 2026-06-07  
-**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIEREMENTS_V1.md](../requirements/REQUIEREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
+**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIREMENTS_V1.md](../requirements/REQUIREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
 
 This is the detailed definition of the first milestone in the delivery plan ([DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones)),
 which that table summarises in a single row. It expands M0 into independently reviewable, separately-mergeable
