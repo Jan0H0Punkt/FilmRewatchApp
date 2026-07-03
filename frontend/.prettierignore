@@ -1,0 +1,5 @@
+# Build and tool output — never hand-formatted.
+dist/
+.angular/
+coverage/
+package-lock.json

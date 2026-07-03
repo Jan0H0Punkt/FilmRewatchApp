@@ -8,14 +8,15 @@ Run locally with::
 
     uvicorn app.main:app --reload
 
-CORS is wired below from configuration (PR2); the error-envelope exception
-handler (PR5) attaches to this factory later.
+CORS is wired below from configuration (PR2), and the single error-envelope
+exception handler (PR5) is registered on the app (DESIGN §5.4, NFR-MAINT-03).
 """
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.errors import register_exception_handlers
 from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
@@ -75,7 +76,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    # The error-envelope exception handler (PR5) registers here later.
+    # Every error response uses the single envelope (NFR-MAINT-03, §5.4); these
+    # handlers override FastAPI's defaults so no route can emit another shape.
+    register_exception_handlers(app)
     app.include_router(build_api_router())
     return app
 

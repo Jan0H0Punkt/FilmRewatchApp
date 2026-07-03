@@ -4,9 +4,9 @@
 **Status:** Draft  
 **Created:** 2026-06-07  
 **Last updated:** 2026-06-07  
-**Companion to:** [DESIGN_V1.md](./DESIGN_V1.md) · [REQUIEREMENTS_V1.md](./REQUIEREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](./FUTURE_WORK_V1.md)  
+**Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIEREMENTS_V1.md](../requirements/REQUIEREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
 
-This is the detailed definition of the first milestone in the delivery plan ([DESIGN §10](./DESIGN_V1.md#10-delivery-plan-milestones)),
+This is the detailed definition of the first milestone in the delivery plan ([DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones)),
 which that table summarises in a single row. It expands M0 into independently reviewable, separately-mergeable
 work items (one PR each).
 
@@ -25,11 +25,11 @@ work items (one PR each).
     - [PR1 — Backend application skeleton \& OpenAPI ✅](#pr1--backend-application-skeleton--openapi-)
     - [PR2 — Configuration module (config-over-code) ✅](#pr2--configuration-module-config-over-code-)
     - [PR3 — Strict type-safety setup ✅](#pr3--strict-type-safety-setup-)
-    - [PR4 — Database session \& Alembic harness](#pr4--database-session--alembic-harness)
-    - [PR5 — Error envelope \& exception handler](#pr5--error-envelope--exception-handler)
-    - [PR6 — Docker Compose stack](#pr6--docker-compose-stack)
-    - [PR7 — Angular workspace skeleton](#pr7--angular-workspace-skeleton)
-    - [PR8 — README \& developer tooling](#pr8--readme--developer-tooling)
+    - [PR4 — Database session \& Alembic harness ✅](#pr4--database-session--alembic-harness-)
+    - [PR5 — Error envelope \& exception handler ✅](#pr5--error-envelope--exception-handler-)
+    - [PR6 — Docker Compose stack ✅](#pr6--docker-compose-stack-)
+    - [PR7 — Angular workspace skeleton ✅](#pr7--angular-workspace-skeleton-)
+    - [PR8 — README \& developer tooling ✅](#pr8--readme--developer-tooling-)
   - [5. Suggested Sequencing](#5-suggested-sequencing)
   - [6. Requirement Coverage Matrix](#6-requirement-coverage-matrix)
 
@@ -39,10 +39,10 @@ work items (one PR each).
 
 M0 stands up the **empty, runnable shell** of both applications so that every later milestone has a structural
 home and a working dev loop to build into. It delivers **no domain behaviour** — no entities, no business rules,
-no real screens. Its value is entirely in the foundation: the layout of [DESIGN §4](./DESIGN_V1.md#4-repository-layout),
-the API-first contract surface of [§3.2](./DESIGN_V1.md#3-system-architecture), config-over-code
-([§3.5](./DESIGN_V1.md#3-system-architecture)), the runnable Docker stack ([§8.1](./DESIGN_V1.md#81-tooling--infrastructure)),
-and the strict type-safety baseline that [§5.7](./DESIGN_V1.md#57-type-safety) requires be **established now so it
+no real screens. Its value is entirely in the foundation: the layout of [DESIGN §4](../designs/DESIGN_V1.md#4-repository-layout),
+the API-first contract surface of [§3.2](../designs/DESIGN_V1.md#3-system-architecture), config-over-code
+([§3.5](../designs/DESIGN_V1.md#3-system-architecture)), the runnable Docker stack ([§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure)),
+and the strict type-safety baseline that [§5.7](../designs/DESIGN_V1.md#57-type-safety) requires be **established now so it
 is enforced from the first commit rather than retrofitted**.
 
 It is sequenced first because the delivery plan is **backend-first** and because the scaffolding is what makes the
@@ -52,8 +52,8 @@ README that explains how to run and test everything.
 **Delivers (DESIGN §10 row M0):** repo skeletons · config · Docker Compose stack · OpenAPI served · strict
 type-safety setup · top-level README.
 
-**Key requirements:** [§3.5](./DESIGN_V1.md#3-system-architecture), [§4 layout](./DESIGN_V1.md#4-repository-layout),
-[§5.7](./DESIGN_V1.md#57-type-safety), [§8.1](./DESIGN_V1.md#81-tooling--infrastructure), `NFR-MAINT-05`
+**Key requirements:** [§3.5](../designs/DESIGN_V1.md#3-system-architecture), [§4 layout](../designs/DESIGN_V1.md#4-repository-layout),
+[§5.7](../designs/DESIGN_V1.md#57-type-safety), [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure), `NFR-MAINT-05`
 (and `NFR-MAINT-01/03/04`, `§3.2` picked up by the scaffolding).
 
 ---
@@ -69,7 +69,7 @@ M0 is complete when **all** of the following hold (each is checked by exactly on
 - [ ] The backend **strict type-check passes with zero errors** (pyright in strict mode); the shared Pydantic base is `strict=True`, `extra="forbid"` (`§5.7`).
 - [ ] Any error response uses the single envelope `{ "error": { "code": "...", "message": "..." } }` (`NFR-MAINT-03`), verifiable via a forced 404/validation error.
 - [ ] **No environment-specific value is hardcoded** — config is read from the environment via `pydantic-settings`; `.env.example` is committed (`NFR-MAINT-04`, `§3.5`).
-- [ ] The **Angular workspace builds in production mode** (`ng build`), strict TypeScript is on, the [§4](./DESIGN_V1.md#4-repository-layout) folder skeleton exists, and `environment.ts` holds the API base URL (`§8` wiring).
+- [ ] The **Angular workspace builds in production mode** (`ng build`), strict TypeScript is on, the [§4](../designs/DESIGN_V1.md#4-repository-layout) folder skeleton exists, and `environment.ts` holds the API base URL (`§8` wiring).
 - [ ] A **top-level README** documents how to run the app, how to run tests, and where the API docs are (`NFR-MAINT-05`).
 
 ---
@@ -77,11 +77,11 @@ M0 is complete when **all** of the following hold (each is checked by exactly on
 ## 3. Explicitly Out of Scope
 
 M0 deliberately ships **structure without behaviour**. The following are *not* in M0; each is owned by a later
-milestone (per [DESIGN §10](./DESIGN_V1.md#10-delivery-plan-milestones)) and PRs here must not drift into them:
+milestone (per [DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones)) and PRs here must not drift into them:
 
 | Deferred from M0                                                                               | Owned by                           |
 | ---------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Domain ORM models + the 7-table migration ([§5.2](./DESIGN_V1.md#52-data-persistence--models)) | **M1**                             |
+| Domain ORM models + the 7-table migration ([§5.2](../designs/DESIGN_V1.md#52-data-persistence--models)) | **M1**                             |
 | Any business logic — validation rules, duplicate detection, averages, cascade/orphan cleanup   | **M1**                             |
 | Search/filter registry & query endpoints                                                       | **M2**                             |
 | Real Angular views, adaptive navigation, shared presentational components                      | **M3**                             |
@@ -90,7 +90,7 @@ milestone (per [DESIGN §10](./DESIGN_V1.md#10-delivery-plan-milestones)) and PR
 | Offline write queue, auto-drain, idempotency, last-write-wins conflicts                        | **M6**                             |
 | Film merge, inline edit, optional search dimensions, a11y pass                                 | **M7**                             |
 | Error-schema **audit**, responsive/a11y QA                                                     | **M8**                             |
-| TMDB / external-metadata adapter                                                               | [Future Work](./FUTURE_WORK_V1.md) |
+| TMDB / external-metadata adapter                                                               | [Future Work](../requirements/FUTURE_WORK_V1.md) |
 
 The empty module folders (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`, `adapters/` and their frontend
 mirrors) **are** created in M0 as placeholders so the layout exists — they just contain stubs, not logic.
@@ -135,7 +135,7 @@ flowchart LR
 
 ### PR1 — Backend application skeleton & OpenAPI ✅
 
-**Goal.** Create the `backend/` application exactly in the [§4](./DESIGN_V1.md#4-repository-layout) shape and make
+**Goal.** Create the `backend/` application exactly in the [§4](../designs/DESIGN_V1.md#4-repository-layout) shape and make
 it serve a versioned, self-documenting API surface — empty but real.
 
 **In scope**
@@ -144,14 +144,14 @@ it serve a versioned, self-documenting API surface — empty but real.
   `rewatch/`, `adapters/`, each with placeholder `router.py` / `service.py` / `repository.py` / `schemas.py` /
   `models.py` files; plus `app/core/` and `app/main.py`.
 - `main.py` **app factory** that builds the FastAPI app, mounts an `/api/v1` router, and wires each module's
-  (empty) router via the factory ([§5.1](./DESIGN_V1.md#51-layered-structure-fastapi-backend)).
+  (empty) router via the factory ([§5.1](../designs/DESIGN_V1.md#51-layered-structure-fastapi-backend)).
 - A single liveness endpoint `GET /api/v1/health → {"status": "ok"}` (placeholder until M1).
 - OpenAPI/Swagger served by FastAPI (`/docs`, `/openapi.json`), titled and versioned `v1`.
 
 **Out of scope.** No models, services, repositories with logic; no DB connection (PR4); CORS config (PR2).
 
-**Refs.** [§4](./DESIGN_V1.md#4-repository-layout), [§3.2](./DESIGN_V1.md#3-system-architecture),
-[§5.1](./DESIGN_V1.md#51-layered-structure-fastapi-backend), `NFR-MAINT-01`.
+**Refs.** [§4](../designs/DESIGN_V1.md#4-repository-layout), [§3.2](../designs/DESIGN_V1.md#3-system-architecture),
+[§5.1](../designs/DESIGN_V1.md#51-layered-structure-fastapi-backend), `NFR-MAINT-01`.
 
 **Depends on.** —
 
@@ -168,17 +168,17 @@ it serve a versioned, self-documenting API surface — empty but real.
 ### PR2 — Configuration module (config-over-code) ✅
 
 **Goal.** Centralise all environment-specific values behind `pydantic-settings` so nothing is hardcoded
-([§3.5](./DESIGN_V1.md#3-system-architecture), `NFR-MAINT-04`).
+([§3.5](../designs/DESIGN_V1.md#3-system-architecture), `NFR-MAINT-04`).
 
 **In scope**
 - `app/core/config.py`: a typed `Settings` model loading `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, and host/port
   from the environment.
-- CORS middleware wired in the app factory from `CORS_ALLOWED_ORIGINS` (the backend hardcodes **no** client origin — [§3.6](./DESIGN_V1.md#3-system-architecture)/[§8](./DESIGN_V1.md#8-configuration--deployment)).
+- CORS middleware wired in the app factory from `CORS_ALLOWED_ORIGINS` (the backend hardcodes **no** client origin — [§3.6](../designs/DESIGN_V1.md#3-system-architecture)/[§8](../designs/DESIGN_V1.md#8-configuration--deployment)).
 - A committed `backend/.env.example` documenting every variable; real `.env` git-ignored.
 
 **Out of scope.** Actually connecting to the DB (PR4); secrets management beyond env vars.
 
-**Refs.** [§3.5](./DESIGN_V1.md#3-system-architecture), [§8](./DESIGN_V1.md#8-configuration--deployment), `NFR-MAINT-04`.
+**Refs.** [§3.5](../designs/DESIGN_V1.md#3-system-architecture), [§8](../designs/DESIGN_V1.md#8-configuration--deployment), `NFR-MAINT-04`.
 
 **Depends on.** PR1.
 
@@ -194,11 +194,11 @@ it serve a versioned, self-documenting API surface — empty but real.
 
 ### PR3 — Strict type-safety setup ✅
 
-**Goal.** Establish the [§5.7](./DESIGN_V1.md#57-type-safety) baseline **now**, so strictness is enforced from the
+**Goal.** Establish the [§5.7](../designs/DESIGN_V1.md#57-type-safety) baseline **now**, so strictness is enforced from the
 first commit rather than retrofitted. The checker is **pyright** — chosen for its aggressive inference/narrowing
 under strict mode and because it is the same engine as Pylance in VS Code, so editor feedback and the
 `make typecheck` target run the identical checker (a fit for the no-CI, editor-driven workflow of
-[§8.1](./DESIGN_V1.md#81-tooling--infrastructure)).
+[§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure)).
 
 **In scope**
 - **Pyright** as the static checker with `typeCheckingMode: strict` (configured in `pyrightconfig.json` or the
@@ -210,7 +210,7 @@ under strict mode and because it is the same engine as Pylance in VS Code, so ed
 
 **Out of scope.** Frontend strict TS (handled in PR7); domain schemas (M1).
 
-**Refs.** [§5.7](./DESIGN_V1.md#57-type-safety).
+**Refs.** [§5.7](../designs/DESIGN_V1.md#57-type-safety).
 
 **Depends on.** PR1 (and pairs with PR2 so `Settings` is covered).
 
@@ -223,7 +223,7 @@ under strict mode and because it is the same engine as Pylance in VS Code, so ed
 
 ---
 
-### PR4 — Database session & Alembic harness
+### PR4 — Database session & Alembic harness ✅
 
 **Goal.** Stand up the SQLAlchemy 2.x data-access **plumbing** and the Alembic migration harness — **without any
 domain tables** (those are M1).
@@ -232,30 +232,32 @@ domain tables** (those are M1).
 - `app/core/db.py`: engine built from `DATABASE_URL`, a session factory, and a FastAPI request-scoped session
   dependency.
 - A typed declarative `Base` using SQLAlchemy 2.x `Mapped[...]` so columns are visible to the strict checker
-  ([§5.7](./DESIGN_V1.md#57-type-safety)).
+  ([§5.7](../designs/DESIGN_V1.md#57-type-safety)).
 - Alembic initialised under `backend/migrations/` (`alembic.ini`, `env.py`) wired to `DATABASE_URL` from config;
   an **empty baseline revision** (no tables yet).
 
 **Out of scope.** The 7 domain tables / models and their first real migration — **M1**
-([§5.2](./DESIGN_V1.md#52-data-persistence--models)).
+([§5.2](../designs/DESIGN_V1.md#52-data-persistence--models)).
 
-**Refs.** [§4](./DESIGN_V1.md#4-repository-layout), [§5.2](./DESIGN_V1.md#52-data-persistence--models) (plumbing only), [§8.1](./DESIGN_V1.md#81-tooling--infrastructure).
+**Refs.** [§4](../designs/DESIGN_V1.md#4-repository-layout), [§5.2](../designs/DESIGN_V1.md#52-data-persistence--models) (plumbing only), [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure).
 
 **Depends on.** PR2 (DB URL), PR3 (typed `Base`).
 
 **Acceptance criteria**
-- [ ] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only.
-- [ ] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists).
-- [ ] The session dependency type-checks under `--strict`.
+- [x] The session dependency type-checks under `--strict`. *(pyright strict mode: 0 errors over `app/core/db.py` + `migrations/env.py`.)*
+- [x] `alembic upgrade head` succeeds against a running Postgres and creates the Alembic version table only. — **Deferred to PR6** (see note); verified offline meanwhile: `alembic upgrade head --sql` emits exactly the `alembic_version` DDL plus the baseline insert, with no domain tables. *(Closed by PR6: the composed stack runs it at startup — only `alembic_version` exists in the composed Postgres.)*
+- [x] `alembic revision --autogenerate` produces an empty diff (proving the harness is wired but no model drift exists). — **Deferred to PR6** (see note); `Base.metadata` is empty — guarded by `test_baseline_defines_no_tables` — and `env.py` imports no models, so the diff is necessarily empty. *(Closed by PR6: `--autogenerate` against the composed Postgres produced an empty revision.)*
+
+> **Deferred verification (→ PR6).** The two checks above need a **running** Postgres, and the project's running-Postgres deliverable is **PR6** (Docker Compose), whose container startup already runs `alembic upgrade head`. Both are therefore closed as part of PR6 — see its acceptance criteria. All PR4 *code* (engine, session factory, request-scoped dependency, typed `Base`, Alembic harness, empty baseline) is complete, and everything verifiable without a live DB has been checked (strict type-check, offline SQL, empty-metadata test).
 
 **Size.** M
 
 ---
 
-### PR5 — Error envelope & exception handler
+### PR5 — Error envelope & exception handler ✅
 
 **Goal.** Establish the single API error shape so M1's very first endpoint already emits the standard envelope
-(`NFR-MAINT-03`, [§5.4](./DESIGN_V1.md#54-validation--error-handling)).
+(`NFR-MAINT-03`, [§5.4](../designs/DESIGN_V1.md#54-validation--error-handling)).
 
 > **Scoping note.** The M0 row doesn't name the error schema explicitly, but the envelope is cross-cutting
 > `core/` infrastructure that every later endpoint depends on, and it's cheap to stand up now. The *audit* of
@@ -270,22 +272,22 @@ domain tables** (those are M1).
 **Out of scope.** Domain-specific codes (`DUPLICATE_FILM`, `FUTURE_WATCH_DATE`, …) — they arrive with their
 features in M1+.
 
-**Refs.** `NFR-MAINT-03`, [§5.4](./DESIGN_V1.md#54-validation--error-handling).
+**Refs.** `NFR-MAINT-03`, [§5.4](../designs/DESIGN_V1.md#54-validation--error-handling).
 
 **Depends on.** PR1.
 
 **Acceptance criteria**
-- [ ] A forced 404 and a request-validation failure both return the exact envelope shape.
-- [ ] No endpoint can bypass the handler to emit a different error format.
+- [x] A forced 404 and a request-validation failure both return the exact envelope shape. *(`tests/test_core_errors.py`: 404 → `NOT_FOUND`, bad query param → `VALIDATION_ERROR`, each asserted to be exactly `{ error: { code, message } }`.)*
+- [x] No endpoint can bypass the handler to emit a different error format. *(Handlers for `AppError`, `RequestValidationError`, `HTTPException`, and a catch-all `Exception` are registered in the app factory, so validation/HTTP/500/domain errors all render the one envelope — covered by the tests, incl. a 500 that leaks nothing.)*
 
 **Size.** S
 
 ---
 
-### PR6 — Docker Compose stack
+### PR6 — Docker Compose stack ✅
 
 **Goal.** Make the whole backend runnable as one command on the laptop
-([§8.1](./DESIGN_V1.md#81-tooling--infrastructure), [§8.2](./DESIGN_V1.md#82-deployment-target)).
+([§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure), [§8.2](../designs/DESIGN_V1.md#82-deployment-target)).
 
 **In scope**
 - `backend/Dockerfile` (production-style image for the FastAPI app).
@@ -293,54 +295,58 @@ features in M1+.
   (`DATABASE_URL` → the `postgres` service, `CORS_ALLOWED_ORIGINS`), and a backend healthcheck hitting
   `/api/v1/health`.
 - Startup applies migrations (`alembic upgrade head`) before serving, so a fresh `up` is immediately consistent.
+- **Closes PR4's deferred live-database checks** (PR4 ships no running Postgres of its own): against the composed
+  Postgres, confirm `alembic upgrade head` creates only the `alembic_version` table (no domain tables) and
+  `alembic revision --autogenerate` yields an empty diff.
 
 **Out of scope.** Serving the built frontend (M0 frontend builds standalone; reverse-proxy unification is
-[Future Work](./FUTURE_WORK_V1.md)); the rewatch scheduler container (M4).
+[Future Work](../requirements/FUTURE_WORK_V1.md)); the rewatch scheduler container (M4).
 
-**Refs.** [§8.1](./DESIGN_V1.md#81-tooling--infrastructure), [§8.2](./DESIGN_V1.md#82-deployment-target).
+**Refs.** [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure), [§8.2](../designs/DESIGN_V1.md#82-deployment-target).
 
 **Depends on.** PR2 (config), PR4 (DB + migrations).
 
 **Acceptance criteria**
-- [ ] `docker compose up` from a clean checkout brings up Postgres + a healthy backend.
-- [ ] Swagger is reachable from the host; `GET /api/v1/health` → `200` through the container.
-- [ ] Postgres data survives `docker compose down && up` (named volume).
+- [x] `docker compose up` from a clean checkout brings up Postgres + a healthy backend. *(Fresh volume + `--build`: Compose waits on the Postgres healthcheck, the backend applies `alembic upgrade head` before uvicorn serves, and both containers report healthy.)*
+- [x] Swagger is reachable from the host; `GET /api/v1/health` → `200` through the container. *(From the host: `/docs` → 200, `/openapi.json` lists `/api/v1/health` under `v1`, and `GET /api/v1/health` → `200 {"status":"ok"}`.)*
+- [x] Postgres data survives `docker compose down && up` (named volume). *(A probe row written before `down` was still present after `up` — the `pgdata` named volume persists.)*
+- [x] **(inherited from PR4)** Against the composed Postgres, `alembic upgrade head` creates only the Alembic version table, and `alembic revision --autogenerate` produces an empty diff. *(`\dt` after startup shows only `alembic_version`, stamped `0001_baseline`; a host-run `--autogenerate` against the composed DB generated only `pass` bodies — probe revision deleted after inspection.)*
 
 **Size.** M
 
 ---
 
-### PR7 — Angular workspace skeleton
+### PR7 — Angular workspace skeleton ✅
 
-**Goal.** Create the `frontend/` Angular workspace in the [§4](./DESIGN_V1.md#4-repository-layout) shape — a
+**Goal.** Create the `frontend/` Angular workspace in the [§4](../designs/DESIGN_V1.md#4-repository-layout) shape — a
 **buildable, empty** shell. No real screens (those are **M3**).
 
 **In scope**
 - `ng new` standalone-components workspace; Angular Material added.
-- Strict TypeScript (`tsconfig` strict family on) — the frontend half of [§5.7](./DESIGN_V1.md#57-type-safety).
+- Strict TypeScript (`tsconfig` strict family on) — the frontend half of [§5.7](../designs/DESIGN_V1.md#57-type-safety).
 - The §4 folder skeleton as placeholders: `core/`, `shared/`, `domain/{film,rating,tag,genre}/`,
-  `views/{rewatch,library,film-detail}/`, plus a **route-registry stub** ([§6.5](./DESIGN_V1.md#65-views--navigation)).
-- `environment.ts` holding the hard-coded API base URL (LAN-address placeholder) — the [§8](./DESIGN_V1.md#8-configuration--deployment) wiring.
+  `views/{rewatch,library,film-detail}/`, plus a **route-registry stub** ([§6.5](../designs/DESIGN_V1.md#65-views--navigation)).
+- `environment.ts` holding the hard-coded API base URL (LAN-address placeholder) — the [§8](../designs/DESIGN_V1.md#8-configuration--deployment) wiring.
 
 **Out of scope.** Real views, adaptive nav (drawer/bottom-bar), shared components, any data layer or cache — all **M3+**.
 
 > If earlier branches already contain Angular scaffolding (the repo history shows a nav bar / film list /
 > add-film view), fold it into this §4 layout rather than duplicating it; align, don't re-create.
 
-**Refs.** [§4](./DESIGN_V1.md#4-repository-layout), [§5.7](./DESIGN_V1.md#57-type-safety), [§8](./DESIGN_V1.md#8-configuration--deployment) wiring, [§6.1](./DESIGN_V1.md#61-layered-structure-angular-client).
+**Refs.** [§4](../designs/DESIGN_V1.md#4-repository-layout), [§5.7](../designs/DESIGN_V1.md#57-type-safety), [§8](../designs/DESIGN_V1.md#8-configuration--deployment) wiring, [§6.1](../designs/DESIGN_V1.md#61-layered-structure-angular-client).
 
 **Depends on.** — (parallel to the backend track).
 
 **Acceptance criteria**
-- [ ] `ng build` (production) succeeds; `ng serve` renders a placeholder root.
-- [ ] Strict TS is on and the build is type-clean.
-- [ ] Folder tree matches §4; `environment.ts` exposes the API base URL as the single wiring point.
+- [x] `ng build` (production) succeeds; `ng serve` renders a placeholder root. *(Production build clean at ~196 kB initial; `ng serve` → `200` serving the app shell, and the unit test asserts the rendered placeholder `<h1>`.)*
+- [x] Strict TS is on and the build is type-clean. *(`strict` + `strictTemplates` set explicitly in `tsconfig.json` — Angular 22's `ng new` no longer emits them; a probe file with an implicit `any` fails the build, then removed.)*
+- [x] Folder tree matches §4; `environment.ts` exposes the API base URL as the single wiring point. *(`core/`, `shared/`, `domain/{film,rating,tag,genre}/`, `views/{rewatch,library,film-detail}/` as README placeholders + `core/route-registry.ts` stub (§6.5); `environment.ts` hard-codes the LAN-placeholder `apiBaseUrl`, with a localhost `environment.development.ts` swapped in by `ng serve`.)*
 
 **Size.** M
 
 ---
 
-### PR8 — README & developer tooling
+### PR8 — README & developer tooling ✅
 
 **Goal.** Satisfy `NFR-MAINT-05` and give the project a single, documented dev loop — the glue that ties M0
 together.
@@ -349,17 +355,17 @@ together.
 - Top-level `README.md`: how to **run** (`docker compose up`; building/serving the frontend), how to **run tests**,
   and **where the API docs are** (`/docs`).
 - Convenience `make`/script targets the README points at: `typecheck` (PR3), `test`, `up` (PR6), `migrate` (PR4).
-- A short "repo layout" pointer to [DESIGN §4](./DESIGN_V1.md#4-repository-layout).
+- A short "repo layout" pointer to [DESIGN §4](../designs/DESIGN_V1.md#4-repository-layout).
 
-**Out of scope.** CI/CD automation — deferred ([Future Work](./FUTURE_WORK_V1.md): checks run by hand locally).
+**Out of scope.** CI/CD automation — deferred ([Future Work](../requirements/FUTURE_WORK_V1.md): checks run by hand locally).
 
-**Refs.** `NFR-MAINT-05`, [§8.1](./DESIGN_V1.md#81-tooling--infrastructure).
+**Refs.** `NFR-MAINT-05`, [§8.1](../designs/DESIGN_V1.md#81-tooling--infrastructure).
 
 **Depends on.** All preceding PRs (it documents what they produced) — lands last.
 
 **Acceptance criteria**
-- [ ] A new contributor can go from clone → running stack → Swagger using only the README.
-- [ ] Each documented command (`up`, `typecheck`, `test`, `migrate`) runs as written.
+- [x] A new contributor can go from clone → running stack → Swagger using only the README. *(Followed the README verbatim: `make up` brings up Postgres + a healthy backend, `GET /api/v1/health` → `200 {"status":"ok"}` and `/docs` → 200 from the host; the README also gained the PR7 frontend loop — `npm install`/`start`/`build`/`test` — and no longer claims `frontend/` doesn't exist.)*
+- [x] Each documented command (`up`, `typecheck`, `test`, `migrate`) runs as written. *(From the repo root, delegating to `backend/Makefile`: `make typecheck` → 0 errors, `make test` → 12 passed, `make up` → both containers healthy, `make migrate` (after the documented `cp .env.example .env`) → `alembic upgrade head` against the composed Postgres with only `alembic_version` present; frontend `npm run build` clean and `npm test` → 2 passed.)*
 
 **Size.** S
 

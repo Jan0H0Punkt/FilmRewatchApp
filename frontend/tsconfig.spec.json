@@ -1,0 +1,13 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    /* TS 6 requires an explicit rootDir wherever outDir is set (the inferred
+       common-source-directory default goes away in TS 7 — see aka.ms/ts6). */
+    "rootDir": "src/app",
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+}

@@ -25,6 +25,9 @@ dependencies = [
 dev = [
     "pyright>=1.1.390",
     "pytest>=8",
+    # Required by Starlette's TestClient, which the error-envelope tests use to
+    # drive real requests through the app (PR5).
+    "httpx2>=2",
 ]
 
 [tool.hatch.build.targets.wheel]
