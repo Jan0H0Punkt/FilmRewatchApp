@@ -28,7 +28,7 @@ work items (one PR each).
     - [PR4 — Database session \& Alembic harness ✅](#pr4--database-session--alembic-harness-)
     - [PR5 — Error envelope \& exception handler ✅](#pr5--error-envelope--exception-handler-)
     - [PR6 — Docker Compose stack ✅](#pr6--docker-compose-stack-)
-    - [PR7 — Angular workspace skeleton](#pr7--angular-workspace-skeleton)
+    - [PR7 — Angular workspace skeleton ✅](#pr7--angular-workspace-skeleton-)
     - [PR8 — README \& developer tooling](#pr8--readme--developer-tooling)
   - [5. Suggested Sequencing](#5-suggested-sequencing)
   - [6. Requirement Coverage Matrix](#6-requirement-coverage-matrix)
@@ -316,7 +316,7 @@ features in M1+.
 
 ---
 
-### PR7 — Angular workspace skeleton
+### PR7 — Angular workspace skeleton ✅
 
 **Goal.** Create the `frontend/` Angular workspace in the [§4](../designs/DESIGN_V1.md#4-repository-layout) shape — a
 **buildable, empty** shell. No real screens (those are **M3**).
@@ -338,9 +338,9 @@ features in M1+.
 **Depends on.** — (parallel to the backend track).
 
 **Acceptance criteria**
-- [ ] `ng build` (production) succeeds; `ng serve` renders a placeholder root.
-- [ ] Strict TS is on and the build is type-clean.
-- [ ] Folder tree matches §4; `environment.ts` exposes the API base URL as the single wiring point.
+- [x] `ng build` (production) succeeds; `ng serve` renders a placeholder root. *(Production build clean at ~196 kB initial; `ng serve` → `200` serving the app shell, and the unit test asserts the rendered placeholder `<h1>`.)*
+- [x] Strict TS is on and the build is type-clean. *(`strict` + `strictTemplates` set explicitly in `tsconfig.json` — Angular 22's `ng new` no longer emits them; a probe file with an implicit `any` fails the build, then removed.)*
+- [x] Folder tree matches §4; `environment.ts` exposes the API base URL as the single wiring point. *(`core/`, `shared/`, `domain/{film,rating,tag,genre}/`, `views/{rewatch,library,film-detail}/` as README placeholders + `core/route-registry.ts` stub (§6.5); `environment.ts` hard-codes the LAN-placeholder `apiBaseUrl`, with a localhost `environment.development.ts` swapped in by `ng serve`.)*
 
 **Size.** M
 
