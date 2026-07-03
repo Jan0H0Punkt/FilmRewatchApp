@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Orientation
 
-FilmRewatchApp is a two-tier film-tracking app: an Angular PWA client and a FastAPI backend, communicating over a versioned `/api/v1` HTTP/JSON API. Only the **backend** exists so far; the Angular workspace is not yet created.
+FilmRewatchApp is a two-tier film-tracking app: an Angular PWA client and a FastAPI backend, communicating over a versioned `/api/v1` HTTP/JSON API.
 
 It is a monorepo with **per-tier guidance** — when working inside a tier, read that tier's `CLAUDE.md` for its commands, architecture, and conventions:
 
 - **`backend/CLAUDE.md`** — the FastAPI backend (layering, `core/`, migrations, strict typing).
-- **`frontend/CLAUDE.md`** — the Angular client. *Not present yet — created in M0 PR7.*
+- **`frontend/CLAUDE.md`** — the Angular client (strict TS, §6.1 layering, route registry, `environment.ts` wiring).
 
 ## Design-doc-driven & milestone-sequenced
 
