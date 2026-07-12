@@ -151,7 +151,7 @@ FilmRewatchApp/
 │   │   ├── tags/            # same shape — autocomplete, orphan cleanup
 │   │   ├── genres/          # same shape — autocomplete, orphan cleanup
 │   │   ├── rewatch/         # isolated algorithm module (§3.3) + daily scheduler + router
-│   │   ├── adapters/        # Optional external integrations (e.g. TMDB) — §3.4
+│   │   ├── adapters/        # FUTURE, if ever — external integrations (e.g. TMDB), §3.4/§5.6; no folder until one lands
 │   │   ├── core/            # Config, DB session, error schema, idempotency, shared deps
 │   │   └── main.py          # App factory, CORS, wires each module's router
 │   ├── migrations/          # Alembic
@@ -179,7 +179,8 @@ Both tiers are **feature-based** and organised the same way. The backend splits 
 repository). The frontend mirrors this: business logic + data access live in **per-entity** `domain/*` modules,
 while the three screens live in `views/*` and compose them (details in §6.1). This gives FR-EXT new work a
 predictable home: a new screen is a new `views/*` folder, a new entity a new `domain/*` module (FR-EXT-01/02), and
-a new adapter a new `adapters/*` module (FR-EXT-08).
+a new adapter a new `adapters/*` module (FR-EXT-08 — future, if ever; the folder is created only together with the
+first adapter, §5.6).
 
 ---
 
@@ -346,6 +347,11 @@ External metadata lookup (e.g. TMDB) is realised as an **optional adapter** in `
 small interface (`search(query) -> list[FilmDraft]`). It is additive: core create/edit logic never imports an
 adapter. Adapters are toggled via a feature flag (§3.5, FR-EXT-06..08); with no adapter active, manual entry is
 fully functional.
+
+> **Note (2026-07-12):** adapters are future work, if ever. The `app/adapters/` folder is deliberately **not**
+> created in advance (no M0 stub): what keeps adapters hook-in-able is the layering itself — core logic never
+> imports an adapter — so the folder appears only if/when the first adapter is actually built (see
+> [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)).
 
 ### 5.7 Type Safety
 

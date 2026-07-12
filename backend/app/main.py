@@ -45,11 +45,10 @@ def build_api_router() -> APIRouter:
     api.include_router(ratings_router, prefix="/ratings", tags=["ratings"])
     api.include_router(tags_router, prefix="/tags", tags=["tags"])
     api.include_router(genres_router, prefix="/genres", tags=["genres"])
-    api.include_router(
-        rewatch_router, prefix="/rewatch-suggestions", tags=["rewatch"]
-    )
-    # ``app/adapters`` is an internal integration surface (§5.6), not a public
-    # API namespace, so it is intentionally not mounted here.
+    api.include_router(rewatch_router, prefix="/rewatch-suggestions", tags=["rewatch"])
+    # There is no ``app/adapters`` module — the adapter pattern (§5.6) is future
+    # work, if ever. Were one built, it would be an internal integration
+    # surface, not a public API namespace, so nothing would be mounted here.
     return api
 
 

@@ -42,7 +42,7 @@ Within a module, calls flow `router → service → repository` (injected via Fa
 
 ### Application assembly
 
-`app/main.py` is an app factory (`create_app()`): it builds the FastAPI app, adds CORS from config, registers the error handlers, then assembles the `/api/v1` router in `build_api_router()`, mounting each module's router. `app/adapters/` is an internal integration surface (§5.6) and is deliberately **not** mounted as a public namespace.
+`app/main.py` is an app factory (`create_app()`): it builds the FastAPI app, adds CORS from config, registers the error handlers, then assembles the `/api/v1` router in `build_api_router()`, mounting each module's router. There is **no** `app/adapters/` folder — the adapter pattern (§5.6) is future work, if ever; the layering (core logic never imports an adapter) is what keeps it hook-in-able, and the folder is created only together with the first adapter. It would then be an internal integration surface, never mounted as a public namespace.
 
 ### Cross-cutting `core/`
 

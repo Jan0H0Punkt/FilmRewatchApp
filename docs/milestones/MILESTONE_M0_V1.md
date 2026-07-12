@@ -92,8 +92,10 @@ milestone (per [DESIGN §10](../designs/DESIGN_V1.md#10-delivery-plan-milestones
 | Error-schema **audit**, responsive/a11y QA                                                     | **M8**                             |
 | TMDB / external-metadata adapter                                                               | [Future Work](../requirements/FUTURE_WORK_V1.md) |
 
-The empty module folders (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/`, `adapters/` and their frontend
+The empty module folders (`films/`, `ratings/`, `tags/`, `genres/`, `rewatch/` and their frontend
 mirrors) **are** created in M0 as placeholders so the layout exists — they just contain stubs, not logic.
+(`adapters/` is the exception — descoped 2026-07-12: it stays a documented pattern (DESIGN §5.6) with **no**
+folder until an adapter is ever actually built.)
 
 ---
 
@@ -141,8 +143,9 @@ it serve a versioned, self-documenting API surface — empty but real.
 **In scope**
 - `backend/pyproject.toml` (FastAPI, uvicorn, declared deps) and the `app/` package.
 - The full feature-module skeleton from §4 as **empty stubs**: `app/films/`, `ratings/`, `tags/`, `genres/`,
-  `rewatch/`, `adapters/`, each with placeholder `router.py` / `service.py` / `repository.py` / `schemas.py` /
-  `models.py` files; plus `app/core/` and `app/main.py`.
+  `rewatch/`, each with placeholder `router.py` / `service.py` / `repository.py` / `schemas.py` /
+  `models.py` files; plus `app/core/` and `app/main.py`. (`adapters/` was originally listed here but never
+  created — recorded 2026-07-12 as descoped: no folder until an adapter is ever built, DESIGN §5.6.)
 - `main.py` **app factory** that builds the FastAPI app, mounts an `/api/v1` router, and wires each module's
   (empty) router via the factory ([§5.1](../designs/DESIGN_V1.md#51-layered-structure-fastapi-backend)).
 - A single liveness endpoint `GET /api/v1/health → {"status": "ok"}` (placeholder until M1).
