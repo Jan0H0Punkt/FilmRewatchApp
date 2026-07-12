@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Status:** Living  
 **Created:** 2026-06-05  
-**Last updated:** 2026-06-05  
+**Last updated:** 2026-07-12  
 **Companion to:** [REQUIREMENTS_V1.md](./REQUIREMENTS_V1.md) · [DESIGN_V1.md](../designs/DESIGN_V1.md) · [OPEN_DECISIONS_V1.md](./OPEN_DECISIONS_V1.md)  
 
 Work intentionally **out of scope for this version** but worth doing later. Nothing here is required for the
@@ -58,6 +58,21 @@ and backend on the **same origin** behind a reverse proxy (nginx or Caddy servin
 - **Benefit when adopted:** no hard-coded URL, no rebuild to repoint at a different backend, and CORS largely
   eliminated (same origin).
 - **Design refs:** DESIGN §8.
+
+## API access protection (unauthenticated LAN exposure)
+
+The API is deliberately **unauthenticated** and reachable by every device on the home Wi‑Fi — §8.2 exposes port
+8000 so the phone can reach it, and CORS constrains *browsers* only, not direct HTTP clients (`curl`, scripts).
+For v1 this is an **accepted risk** (recorded 2026-07-12, REVIEW_M0 §2.1): single user, trusted home LAN, and
+authentication is explicitly out of scope per REQUIREMENTS §1.3.
+
+- **Why deferred:** single-user app on a trusted home network; no auth in scope (REQUIREMENTS §1.3). "For now
+  it's fine" — but a different solution should be found eventually rather than leaving this permanent.
+- **Future shape (options, cheapest first):** a static bearer token the client sends in a header, checked by one
+  FastAPI middleware; or authentication enforced at the same-origin reverse proxy (see the entry above — adopting
+  the proxy would provide the enforcement point nearly for free). Revisit immediately if the network stops being
+  trusted or the user model changes.
+- **Design refs:** DESIGN §3.6 (CORS), §8.2 (deployment/exposure); REVIEW_M0 §2.1.
 
 ## External metadata integration (adapter pattern)
 
