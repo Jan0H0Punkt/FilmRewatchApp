@@ -11,20 +11,35 @@ FROM python:3.12-slim
 
 # No .pyc litter in the image; logs unbuffered so `docker logs` sees them live.
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PYTHONUNBUFFERED=1
+
+# uv installs dependencies *exactly* as pinned in the committed uv.lock
+# (`--frozen`: fail rather than re-resolve), so two builds months apart produce
+# the same image (NFR-MAINT-04 reproducibility, REVIEW_M0 §2.3). The binary is
+# copied from the official distroless image, pinned to a minor version.
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /bin/uv
 
 WORKDIR /app
+
+# Dependencies first, project second — the (slow, rarely-changing) dependency
+# layer stays cached across app-code edits. `--no-dev` skips the dev group;
+# the final sync editable-installs the `app` package itself.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # The application package plus what the startup `alembic upgrade head` needs:
 # the migration scripts and alembic.ini, whose relative `script_location` /
 # `prepend_sys_path` resolve against this WORKDIR exactly as they do when
 # Alembic runs from `backend/` locally. (`.dockerignore` keeps .env, venvs and
 # tests out of the build context.)
-COPY pyproject.toml alembic.ini ./
+COPY alembic.ini ./
 COPY app ./app
 COPY migrations ./migrations
-RUN pip install --no-cache-dir .
+RUN uv sync --frozen --no-dev
+
+# Run from the project venv uv created — `alembic` and `uvicorn` in CMD
+# resolve from it, no activation needed.
+ENV PATH="/app/.venv/bin:$PATH"
 
 # The app needs no root privileges — run as an unprivileged system user.
 RUN useradd --system --no-create-home appuser

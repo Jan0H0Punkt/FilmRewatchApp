@@ -19,15 +19,20 @@ dependencies = [
     "psycopg[binary]>=3.1",
 ]
 
-# Developer tooling — not shipped in the wheel. Install with `pip install -e .[dev]`
-# (documented in the README, PR8).
-[project.optional-dependencies]
+# Developer tooling — not shipped in the wheel. uv's default `dev` group:
+# `uv sync` installs it (with the app, editable) into `.venv` from the committed
+# uv.lock, so every dev environment is reproducible (NFR-MAINT-04, REVIEW_M0
+# §2.3; documented in the README, PR8). The Docker image skips it (`--no-dev`).
+[dependency-groups]
 dev = [
     "pyright>=1.1.390",
     "pytest>=8",
     # Required by Starlette's TestClient, which the error-envelope tests use to
     # drive real requests through the app (PR5).
     "httpx2>=2",
+    # Linter + formatter (REVIEW_M0 §4) — the backend half of the lint/format
+    # gate the frontend already has (ESLint + Prettier). Config: [tool.ruff].
+    "ruff>=0.15.21",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -41,3 +46,20 @@ include = ["app", "tests"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 pythonPlatform = "Linux"
+
+# Lint + format via Ruff (REVIEW_M0 §4), mirroring the strictness bar §5.7 sets
+# for types: `make lint` / `make format-check` must be clean for every change,
+# and the pre-commit hook enforces both on staged backend files.
+# 100 chars (not the 88 default) because the codebase's heavily-documented
+# style (design-§ citations in docstrings/comments) runs a little long; all
+# existing code already fits, so the bump avoids noisy rewrapping.
+[tool.ruff]
+target-version = "py312" # matches requires-python / [tool.pyright]
+line-length = 100
+
+[tool.ruff.lint]
+# Beyond the E/F defaults: W (pycodestyle warnings), I (import sorting),
+# UP (modernise to 3.12 idioms), B (bugbear — likely-bug patterns), C4
+# (comprehension cleanups), RUF (Ruff's own checks). All mainstream groups;
+# nothing exotic or preview.
+extend-select = ["W", "I", "UP", "B", "C4", "RUF"]

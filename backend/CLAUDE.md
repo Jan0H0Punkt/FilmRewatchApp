@@ -8,18 +8,22 @@ Guidance for the FastAPI backend under `backend/`. See the repo-root `CLAUDE.md`
 
 All backend commands run from `backend/`.
 
+Dependencies are managed with **uv** (`brew install uv`): the committed `uv.lock` pins exact versions (NFR-MAINT-04 reproducibility), and `uv sync` builds `.venv` from it — the app installed editable plus the `dev` group (pyright, pytest, httpx2). Never `pip install` into this project; add/upgrade dependencies via `uv add` / `uv lock --upgrade` so the lockfile moves with `pyproject.toml`.
+
 ```bash
-pip install -e .[dev]              # one-time setup (installs dev tools + httpx2)
-make typecheck                     # pyright in strict mode over app/ + tests/ — must be zero errors
-make test                          # pytest
-pytest tests/test_core_errors.py   # run one test file
-pytest tests/test_core_errors.py::test_name   # run one test
-uvicorn app.main:app --reload      # run the API locally (Swagger at /docs, schema at /openapi.json)
-alembic upgrade head               # apply migrations (M0: empty baseline only)
-alembic revision --autogenerate    # M0: must produce an empty diff (no models yet)
+uv sync                            # one-time setup (creates .venv from uv.lock, installs dev tools + httpx2)
+make typecheck                     # uv run pyright — strict mode over app/ + tests/, must be zero errors
+make lint                          # uv run ruff check — must be clean
+make format-check                  # uv run ruff format --check (fix findings with `make format`)
+make test                          # uv run pytest
+uv run pytest tests/test_core_errors.py   # run one test file
+uv run pytest tests/test_core_errors.py::test_name   # run one test
+uv run uvicorn app.main:app --reload      # run the API locally (Swagger at /docs, schema at /openapi.json)
+uv run alembic upgrade head               # apply migrations (M0: empty baseline only)
+uv run alembic revision --autogenerate    # M0: must produce an empty diff (no models yet)
 ```
 
-There is no CI — `make typecheck` and `make test` are the local gate for every change. The strict type-check must pass with zero errors from the first commit; treat a pyright error as a build break. Run pyright with the project virtualenv **activated** — it resolves types from the active environment, so an unactivated run reports spurious missing-import errors.
+There is no CI — `make typecheck`, `make lint`, `make format-check`, and `make test` are the local gate for every change (the repo-level pre-commit hook runs the Ruff pair on staged backend files). The strict type-check must pass with zero errors from the first commit; treat a pyright or Ruff error as a build break. Everything runs through `uv run`, which uses `backend/.venv` (syncing it first if stale) — no manual activation; pyright resolves types from that environment, so a run outside `uv run`/the venv reports spurious missing-import errors.
 
 Running the app or Alembic requires `DATABASE_URL` (the tests set a placeholder — see Conventions). Copy `.env.example` to `.env` for local values.
 
@@ -54,4 +58,5 @@ Alembic lives in `backend/migrations/`. `env.py` reads `DATABASE_URL` from `core
 ## Conventions
 
 - **Type safety is strict everywhere** (§5.7): pyright strict statically, Pydantic strict at the API boundary, SQLAlchemy 2.x `Mapped[...]` on ORM columns. Match the existing heavily-documented module-docstring style that cites design sections and requirement IDs.
+- **Lint/format is Ruff** (REVIEW_M0 §4): `ruff check` and `ruff format --check` must be clean — config in `pyproject.toml` (`[tool.ruff]`, line length 100, `extend-select` E/W/F/I/UP/B/C4/RUF). Never hand-format against the formatter; run `make format`.
 - **Tests** (`backend/tests/`): `conftest.py` sets a placeholder `DATABASE_URL` via `os.environ.setdefault` so the app can be built offline; real HTTP tests drive the app through Starlette's `TestClient`, which requires **`httpx2`** (already in the `[dev]` deps) — plain `httpx` will make strict pyright fail.

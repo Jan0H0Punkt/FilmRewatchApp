@@ -41,34 +41,38 @@ CORS_ALLOWED_ORIGINS=http://192.168.1.10:4200 docker compose up
 
 ## Local development (backend)
 
-Requires Python ≥ 3.12. All commands run from `backend/`.
+Requires [uv](https://docs.astral.sh/uv/) (`brew install uv`) and Python ≥ 3.12 (uv fetches one if
+needed). Dependencies are pinned in the committed `uv.lock`, so every environment — including the
+Docker image — installs exactly the same versions (NFR-MAINT-04). All commands run from `backend/`.
 
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .[dev]        # one-time setup
+uv sync                      # one-time setup — creates .venv from uv.lock (app + dev tools)
 cp .env.example .env         # local config — every variable is documented there
 ```
 
 Run the API against the composed Postgres (`docker compose up postgres` gives you just the DB):
 
 ```bash
-make migrate                       # alembic upgrade head (M0: empty baseline)
-uvicorn app.main:app --reload      # Swagger at http://localhost:8000/docs
+make migrate                            # alembic upgrade head (M0: empty baseline)
+uv run uvicorn app.main:app --reload    # Swagger at http://localhost:8000/docs
 ```
 
-### Tests & type-check
+### Tests, type-check & lint
 
-There is no CI — these two commands are the **local gate for every change**:
+There is no CI — these commands are the **local gate for every change**:
 
 ```bash
 make test          # pytest
 make typecheck     # pyright in strict mode (§5.7) — must be zero errors
+make lint          # ruff check — must be clean
+make format-check  # ruff format --check (fix findings with `make format`)
 ```
 
-Strict type-safety is enforced from the first commit: treat a pyright error as a build break. Run
-`make typecheck` with the virtualenv **activated**, since pyright resolves types from the active
-environment.
+Strict type-safety is enforced from the first commit: treat a pyright or Ruff error as a build
+break. The make targets run through `uv run`, which resolves the tools from `backend/.venv` — no
+manual activation needed. To change dependencies, use `uv add` / `uv lock --upgrade` (never bare
+`pip`), so `uv.lock` stays in step with `pyproject.toml`.
 
 ## Local development (frontend)
 
@@ -86,7 +90,8 @@ The API base URL is hard-coded in the build (§8 wiring): `src/environments/envi
 single wiring point (the laptop's LAN address so the mobile PWA can reach it); `ng serve` swaps in
 a localhost variant. The backend's `CORS_ALLOWED_ORIGINS` must include this app's origin.
 
-Once per clone, enable the repo's pre-commit hook (Prettier + lint on staged frontend files):
+Once per clone, enable the repo's pre-commit hook (Prettier + ESLint on staged frontend files,
+Ruff lint + format check on staged backend Python files):
 
 ```bash
 git config core.hooksPath .githooks
@@ -94,22 +99,24 @@ git config core.hooksPath .githooks
 
 ## Make targets
 
-All targets run from the repo root; `migrate`, `typecheck`, and `test` also run from `backend/`
-(the root `Makefile` delegates to it; backend targets need the backend virtualenv activated):
+All targets run from the repo root; the backend ones also run from `backend/` (the root
+`Makefile` delegates to it; backend targets run through `uv run`, no activation needed):
 
-| Command          | What it does                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| `make dev`       | Start the whole app: Docker stack (detached, waits healthy) + Angular dev server      |
-| `make up`        | Start the backend stack (backend + PostgreSQL) via Docker Compose, in the foreground  |
-| `make down`      | Stop the Docker Compose stack (data survives — named volume)                          |
-| `make check`     | The full local gate: backend typecheck + tests, frontend build + tests + lint         |
-| `make typecheck` | pyright in strict mode over the whole backend — must be zero errors                   |
-| `make test`      | Backend unit tests (frontend tests: `npm test` from `frontend/`)                      |
-| `make migrate`   | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
+| Command             | What it does                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `make dev`          | Start the whole app: Docker stack (detached, waits healthy) + Angular dev server      |
+| `make up`           | Start the backend stack (backend + PostgreSQL) via Docker Compose, in the foreground  |
+| `make down`         | Stop the Docker Compose stack (data survives — named volume)                          |
+| `make check`        | The full local gate: backend typecheck + lint + format + tests, frontend build + tests + lint |
+| `make typecheck`    | pyright in strict mode over the whole backend — must be zero errors                   |
+| `make lint`         | Ruff lint over the whole backend — must be clean                                      |
+| `make format-check` | Ruff format check (`make -C backend format` rewrites)                                 |
+| `make test`         | Backend unit tests (frontend tests: `npm test` from `frontend/`)                      |
+| `make migrate`      | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
 
 `make dev` leaves the containers running when you Ctrl+C the dev server — stop them with
 `make down`. `make check` is the everything-bar before merging: it needs both toolchains
-(backend venv active + `frontend/node_modules` installed) and stops at the first failure.
+(`uv` installed + `frontend/node_modules` installed) and stops at the first failure.
 
 ## Repository layout
 

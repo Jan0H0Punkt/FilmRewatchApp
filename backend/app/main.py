@@ -39,9 +39,7 @@ def build_api_router() -> APIRouter:
     routes inside each module.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
-    api.add_api_route(
-        "/health", health, methods=["GET"], tags=["health"], summary="Liveness probe"
-    )
+    api.add_api_route("/health", health, methods=["GET"], tags=["health"], summary="Liveness probe")
 
     api.include_router(films_router, prefix="/films", tags=["films"])
     api.include_router(ratings_router, prefix="/ratings", tags=["ratings"])
