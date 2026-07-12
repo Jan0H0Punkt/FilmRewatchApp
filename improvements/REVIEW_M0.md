@@ -13,13 +13,13 @@ M0 is in very good shape: the layering discipline, strict typing on both tiers, 
 | # | Finding | Severity |
 |---|---------|----------|
 | 1 | The **authoritative requirements doc was missing from `main`**; every other doc linked to it — ✅ **resolved 2026-07-03**: restored as `docs/requirements/REQUIREMENTS_V1.md` (typo fixed), all references updated | ~~High~~ resolved |
-| 2 | `frontend/node_modules` was committed into `main`'s history — `.git` is ~98 MB for a scaffolding repo | **High** |
-| 3 | Postgres is published on `0.0.0.0:5432` with default credentials — reachable by anyone on the LAN | **High (security)** |
-| 4 | The API has no authentication and is deliberately LAN-exposed — nowhere recorded as an accepted risk | Medium (security) |
-| 5 | Backend has no dependency lockfile and no linter/formatter (frontend has both) | Medium |
+| 2 | `frontend/node_modules` (and `frontend/.angular` cache) were committed into `main`'s history — `.git` was ~98 MB — ✅ **resolved 2026-07-03**: history rewritten with `git filter-repo`, all branches force-pushed; `.git` now ~700 KB | ~~High~~ resolved |
+| 3 | Postgres is published on `0.0.0.0:5432` with default credentials — reachable by anyone on the LAN — ✅ **resolved 2026-07-12**: loopback bind `127.0.0.1:5432:5432` | ~~High (security)~~ resolved |
+| 4 | The API has no authentication and is deliberately LAN-exposed — nowhere recorded as an accepted risk — ✅ **addressed 2026-07-12**: recorded as accepted risk + future-work entry ("API access protection") with mitigation options | ~~Medium (security)~~ addressed |
+| 5 | Backend has no dependency lockfile and no linter/formatter (frontend has both) — ✅ **resolved 2026-07-12**: uv adopted (committed `uv.lock`, `uv sync --frozen` Docker build) + Ruff lint/format wired into `make check` and the pre-commit hook | ~~Medium~~ resolved |
 | 6 | Google Fonts loaded from CDN — contradicts the offline-first PWA goal | Medium |
-| 7 | Root `.gitignore` gaps (`.DS_Store`, undocumented root `.env`, un-shareable `.claude/skills/`) | Low |
-| 8 | Assorted doc/code mismatches (missing `app/adapters/`, milestone doc still "Draft", stock frontend README) | Low |
+| 7 | Root `.gitignore` gaps (`.DS_Store`, undocumented root `.env`, un-shareable `.claude/skills/`) — mostly addressed 2026-07-12: root `.DS_Store` ignore + root `.env.example` (README-documented) added; `.claude/skills/` sharing still open | Low (partial) |
+| 8 | Assorted doc/code mismatches (missing `app/adapters/`, milestone doc still "Draft", stock frontend README) — `app/adapters/` ✅ resolved 2026-07-12 (decided: no folder, future-if-ever; docs annotated); milestone status + frontend README still open | Low (partial) |
 
 Details, evidence, and recommendations below.
 
@@ -33,17 +33,17 @@ Details, evidence, and recommendations below.
 
 **Resolution:** the file (v1.1, "Approved", 814 lines — verified content-identical to the `origin/plan/design_v1` copy) was restored as **`docs/requirements/REQUIREMENTS_V1.md`**, fixing the long-standing filename typo in the same move. All references across the five linking docs were updated, the in-file relative link to `DESIGN_V1.md` was corrected for the new location, and recovery artifacts (a stray diff hunk-header line, a missing trailing newline) were cleaned. Not yet committed at the time of writing.
 
-### 1.2 `node_modules` is baked into git history
+### 1.2 `node_modules` was baked into git history — ✅ resolved
 
-Commit `c58a3284` ("dummy frontend") and follow-ups (`7729caf2`, `1cedc009`) committed `frontend/node_modules` — and those commits are **reachable from `main`**. Result: `.git` weighs ~98 MB for a repo whose working tree is a few hundred KB. Every clone pays this forever, and it will only compound.
+*(Resolved 2026-07-03, same day as the review.)* Commit `c58a3284` ("dummy frontend") and follow-ups (`7729caf2`, `1cedc009`) committed `frontend/node_modules` — and, as discovered during the fix, `frontend/.angular` build cache too — reachable from every branch. Result: `.git` weighed ~98 MB for a repo whose working tree is a few hundred KB, paid by every clone forever.
 
-**Recommendation:** decide now, while the repo has one contributor:
-- **Rewrite history** with `git filter-repo --path frontend/node_modules --invert-paths` (or BFG), force-push, re-clone. Cheap today, painful later. This is the right call for a young solo repo.
-- Or explicitly accept the bloat and note it — but do it as a decision, not by default.
+**Resolution:** history was rewritten with `git filter-repo --path frontend/node_modules --path frontend/.angular --invert-paths` and all five branches were force-pushed (`main` required temporarily allowing force-pushes in its branch protection rule — re-disable it). All 53 commits survive with identical tree content; `.git` shrank from ~98 MB to ~700 KB. A full pre-rewrite backup exists at `~/Projects/FilmRewatchApp-pre-rewrite-backup.bundle` (delete once confident). Residual caveats: any other clone of the repo must be **re-cloned, not pulled**, and GitHub may retain the old objects server-side via PR refs (e.g. PR #5) until its internal GC runs — fresh clones don't download those.
 
-Also: the stale branches `origin/plan/design_v1`, `origin/requierements_and_planing`, and local `feat/m0` / `pr-4` should be deleted once anything still needed from them (see 1.1!) is recovered.
+Still open from this finding: the stale branches (`plan/design_v1`, `requierements_and_planing`, `feat/m0`, `pr-4`) were rewritten and re-pushed rather than deleted; now that the requirements doc is recovered (1.1), they can be removed.
 
-### 1.3 Postgres is exposed to the whole LAN with default credentials
+### 1.3 Postgres is exposed to the whole LAN with default credentials — ✅ resolved
+
+*(Resolved 2026-07-12: the mapping is now `"127.0.0.1:5432:5432"`, with a comment explaining why the bind is loopback-only. The two smaller healthcheck notes below remain as accepted.)*
 
 `docker-compose.yml` publishes `"5432:5432"`, which binds `0.0.0.0` — and the deployment target is a laptop that is *deliberately* on shared Wi‑Fi (that's how the phone reaches the backend). Combined with the default `filmrewatch`/`filmrewatch` credentials, **anyone on the same network can connect to the database with superuser rights on it**. The port is published only so host-side tooling (`psql`, Alembic) can reach the DB — that need is fully served by a loopback bind.
 
@@ -57,7 +57,9 @@ Two smaller issues in the same file:
 
 ## 2. Security review (rest)
 
-### 2.1 Unauthenticated, LAN-reachable write API — record the *exposure*, not just the scoping
+### 2.1 Unauthenticated, LAN-reachable write API — record the *exposure*, not just the scoping — ✅ addressed
+
+*(Addressed 2026-07-12: recorded in `FUTURE_WORK_V1.md` as a new "API access protection" entry — the exposure is an explicitly accepted risk for now, with the mitigation options below (static bearer token / auth at the reverse proxy) listed as the future solution to pick from.)*
 
 The recovered requirements doc (see 1.1) settles part of this: **"User authentication and multi-user support" is explicitly out of scope** (REQUIREMENTS §1.3), so no-auth is a recorded, deliberate decision — not an oversight, as an earlier draft of this finding suspected.
 
@@ -74,7 +76,9 @@ Worth stating, because it's a lot:
 - **The error envelope leaks nothing**: the catch-all 500 handler returns a fixed message, and there's a test asserting the exception text does not reach the client. Good.
 - **Strict Pydantic at the boundary** (`strict=True`, `extra="forbid"`) is itself a security posture — it rejects smuggled/unknown fields by default.
 
-### 2.3 Supply chain / reproducibility
+### 2.3 Supply chain / reproducibility — ✅ resolved
+
+*(Resolved 2026-07-12: uv adopted — `backend/uv.lock` committed (40 packages pinned), dev deps moved to uv's `[dependency-groups]`, the Dockerfile installs via a two-stage `uv sync --frozen --no-dev` with the uv image minor-pinned, and all commands/docs/Makefiles now go through `uv run`. Verified: pyright strict 0 errors, all tests green, `docker compose build backend` succeeds.)*
 
 - The **backend has no lockfile**. `pyproject.toml` declares floors (`fastapi>=0.115`, etc.), so `pip install` — including *inside the Docker build* — resolves to whatever is newest at build time. Two builds a month apart produce different images; the "strict gate" certifies an environment that silently drifts. The frontend does this right (`package-lock.json` committed, `packageManager` pinned).
 - **Recommendation:** adopt **uv** (the de-facto standard Python project manager in 2026 — see Sources) with a committed `uv.lock`; it replaces `pip` + `venv` with one faster tool and gives the Docker build `uv sync --frozen` reproducibility. If staying on pip, at minimum commit a `pip-compile`-style pinned requirements file used by the Dockerfile.
@@ -96,11 +100,11 @@ Current state is mostly correct (verified: `.env`s, `.pytest_cache/`, `node_modu
 
 | Item | Finding |
 |------|---------|
-| `.DS_Store` | Only ignored under `frontend/` (the CLI-generated file). On macOS these appear everywhere — add `.DS_Store` to the **root** `.gitignore`. |
-| Root `.env` | Ignored (good) but **undocumented**: `docker-compose.yml` reads `POSTGRES_USER`/`POSTGRES_PASSWORD` from it, yet there is no root `.env.example` and the README never mentions it. Add a root `.env.example` (NFR-MAINT-04's own logic demands it). |
+| `.DS_Store` | ✅ **Done 2026-07-12** — added to the root `.gitignore`. (Was only ignored under `frontend/`; on macOS these appear everywhere.) |
+| Root `.env` | ✅ **Done 2026-07-12** — root `.env.example` added (DB credentials, `CORS_ALLOWED_ORIGINS`, incl. the LAN-origin example) and the README's quick-start now explains the Compose-reads-it mechanism and the difference from `backend/.env`. |
 | `.claude/*` | Blanket-ignores `.claude/skills/implement-pr/SKILL.md`, which `CLAUDE_IMPROVEMENTS.md` itself flags as worth sharing. Add `!.claude/skills/` if the skill should survive a re-clone; as-is it exists only on this machine. |
 | `scripts/` | Ignored at root, but no such directory exists and nothing explains it (it's a local-scratch convention). Either add a comment in `.gitignore` or rename the convention to something self-explanatory (`scratch/`). Ignoring a plausibly-committable name like `scripts/` will eventually surprise someone who tries to commit a real script. |
-| `backend/.gitignore` | Fine. Consider adding `.ruff_cache/` when ruff lands (see 4.2). |
+| `backend/.gitignore` | Fine. ✅ `.ruff_cache/` added 2026-07-12 together with Ruff (see §4). |
 
 ---
 
@@ -113,8 +117,8 @@ Checked against the ecosystem as of July 2026:
 | FastAPI + Pydantic v2 + SQLAlchemy 2.x + Alembic | ✅ Correct | Current, healthy, standard stack. FastAPI floor `>=0.115` is old (current: 0.139) but harmless *once a lockfile exists* (2.3). |
 | **pyright strict** | ✅ Correct | The PR3 rationale (same engine as Pylance, editor = gate) is sound and matches the no-CI workflow. |
 | **`httpx2`** | ✅ Correct — and ahead of the curve | Verified: `httpx2` is Pydantic's maintained fork of the stalled httpx; Starlette's TestClient now prefers it and deprecates plain httpx. The repo (and its memory note) made the right call. |
-| pip + venv | ⚠️ Works, but dated | uv is the 2026 default for new projects: lockfile, speed, one tool. See 2.3. |
-| **No Python linter/formatter** | ❌ Gap | The frontend has ESLint + Prettier + a pre-commit hook; the backend has *nothing* between "pyright passes" and "whatever style". **Ruff** (lint + format, one tool) is the de-facto standard and used by FastAPI/Pydantic themselves. Add it and extend `.githooks/pre-commit` to cover staged backend files — right now the hook only guards `frontend/`, which quietly contradicts the "checks are the gate for every change" rule. |
+| pip + venv | ✅ Resolved — migrated to uv 2026-07-12 | uv is the 2026 default for new projects: lockfile, speed, one tool. See 2.3 (resolved). |
+| **No Python linter/formatter** | ✅ Resolved 2026-07-12 | **Ruff** added (lint + format; rules E/F/W/I/UP/B/C4/RUF, line-length 100): `make lint`/`format-check` are part of `make check`, and `.githooks/pre-commit` now guards staged backend files too — the hook previously only covered `frontend/`, quietly contradicting the "checks are the gate for every change" rule. Existing code was already clean (zero lint findings; three lines rewrapped). |
 | Angular 22, standalone, zoneless, signals | ✅ Current | 22.0.x is the latest stable (July 2026). `provideZonelessChangeDetection` + signal-based root is exactly the modern default. |
 | Vitest via `@angular/build:unit-test` | ✅ Correct | The current Angular default runner; Karma is dead. |
 | Angular Material | ✅ Per design | Dependency lands in M0 while unused until M3 — the milestone doc explicitly ordered this, so fine; just don't let the theme drift before M3. |
@@ -147,7 +151,9 @@ The design hard-codes `http://192.168.1.10:8000/api/v1` into `environment.ts` an
 
 The design considered SQLite and confirmed Postgres, and the data-access layering makes the engine swappable, so this review does not contest the decision. It is worth recording, though, that **most of M0's operational surface** — Docker, Compose, the exposed port (finding 1.3), credentials, volumes, `pg_isready`, migrations-vs-running-DB sequencing — exists *because* of that choice, for a single-user app whose write volume is a few rows a day. If operational friction ever becomes a complaint, this is the root cause, and the design's own §2 note says the switch stays cheap.
 
-### 5.4 Version numbering
+### 5.4 Version numbering — ✅ resolved
+
+*(Resolved 2026-07-12: both bumped to `0.1.0`, and a versioning policy is now written down in the README — SemVer at the application level, minor bump per milestone pre-1.0, `1.0.0` reserved for REQUIREMENTS_V1 fully implemented, `/api/v1` contract version independent.)*
 
 `pyproject.toml` and the FastAPI app both declare `version = "1.0.0"` for a milestone that is explicitly "structure without behaviour". Semantically this should be `0.x` until the app does something; `1.0.0` will make future "what changed since 1.0?" questions unanswerable. Trivial now, annoying later.
 
@@ -165,9 +171,9 @@ Short answer: yes — M0 contains remarkably little fat. The empty stubs are all
 |------|-----------|
 | `backend/migrations/.gitkeep`, `backend/tests/.gitkeep` | Obsolete — both directories have real tracked files now. Delete. |
 | `frontend/README.md` | Stock `ng new` boilerplate; even documents `ng e2e`, which isn't configured. Either trim to a pointer at the root README or delete. |
-| `CLAUDE_IMPROVEMENTS.md` at repo root | Useful content, wrong place — it's a tooling/DX backlog that self-describes as "not a product design doc", yet sits at top level beside the README. Move under `docs/` or `.claude/`. |
+| `CLAUDE_IMPROVEMENTS.md` at repo root | ✅ **Addressed 2026-07-12** — moved to `improvements/` (together with this review). |
 | `frontend/src/app/core/route-registry.ts` vs `routes.registry.ts` | Both needed (infrastructure vs. append-only data) — but the names differ by one transposed word and a separator style. A future contributor *will* open the wrong one. Suggest `route-registry.ts` + `route-registry.data.ts` (or fold the empty array into the infra file until M3 needs it). |
-| Missing: `app/adapters/` | The reverse problem — something the docs say exists, doesn't. DESIGN §4 and milestone PR1's in-scope list both include `app/adapters/` stubs, and `backend/CLAUDE.md` speaks of it in the present tense ("`app/adapters/` … is deliberately **not** mounted"). Either create the stub folder or amend the three docs. As-is, the first M-milestone that touches adapters will discover the docs describe a fiction. |
+| Missing: `app/adapters/` | ✅ **Resolved 2026-07-12** — decided the *other* way: no stub folder; adapters are future-if-ever, and the layering (core never imports an adapter) is what keeps them hook-in-able. DESIGN §4 tree + §5.6 note, milestone §3 + PR1 scope, and `backend/CLAUDE.md` all annotated accordingly. |
 | Missing: `LICENSE` | The repo is on GitHub with no license file — if the repo is (or ever becomes) public, that means "all rights reserved" by default. Add one deliberately, or note that it's intentionally private. |
 
 ---
@@ -178,14 +184,14 @@ Short answer: yes — M0 contains remarkably little fat. The empty stubs are all
 2. **`rewatch/` has no `dependencies.py`** while the four CRUD modules do. Defensible (§4 describes rewatch differently), but worth one line in a docstring so it reads as intent, not omission.
 3. **DESIGN §3 typo**: "…the list is only as current as the last successful backend connection (§6.2) —  refreshes it." — a word is missing before "refreshes" (presumably "reopening the view").
 4. **`conftest.py`'s cached-settings interplay**: `get_settings()` is `lru_cache`d; today's tests are fine, but the first M1 test that wants *different* settings will silently get the cached ones. A `get_settings.cache_clear()` fixture (or DI override) will be needed — noting it now saves a debugging session later.
-5. **Compose default `CORS_ALLOWED_ORIGINS`** only covers `http://localhost:4200`; fine for M0, but the LAN origin the whole §8.2 story depends on has to be supplied by hand every `up`. Once a root `.env.example` exists (finding 3), document it there.
+5. **Compose default `CORS_ALLOWED_ORIGINS`** only covers `http://localhost:4200`; fine for M0, but the LAN origin the whole §8.2 story depends on has to be supplied by hand every `up`. ✅ Done 2026-07-12 — documented (with the LAN-origin example) in the new root `.env.example`.
 6. **Production build ships the placeholder IP**: `ng build` defaults to production, which bakes in the fictional `192.168.1.10`. Anyone running the production bundle before editing `environment.ts` gets silent request failures. A loud placeholder (`http://CHANGE-ME...`) would fail obviously instead.
 
 ---
 
 ## 8. Overall verdict
 
-M0's *stated* goal — structure without behaviour, strictness from the first commit, one-command run — is genuinely met, and the execution quality of the code that exists is high (typed everywhere, tested where testable, documented beyond the norm). The findings that matter are repository-level: the requirements doc (1.1, ✅ restored same day), scrub `node_modules` from history while it's cheap (1.2), stop publishing Postgres to the LAN (1.3), and give the backend the same lockfile + lint discipline the frontend already has (2.3, 4). None of these blocks M1, but they get more expensive with every milestone that passes.
+M0's *stated* goal — structure without behaviour, strictness from the first commit, one-command run — is genuinely met, and the execution quality of the code that exists is high (typed everywhere, tested where testable, documented beyond the norm). The findings that matter are repository-level: the requirements doc (1.1, ✅ restored same day), the `node_modules` history bloat (1.2, ✅ scrubbed and force-pushed same day), stop publishing Postgres to the LAN (1.3, ✅ loopback-bound 2026-07-12), and give the backend the same lockfile + lint discipline the frontend already has (2.3 + 4, ✅ uv + Ruff 2026-07-12). The remaining items don't block M1, but they get more expensive with every milestone that passes.
 
 ---
 
