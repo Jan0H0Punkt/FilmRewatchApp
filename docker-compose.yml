@@ -23,7 +23,10 @@ services:
     ports:
       # Published so host-side tools (psql, Alembic run from `backend/`) can
       # target the composed DB — e.g. PR4's autogenerate-empty-diff check.
-      - "5432:5432"
+      # Loopback-only: that need is fully served by localhost, and the laptop
+      # sits on shared Wi‑Fi (§8.2) — never expose the DB to the LAN. Only
+      # the backend's 8000 is LAN-facing (the PWA needs it).
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U filmrewatch -d filmrewatch"]
       interval: 5s
