@@ -132,6 +132,22 @@ frontend/    Angular PWA client — views/ → domain/<entity>/ facades → core
 docs/        Design doc, milestone plans, requirements — see below.
 ```
 
+## Versioning
+
+The app follows [Semantic Versioning 2.0.0](https://semver.org) (`MAJOR.MINOR.PATCH`). The
+"public API" in SemVer's sense is the versioned HTTP contract the client consumes (`/api/v1`):
+
+- **MAJOR** — incompatible changes to the public API. A breaking change also moves the URL
+  contract (`/api/v1` → `/api/v2`), so the app major and the URL version move together.
+- **MINOR** — new, backwards-compatible functionality. Pre-1.0, each completed milestone bumps
+  it (M1 → `0.2.0`, M2 → `0.3.0`, …).
+- **PATCH** — backwards-compatible bug fixes.
+
+The current version is **0.1.0** (M0 scaffolding). Per SemVer, `0.x` is the development phase —
+anything may change at any time. **`1.0.0`** declares the public API stable and is reserved for
+when [REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) is fully implemented (Future Work
+excluded).
+
 ## Documentation
 
 Development is **design-doc-driven and milestone-sequenced**; code and commits reference design

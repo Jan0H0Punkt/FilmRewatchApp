@@ -58,7 +58,10 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title="Film Rewatch API",
-        version="1.0.0",
+        # App version (SemVer 2.0.0, policy in the root README). The /api/vN
+        # contract is SemVer's "public API": breaking it bumps MAJOR and the
+        # URL version together.
+        version="0.1.0",
         summary="Backend API for the Film Rewatch application.",
         description=(
             "Versioned (`v1`) HTTP/JSON API. M0 ships only the structural "

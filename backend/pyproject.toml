@@ -4,7 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "film-rewatch-backend"
-version = "1.0.0"
+# App version (SemVer 2.0.0, policy in the root README): 0.x until
+# REQUIREMENTS_V1 is fully implemented; MAJOR moves with the /api/vN contract.
+version = "0.1.0"
 description = "Backend API for the Film Rewatch application (FastAPI)."
 requires-python = ">=3.12"
 dependencies = [
