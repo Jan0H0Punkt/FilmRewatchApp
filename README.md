@@ -39,6 +39,10 @@ defaults, and you can override e.g. the allowed frontend origin from the shell:
 CORS_ALLOWED_ORIGINS=http://192.168.1.10:4200 docker compose up
 ```
 
+For persistent overrides, copy the root [`.env.example`](.env.example) to `.env` — Docker Compose
+reads it automatically (DB credentials, CORS origins; every variable is documented there). This is
+a *different* file from `backend/.env`, which the app reads when run outside Docker.
+
 ## Local development (backend)
 
 Requires [uv](https://docs.astral.sh/uv/) (`brew install uv`) and Python ≥ 3.12 (uv fetches one if
