@@ -2,3 +2,6 @@
 !.claude/settings.json
 scripts/
 .env
+
+# macOS Finder metadata — appears in any directory, not just frontend/
+.DS_Store
