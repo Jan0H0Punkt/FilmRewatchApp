@@ -33,6 +33,7 @@ class FakeGenreRepository:
     def __init__(self) -> None:
         self.by_lower_name: dict[str, Genre] = {}
         self.deleted_orphans = 0
+        self.links: set[tuple[uuid.UUID, uuid.UUID]] = set()
 
     def get_or_create(self, name: str) -> Genre:
         key = name.lower()
@@ -50,6 +51,15 @@ class FakeGenreRepository:
 
     def delete_orphans(self) -> int:
         return self.deleted_orphans
+
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        self.links.add((film_id, genre_id))
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
+        linked = [
+            genre for genre in self.by_lower_name.values() if (film_id, genre.id) in self.links
+        ]
+        return sorted(linked, key=lambda genre: genre.name.lower())
 
 
 def test_service_trims_surrounding_whitespace_before_storing() -> None:
@@ -155,6 +165,34 @@ def test_list_by_prefix_treats_like_wildcards_literally(db_session: Session) -> 
     # Unescaped, "%" would match anything and "_" any one character.
     assert [genre.name for genre in repository.list_by_prefix("100%")] == ["100% true crime"]
     assert [genre.name for genre in repository.list_by_prefix("10_")] == ["10_special"]
+
+
+def test_link_film_is_idempotent_and_lists_only_that_films_genres(db_session: Session) -> None:
+    # FR-TAG-03 analogue via the film flows: assigning twice is a no-op (§5.5
+    # natural idempotency), and the per-film listing is scoped and alphabetical.
+    repository = GenreRepository(db_session)
+    films = [
+        Film(
+            id=uuid.uuid4(),
+            natural_key=f"genre link probe {n}|2001|jane doe",
+            release_year=2001,
+            director="Jane Doe",
+        )
+        for n in (1, 2)
+    ]
+    db_session.add_all(films)
+    db_session.flush()
+    drama = repository.get_or_create("Drama")
+    western = repository.get_or_create("western")
+    db_session.flush()
+
+    repository.link_film(films[0].id, drama.id)
+    repository.link_film(films[0].id, drama.id)  # repeat: no-op, no violation
+    repository.link_film(films[0].id, western.id)
+    repository.link_film(films[1].id, drama.id)
+
+    assert [genre.name for genre in repository.list_for_film(films[0].id)] == ["Drama", "western"]
+    assert [genre.name for genre in repository.list_for_film(films[1].id)] == ["Drama"]
 
 
 def test_delete_orphans_spares_labels_still_linked_to_a_film(db_session: Session) -> None:
