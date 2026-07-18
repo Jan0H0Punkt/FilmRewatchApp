@@ -5,7 +5,7 @@
 # through `uv run` (resolves pyright/pytest/alembic from backend/.venv — no
 # activation needed). Frontend steps use its npm scripts via `npm --prefix frontend`.
 
-.PHONY: dev up down check typecheck lint format-check test migrate
+.PHONY: dev up down check typecheck lint format-check test test-offline migrate
 
 # Start the whole app: backend + PostgreSQL in Docker (detached, waits until
 # healthy), then the Angular dev server in the foreground at localhost:4200.
@@ -44,9 +44,15 @@ lint:
 format-check:
 	$(MAKE) -C backend format-check
 
-# Backend unit tests (frontend unit tests run via `npm test` from frontend/).
+# Backend tests, full suite: offline plus the DB-bound repository tests (§9),
+# which need the composed Postgres up and skip with a reason otherwise.
+# (Frontend unit tests run via `npm test` from frontend/.)
 test:
 	$(MAKE) -C backend test
+
+# Backend offline subset only — skips the `db`-marked repository tests.
+test-offline:
+	$(MAKE) -C backend test-offline
 
 # Apply Alembic migrations to the DB in DATABASE_URL (M0: empty baseline).
 migrate:
