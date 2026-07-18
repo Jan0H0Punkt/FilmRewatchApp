@@ -18,6 +18,7 @@ Rules enforced here (authoritatively server-side, NFR-INT-03):
   (PR5/PR6/PR7), never a user-facing route.
 """
 
+import uuid
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -52,6 +53,10 @@ class GenreRepositoryProtocol(Protocol):
 
     def delete_orphans(self) -> int: ...
 
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]: ...
+
 
 class GenreService:
     """Genre business rules over an injected repository interface."""
@@ -77,3 +82,15 @@ class GenreService:
     def delete_orphans(self) -> int:
         """Delete genres left on no films (FR-TAG-04 analogue); returns the count."""
         return self._repository.delete_orphans()
+
+    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        """Assign a genre to a film (FR-TAG-03 analogue) — idempotent.
+
+        Called service-to-service by the film flows (M1 PR4/PR5) inside their
+        atomic unit of work; there is no standalone assignment route.
+        """
+        self._repository.link_film(film_id, genre_id)
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
+        """The film's genres for the §7.3 detail projection, alphabetically."""
+        return self._repository.list_for_film(film_id)
