@@ -1,4 +1,4 @@
-"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4/PR5).
+"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6).
 
 The "log a watched film" flow (FR-LIB-01..05): create a film **together with**
 its mandatory first rating, tags, and genres in one atomic unit of work
@@ -6,14 +6,16 @@ its mandatory first rating, tags, and genres in one atomic unit of work
 (FR-LIB-04/05), and the full §7.3 detail projection with the average computed
 on every read (FR-RAT-09/10, NFR-INT-01). PR5 adds the edit flow
 (FR-LIB-06..09): every user-editable field, natural-key recomputation, and the
-same duplicate block applied to edits.
+same duplicate block applied to edits. PR6 adds the delete flow
+(FR-LIB-10..12): the film and everything cascading from it, plus the
+now-orphaned tags/genres, removed atomically.
 
 Layering (§5.1): this service depends on the films repository *interface* and
 reaches the other modules **service-to-service** — tags/genres via their
 ``get_or_create``/``assign``/``unassign``/``delete_orphans`` APIs
 (FR-TAG-01..04), ratings via ``add_entry`` — all sharing the request's
-session, so one ``commit()`` seals the whole create (or edit) and any failure
-rolls everything back (nothing here commits partially).
+session, so one ``commit()`` seals the whole create (or edit, or delete) and
+any failure rolls everything back (nothing here commits partially).
 
 Duplicate detection is the pre-check against the derived key; the §5.2 unique
 constraint on ``films.natural_key`` remains the database backstop should two
@@ -123,6 +125,8 @@ class FilmRepositoryProtocol(Protocol):
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]: ...
 
     def delete_titles(self, film_id: uuid.UUID) -> None: ...
+
+    def delete_film(self, film: Film) -> None: ...
 
     def commit(self) -> None: ...
 
@@ -345,6 +349,25 @@ class FilmService:
             film.updated_at = datetime.now(UTC)
         self._repository.commit()
         return self.get_detail(film.id)
+
+    def delete(self, film_id: uuid.UUID) -> None:
+        """Delete a film and everything that depends on it (FR-LIB-10..12).
+
+        The film row's removal cascades to its titles, rating entries, and
+        tag/genre links at the database level (PR1's ``ON DELETE CASCADE``
+        foreign keys); this method then sweeps for tags/genres the deletion
+        left on no films (FR-LIB-12, FR-TAG-04). Both steps share the film
+        service's one unit of work, sealed by a single commit (NFR-INT-02) —
+        a failure anywhere leaves the film, and everything cascading from it,
+        exactly as it was.
+        """
+        film = self._repository.find_by_id(film_id)
+        if film is None:
+            raise FilmNotFoundError(film_id)
+        self._repository.delete_film(film)
+        self._tags.delete_orphans()
+        self._genres.delete_orphans()
+        self._repository.commit()
 
     def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
         """Replace a film's tags with ``names`` (FR-TAG-03/04), orphans reaped."""

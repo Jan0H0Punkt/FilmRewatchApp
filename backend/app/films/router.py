@@ -1,10 +1,10 @@
-"""Presentation layer for the films module (DESIGN §5.1, M1 PR4/PR5).
+"""Presentation layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6).
 
 FastAPI routes under ``/api/v1/films`` (mounted by the app factory): the
 "log a watched film" create (FR-LIB-01..05), the side-effect-free duplicate
-probe (FR-LIB-05), the §7.3 detail read, and the edit (FR-LIB-06..09). Routing
-and (de)serialisation only — every rule lives in the service layer
-(NFR-MAINT-02).
+probe (FR-LIB-05), the §7.3 detail read, the edit (FR-LIB-06..09), and the
+cascading delete (FR-LIB-10..12). Routing and (de)serialisation only — every
+rule lives in the service layer (NFR-MAINT-02).
 """
 
 from typing import Annotated
@@ -96,3 +96,21 @@ def update_film(
     service: Annotated[FilmService, Depends(get_film_service)],
 ) -> FilmDetailRead:
     return service.update(film_id, payload)
+
+
+@router.delete(
+    "/{film_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a film",
+    description=(
+        "Deletes a film together with its titles, rating history, and tag/genre "
+        "links, atomically (FR-LIB-10..12, NFR-INT-02); any tag or genre the "
+        "deletion leaves on no films is deleted too (FR-TAG-04). An unknown id "
+        "yields the `NOT_FOUND` envelope."
+    ),
+)
+def delete_film(
+    film_id: UUID,
+    service: Annotated[FilmService, Depends(get_film_service)],
+) -> None:
+    service.delete(film_id)
