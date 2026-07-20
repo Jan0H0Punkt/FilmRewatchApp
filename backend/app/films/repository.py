@@ -13,7 +13,7 @@ it calls to seal one. Everything else only stages or reads.
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.films.models import Film, Title
@@ -54,6 +54,17 @@ class FilmRepository:
             .order_by(Title.is_primary.desc(), func.lower(Title.value))
         )
         return self._session.scalars(statement).all()
+
+    def delete_titles(self, film_id: uuid.UUID) -> None:
+        """Remove every title for a film (the edit flow's titles replacement).
+
+        Runs immediately as a Core DELETE rather than through the unit-of-work
+        (M1 PR5, FR-LIB-06) — critically, *before* the replacement titles are
+        staged, so a new primary/original title in the same unit of work never
+        races the one-primary/one-original partial unique indexes (§5.2)
+        against the row it is replacing.
+        """
+        self._session.execute(delete(Title).where(Title.film_id == film_id))
 
     def commit(self) -> None:
         """Seal the caller's unit of work (the service decides when)."""
