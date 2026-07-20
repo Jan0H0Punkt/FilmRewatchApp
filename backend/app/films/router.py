@@ -1,9 +1,10 @@
-"""Presentation layer for the films module (DESIGN §5.1, M1 PR4).
+"""Presentation layer for the films module (DESIGN §5.1, M1 PR4/PR5).
 
 FastAPI routes under ``/api/v1/films`` (mounted by the app factory): the
 "log a watched film" create (FR-LIB-01..05), the side-effect-free duplicate
-probe (FR-LIB-05), and the §7.3 detail read. Routing and (de)serialisation
-only — every rule lives in the service layer (NFR-MAINT-02).
+probe (FR-LIB-05), the §7.3 detail read, and the edit (FR-LIB-06..09). Routing
+and (de)serialisation only — every rule lives in the service layer
+(NFR-MAINT-02).
 """
 
 from typing import Annotated
@@ -17,6 +18,7 @@ from app.films.schemas import (
     DuplicateCheckResult,
     FilmCreate,
     FilmDetailRead,
+    FilmUpdate,
 )
 from app.films.service import FilmService
 
@@ -72,3 +74,25 @@ def get_film(
     service: Annotated[FilmService, Depends(get_film_service)],
 ) -> FilmDetailRead:
     return service.get_detail(film_id)
+
+
+@router.patch(
+    "/{film_id}",
+    summary="Edit a film",
+    description=(
+        "Edits the user-editable fields of a film — titles, release year, "
+        "director, genres, tags, poster, favourite flag, rewatch delay "
+        "(FR-LIB-06). Every field is optional (absent = unchanged); `id`, "
+        "`created_at`, `natural_key`, and `average_rating` are never editable "
+        "(FR-LIB-07). Editing the primary title, release year, or director "
+        "recomputes `natural_key` (FR-LIB-08); an edit that would collide "
+        "with another film is rejected, unapplied, with `DUPLICATE_FILM` "
+        "identifying the collision (FR-LIB-09)."
+    ),
+)
+def update_film(
+    film_id: UUID,
+    payload: FilmUpdate,
+    service: Annotated[FilmService, Depends(get_film_service)],
+) -> FilmDetailRead:
+    return service.update(film_id, payload)

@@ -1,10 +1,10 @@
-"""End-to-end film-flow tests against real Postgres (M1 PR4 — §9, §5.4).
+"""End-to-end film-flow tests against real Postgres (M1 PR4/PR5 — §9, §5.4).
 
 The full stack — router → service → repositories → Postgres — through
 ``TestClient`` over the PR2 harness session: the atomic create (FR-LIB-01..03),
 the duplicate block and probe (FR-LIB-05), the §7.3 detail read with its
-computed average (FR-RAT-05/06/09), and the envelope contract of every error
-path (NFR-MAINT-03).
+computed average (FR-RAT-05/06/09), the edit (FR-LIB-06..09), and the envelope
+contract of every error path (NFR-MAINT-03).
 
 The overridden session dependency rolls back after each request, mirroring
 production's ``get_session`` close semantics: a request that failed leaves
@@ -14,7 +14,7 @@ inside the harness' outer transaction — survives for the test to inspect.
 
 import uuid
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import cast
 
@@ -298,3 +298,225 @@ def test_unknown_and_malformed_film_ids_map_to_the_envelope(db_session: Session)
     malformed = client.get("/api/v1/films/not-a-uuid")
     assert malformed.status_code == 422
     assert _error_code(malformed.json()) == "VALIDATION_ERROR"
+
+
+# --------------------------------------------------------------------------- #
+# The edit flow (FR-LIB-06..09)
+# --------------------------------------------------------------------------- #
+
+
+def _timestamp(value: object) -> datetime:
+    assert isinstance(value, str)
+    return datetime.fromisoformat(value)
+
+
+def test_edit_updates_fields_and_bumps_updated_at_never_created_at(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+
+    response = client.patch(
+        f"/api/v1/films/{film_id}",
+        json={
+            "release_year": 1996,
+            "director": "Someone Else",
+            "is_favorite": True,
+            "delay_days": 7,
+        },
+    )
+    assert response.status_code == 200
+    body = cast(dict[str, object], response.json())
+    assert body["release_year"] == 1996
+    assert body["director"] == "Someone Else"
+    assert body["is_favorite"] is True
+    assert body["delay_days"] == 7
+    assert body["created_at"] == created["created_at"]
+    assert _timestamp(body["updated_at"]) > _timestamp(created["updated_at"])
+    assert "natural_key" not in body
+
+    # Persisted — the detail read agrees.
+    assert client.get(f"/api/v1/films/{film_id}").json() == body
+
+
+def test_edit_empty_body_is_a_no_op(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+
+    response = client.patch(f"/api/v1/films/{film_id}", json={})
+    assert response.status_code == 200
+    assert response.json() == created
+
+
+def test_edit_recomputes_natural_key_and_blocks_a_collision_leaving_the_film_unchanged(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    heat = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    collateral = cast(
+        dict[str, object],
+        client.post(
+            "/api/v1/films",
+            json=_payload(
+                titles=[{"value": "Collateral", "is_primary": True}],
+                release_year=2004,
+                tags=["other"],
+                genre=["Other"],
+            ),
+        ).json(),
+    )
+
+    response = client.patch(
+        f"/api/v1/films/{collateral['id']}",
+        json={
+            "titles": [{"value": "  HEAT ", "is_primary": True}],
+            "release_year": 1995,
+            "director": "michael mann ",
+        },
+    )
+    assert response.status_code == 409
+    body = cast(dict[str, dict[str, str]], response.json())
+    assert body["error"]["code"] == "DUPLICATE_FILM"
+    assert str(heat["id"]) in body["error"]["message"]
+
+    # Unapplied (FR-LIB-09): re-reading shows the film exactly as it was.
+    assert client.get(f"/api/v1/films/{collateral['id']}").json() == collateral
+
+    film_id = uuid.UUID(cast(str, collateral["id"]))
+    film = db_session.get(Film, film_id)
+    assert film is not None
+    assert film.natural_key == "collateral|2004|michael mann"
+
+
+def test_edit_titles_are_replaced_and_the_title_rules_still_hold(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = uuid.UUID(cast(str, created["id"]))
+
+    two_primaries = client.patch(
+        f"/api/v1/films/{film_id}",
+        json={
+            "titles": [
+                {"value": "Heat", "is_primary": True},
+                {"value": "Fuego", "is_primary": True},
+            ]
+        },
+    )
+    assert two_primaries.status_code == 422
+    assert _error_code(two_primaries.json()) == "VALIDATION_ERROR"
+    assert _count(db_session, Title) == 2  # rejected: the original titles survive
+
+    replaced = client.patch(
+        f"/api/v1/films/{film_id}",
+        json={"titles": [{"value": "Collateral", "is_primary": True}]},
+    )
+    assert replaced.status_code == 200
+    body = cast(dict[str, object], replaced.json())
+    titles = cast(list[dict[str, object]], body["titles"])
+    assert [title["value"] for title in titles] == ["Collateral"]
+    assert _count(db_session, Title) == 1  # the old two titles are gone, not just unlinked
+
+
+def test_edit_poster_can_be_set_replaced_and_removed(db_session: Session) -> None:
+    client = _client_over(db_session)
+    body = _payload()
+    del body["poster_image"]
+    created = cast(dict[str, object], client.post("/api/v1/films", json=body).json())
+    film_id = created["id"]
+    assert created["poster_image"] is None
+
+    set_ = client.patch(
+        f"/api/v1/films/{film_id}", json={"poster_image": "https://example.org/a.jpg"}
+    )
+    assert cast(dict[str, object], set_.json())["poster_image"] == "https://example.org/a.jpg"
+
+    invalid = client.patch(f"/api/v1/films/{film_id}", json={"poster_image": "not a url"})
+    assert invalid.status_code == 422
+    assert _error_code(invalid.json()) == "VALIDATION_ERROR"
+
+    removed = client.patch(f"/api/v1/films/{film_id}", json={"poster_image": None})
+    assert removed.status_code == 200
+    assert cast(dict[str, object], removed.json())["poster_image"] is None
+
+    unrelated_edit = client.patch(f"/api/v1/films/{film_id}", json={"is_favorite": True})
+    assert cast(dict[str, object], unrelated_edit.json())["poster_image"] is None
+
+
+def test_edit_rejects_immutable_and_unknown_fields(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+
+    for override in (
+        {"id": str(uuid.uuid4())},
+        {"created_at": "2020-01-01T00:00:00Z"},
+        {"natural_key": "heat|1995|michael mann"},
+        {"average_rating": 1.0},
+    ):
+        response = client.patch(f"/api/v1/films/{film_id}", json=override)
+        assert response.status_code == 422, override
+        assert _error_code(response.json()) == "VALIDATION_ERROR"
+
+    # None of the rejected attempts touched the film.
+    assert client.get(f"/api/v1/films/{film_id}").json() == created
+
+
+def test_edit_reassigns_labels_deleting_orphans_but_sparing_shared_ones(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    solo = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+    client.post(
+        "/api/v1/films",
+        json=_payload(
+            titles=[{"value": "Collateral", "is_primary": True}],
+            release_year=2004,
+            tags=["heist"],
+            genre=["Crime"],
+        ),
+    )
+
+    response = client.patch(
+        f"/api/v1/films/{solo['id']}", json={"tags": ["la"], "genre": ["Thriller"]}
+    )
+    assert response.status_code == 200
+    body = cast(dict[str, object], response.json())
+    assert body["tags"] == ["la"]
+    assert body["genre"] == ["Thriller"]
+
+    # "heist"/"Crime" survive — still linked to the other film.
+    assert db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one()
+    assert db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one()
+
+
+def test_edit_removing_a_films_only_label_link_deletes_the_orphan(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+
+    response = client.patch(
+        f"/api/v1/films/{created['id']}", json={"tags": ["la"], "genre": ["Thriller"]}
+    )
+    assert response.status_code == 200
+
+    assert (
+        db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one_or_none() is None
+    )
+    assert (
+        db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one_or_none()
+        is None
+    )
+
+
+def test_edit_unknown_film_id_maps_to_the_not_found_envelope(db_session: Session) -> None:
+    client = _client_over(db_session)
+    response = client.patch(f"/api/v1/films/{uuid.uuid4()}", json={"is_favorite": True})
+    assert response.status_code == 404
+    assert _error_code(response.json()) == "NOT_FOUND"

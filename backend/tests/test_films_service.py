@@ -1,10 +1,12 @@
-"""Offline tests for the films module (M1 PR4 — FR-LIB-01..05, §5.4, §9).
+"""Offline tests for the films module (M1 PR4/PR5 — FR-LIB-01..09, §5.4, §9).
 
 The service and schema rules, no database: the create schema's §5.4 shape
 (title rules, bounds, strictness), natural-key derivation (FR-LIB-04), and the
 :class:`FilmService` flows against in-memory fakes satisfying the §5.1
 protocols — duplicate block (FR-LIB-05), client-minted ids (§5.5 note),
-label dedupe, and the computed average (FR-RAT-09).
+label dedupe, and the computed average (FR-RAT-09). PR5 adds the edit schema
+and flow (FR-LIB-06..09): immutable fields, poster set/replace/remove,
+natural-key recomputation, and the duplicate block applied to edits.
 
 The same rules are exercised end to end (envelope and all) against real
 Postgres in ``test_films_api.py``.
@@ -19,7 +21,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.films.models import Film, Title
-from app.films.schemas import FilmCreate
+from app.films.schemas import FilmCreate, FilmUpdate
 from app.films.service import (
     DuplicateFilmError,
     FilmIdCollisionError,
@@ -72,6 +74,9 @@ class FakeFilmRepository:
         rows = [title for title in self.titles if title.film_id == film_id]
         return sorted(rows, key=lambda title: (not title.is_primary, title.value.lower()))
 
+    def delete_titles(self, film_id: uuid.UUID) -> None:
+        self.titles = [title for title in self.titles if title.film_id != film_id]
+
     def commit(self) -> None:
         self.commits += 1
 
@@ -83,6 +88,7 @@ class FakeTagService:
         self.by_lower: dict[str, Tag] = {}
         self.links: set[tuple[uuid.UUID, uuid.UUID]] = set()
         self.assign_calls = 0
+        self.orphan_sweeps = 0
 
     def get_or_create(self, name: str) -> Tag:
         trimmed = name.strip()
@@ -94,6 +100,17 @@ class FakeTagService:
     def assign(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
         self.assign_calls += 1
         self.links.add((film_id, tag_id))
+
+    def unassign(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        self.links.discard((film_id, tag_id))
+
+    def delete_orphans(self) -> int:
+        self.orphan_sweeps += 1
+        linked_ids = {tag_id for _, tag_id in self.links}
+        orphans = [tag for tag in self.by_lower.values() if tag.id not in linked_ids]
+        for tag in orphans:
+            del self.by_lower[tag.name.lower()]
+        return len(orphans)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]:
         linked = [tag for tag in self.by_lower.values() if (film_id, tag.id) in self.links]
@@ -116,6 +133,16 @@ class FakeGenreService:
 
     def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
         self.links.add((film_id, genre_id))
+
+    def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        self.links.discard((film_id, genre_id))
+
+    def delete_orphans(self) -> int:
+        linked_ids = {genre_id for _, genre_id in self.links}
+        orphans = [genre for genre in self.by_lower.values() if genre.id not in linked_ids]
+        for genre in orphans:
+            del self.by_lower[genre.name.lower()]
+        return len(orphans)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         linked = [genre for genre in self.by_lower.values() if (film_id, genre.id) in self.links]
@@ -163,6 +190,12 @@ def payload(**overrides: object) -> FilmCreate:
     }
     data.update(overrides)
     return FilmCreate.model_validate(data)
+
+
+def update_payload(**fields: object) -> FilmUpdate:
+    """A ``FilmUpdate`` built from only the given fields — every field left
+    out stays at the schema's "absent/unchanged" default (FR-LIB-06)."""
+    return FilmUpdate.model_validate(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -361,3 +394,255 @@ def test_get_detail_for_an_unknown_id_maps_to_the_not_found_envelope() -> None:
         service.get_detail(uuid.uuid4())
     assert caught.value.code == "NOT_FOUND"
     assert caught.value.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Edit-schema rules (§5.4, FR-LIB-06/07) — strict base, title rules, bounds
+# --------------------------------------------------------------------------- #
+
+
+def test_update_payload_with_no_fields_is_a_valid_no_op() -> None:
+    assert update_payload().model_fields_set == set()
+
+
+def test_update_payload_rejects_immutable_and_unknown_fields() -> None:
+    # FR-LIB-07: id, created_at, natural_key, average_rating are never
+    # editable — the strict base rejects them as unknown fields.
+    for override in (
+        {"id": str(uuid.uuid4())},
+        {"created_at": "2020-01-01T00:00:00Z"},
+        {"natural_key": "heat|1995|michael mann"},
+        {"average_rating": 4.5},
+    ):
+        with pytest.raises(ValidationError):
+            update_payload(**override)
+
+
+def test_update_payload_titles_are_revalidated_against_the_title_rules() -> None:
+    with pytest.raises(ValidationError):
+        update_payload(
+            titles=[
+                {"value": "Heat", "is_primary": True},
+                {"value": "Fuego", "is_primary": True},
+            ]
+        )
+    with pytest.raises(ValidationError):
+        update_payload(
+            titles=[
+                {"value": "Heat", "is_primary": True, "is_original": True},
+                {"value": "Fuego", "is_original": True},
+            ]
+        )
+    lone = update_payload(titles=[{"value": "Heat"}])
+    assert lone.titles is not None and lone.titles[0].is_primary is True
+
+
+def test_update_payload_cannot_clear_titles_tags_or_genres_to_empty() -> None:
+    # The always-≥1 invariant (FR-LIB-01/03) survives edits: an edit can
+    # reassign these lists but never empty them outright.
+    empties: list[dict[str, object]] = [{"titles": []}, {"tags": []}, {"genre": []}]
+    for override in empties:
+        with pytest.raises(ValidationError):
+            update_payload(**override)
+
+
+def test_update_payload_field_bounds_match_create() -> None:
+    current_year = datetime.now(UTC).year
+    with pytest.raises(ValidationError):
+        update_payload(release_year=current_year + 1)
+    with pytest.raises(ValidationError):
+        update_payload(director="   ")
+    with pytest.raises(ValidationError):
+        update_payload(poster_image="not a url")
+    with pytest.raises(ValidationError):
+        update_payload(poster_image="https://" + "x" * 2050)
+
+
+def test_update_payload_null_poster_is_distinguishable_from_absent() -> None:
+    # FR-LIB-15: an explicit null means "remove"; everywhere else (§5.4 note
+    # on the FilmUpdate schema) null means "unchanged" — the service tells the
+    # two apart via ``model_fields_set``.
+    absent = update_payload()
+    assert "poster_image" not in absent.model_fields_set
+
+    explicit_null = update_payload(poster_image=None)
+    assert "poster_image" in explicit_null.model_fields_set
+    assert explicit_null.poster_image is None
+
+
+# --------------------------------------------------------------------------- #
+# Edit flow against the fakes (§9, FR-LIB-06..09)
+# --------------------------------------------------------------------------- #
+
+
+def test_update_unknown_film_id_maps_to_the_not_found_envelope() -> None:
+    service, _, _, _ = make_service()
+    with pytest.raises(FilmNotFoundError):
+        service.update(uuid.uuid4(), update_payload(director="Someone Else"))
+
+
+def test_update_empty_body_is_a_no_op_and_leaves_updated_at_untouched() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(payload())
+    stored = repository.films[created.id]
+    stored.updated_at = datetime(2000, 1, 1, tzinfo=UTC)  # backdated to detect any bump
+
+    detail = service.update(created.id, update_payload())
+
+    assert detail.model_dump(exclude={"updated_at"}) == created.model_dump(exclude={"updated_at"})
+    assert detail.updated_at == datetime(2000, 1, 1, tzinfo=UTC)
+    assert stored.updated_at == datetime(2000, 1, 1, tzinfo=UTC)
+
+
+def test_update_bumps_updated_at_on_a_real_change_but_never_created_at() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(payload())
+    stored = repository.films[created.id]
+    stored.updated_at = datetime(2000, 1, 1, tzinfo=UTC)
+    original_created_at = stored.created_at
+
+    detail = service.update(created.id, update_payload(is_favorite=True))
+
+    assert detail.is_favorite is True
+    assert stored.updated_at > datetime(2000, 1, 1, tzinfo=UTC)
+    assert stored.created_at == original_created_at
+
+
+def test_update_release_year_and_director_persist_and_recompute_the_key() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(payload())
+
+    detail = service.update(created.id, update_payload(release_year=1996, director="Someone Else"))
+
+    assert detail.release_year == 1996
+    assert detail.director == "Someone Else"
+    assert repository.films[created.id].natural_key == derive_natural_key(
+        "Heat", 1996, "Someone Else"
+    )
+
+
+def test_update_a_film_never_collides_with_its_own_unchanged_key() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(payload())
+
+    detail = service.update(
+        created.id,
+        update_payload(
+            titles=[{"value": "Heat", "is_primary": True}],
+            release_year=1995,
+            director="Michael Mann",
+        ),
+    )
+
+    assert detail.id == created.id
+    assert repository.films[created.id].natural_key == derive_natural_key(
+        "Heat", 1995, "Michael Mann"
+    )
+
+
+def test_update_recomputes_natural_key_and_blocks_a_collision_leaving_the_film_unchanged() -> None:
+    service, repository, _, _ = make_service()
+    heat = service.create(payload())
+    collateral = service.create(
+        payload(titles=[{"value": "Collateral", "is_primary": True}], release_year=2004)
+    )
+
+    with pytest.raises(DuplicateFilmError) as caught:
+        service.update(
+            collateral.id,
+            update_payload(
+                titles=[{"value": "  HEAT ", "is_primary": True}],
+                release_year=1995,
+                director="michael mann ",
+            ),
+        )
+    assert caught.value.existing.id == heat.id
+
+    # Unapplied: the film is byte-for-byte as it was (FR-LIB-09).
+    unchanged = repository.films[collateral.id]
+    assert unchanged.release_year == 2004
+    assert unchanged.natural_key == derive_natural_key("Collateral", 2004, "Michael Mann")
+    titles = repository.list_titles(collateral.id)
+    assert [title.value for title in titles] == ["Collateral"]
+
+
+def test_update_recomputes_natural_key_when_only_the_primary_designation_changes() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(
+        payload(
+            titles=[
+                {"value": "Heat", "is_primary": True},
+                {"value": "Fuego", "is_original": True},
+            ]
+        )
+    )
+    assert repository.films[created.id].natural_key == derive_natural_key(
+        "Heat", 1995, "Michael Mann"
+    )
+
+    service.update(
+        created.id,
+        update_payload(
+            titles=[
+                {"value": "Heat", "is_original": True},
+                {"value": "Fuego", "is_primary": True},
+            ]
+        ),
+    )
+
+    assert repository.films[created.id].natural_key == derive_natural_key(
+        "Fuego", 1995, "Michael Mann"
+    )
+    titles = repository.list_titles(created.id)
+    assert {title.value for title in titles} == {"Heat", "Fuego"}
+    primary = next(title for title in titles if title.is_primary)
+    assert primary.value == "Fuego"
+
+
+def test_update_poster_can_be_set_replaced_and_removed() -> None:
+    service, _, _, _ = make_service()
+    created = service.create(payload())
+    assert created.poster_image is None
+
+    set_ = service.update(created.id, update_payload(poster_image="https://example.org/a.jpg"))
+    assert set_.poster_image == "https://example.org/a.jpg"
+
+    replaced = service.update(created.id, update_payload(poster_image="https://example.org/b.jpg"))
+    assert replaced.poster_image == "https://example.org/b.jpg"
+
+    removed = service.update(created.id, update_payload(poster_image=None))
+    assert removed.poster_image is None
+
+    # A later edit that never mentions poster_image leaves it removed.
+    untouched = service.update(created.id, update_payload(is_favorite=True))
+    assert untouched.poster_image is None
+
+
+def test_update_reassigns_tags_and_genres_sparing_labels_shared_with_other_films() -> None:
+    service, _, tags, _ = make_service()
+    solo = service.create(payload(tags=["heist"], genre=["Crime"]))
+    service.create(
+        payload(
+            titles=[{"value": "Collateral", "is_primary": True}],
+            release_year=2004,
+            tags=["heist"],
+            genre=["Crime"],
+        )
+    )
+
+    detail = service.update(solo.id, update_payload(tags=["la"], genre=["Thriller"]))
+
+    assert detail.tags == ["la"]
+    assert detail.genre == ["Thriller"]
+    assert "heist" in tags.by_lower  # still linked to the other film, survives
+
+
+def test_update_removing_a_films_only_label_link_deletes_the_orphan() -> None:
+    service, _, tags, _ = make_service()
+    created = service.create(payload(tags=["heist"]))
+    assert "heist" in tags.by_lower
+
+    service.update(created.id, update_payload(tags=["la"]))
+
+    assert "heist" not in tags.by_lower  # orphaned and reaped (FR-TAG-04)
+    assert "la" in tags.by_lower

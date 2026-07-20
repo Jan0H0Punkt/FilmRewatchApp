@@ -55,6 +55,8 @@ class GenreRepositoryProtocol(Protocol):
 
     def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
 
+    def unlink_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]: ...
 
 
@@ -90,6 +92,15 @@ class GenreService:
         atomic unit of work; there is no standalone assignment route.
         """
         self._repository.link_film(film_id, genre_id)
+
+    def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        """Remove a genre from a film (FR-TAG-04 analogue) — idempotent.
+
+        Called service-to-service by the film flows (M1 PR5+) inside their
+        atomic unit of work; the caller runs :meth:`delete_orphans` afterwards
+        to reap labels the removal left on no films.
+        """
+        self._repository.unlink_film(film_id, genre_id)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         """The film's genres for the §7.3 detail projection, alphabetically."""
