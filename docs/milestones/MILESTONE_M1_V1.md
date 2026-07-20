@@ -1,9 +1,9 @@
 # Milestone M1 — Core Domain (Backend)
 
 **Version:** 1.0  
-**Status:** Draft  
+**Status:** In delivery — PR1–PR4 done, PR5 in progress  
 **Created:** 2026-07-12  
-**Last updated:** 2026-07-12  
+**Last updated:** 2026-07-18  
 **Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIREMENTS_V1.md](../requirements/REQUIREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
 **Predecessor:** [MILESTONE_M0_V1.md](./MILESTONE_M0_V1.md) (complete)
 
@@ -65,16 +65,16 @@ duplicate detection · averages · cascade/orphan cleanup · tests.
 
 M1 is complete when **all** of the following hold (each is checked by at least one PR below):
 
-- [ ] A fresh `docker compose up` applies the **seven-table migration** ([§5.2](../designs/DESIGN_V1.md#52-data-persistence--models))
+- [x] A fresh `docker compose up` applies the **seven-table migration** ([§5.2](../designs/DESIGN_V1.md#52-data-persistence--models))
       on top of the M0 empty baseline; `alembic revision --autogenerate` afterwards yields an **empty diff**
       (models and schema in sync).
-- [ ] A film can be created **only together with** its first rating, ≥1 tag, and ≥1 genre — the watched-only
+- [x] A film can be created **only together with** its first rating, ≥1 tag, and ≥1 genre — the watched-only
       library invariant (`FR-LIB-01/03`); the whole create commits **atomically**.
 - [ ] `natural_key` is derived server-side from primary title + release year + director, recomputed on relevant
       edits, and **never appears** in any request or response (`FR-LIB-04/08`).
 - [ ] Duplicate creation and colliding edits are **blocked** with a `DUPLICATE_FILM` error identifying the
       existing film; `POST /films/duplicate-check` answers the same question without side effects (`FR-LIB-05/09`).
-- [ ] `GET /films/{id}` returns the full [§7.3](../requirements/REQUIREMENTS_V1.md#73-film-detail-view) projection —
+- [x] `GET /films/{id}` returns the full [§7.3](../requirements/REQUIREMENTS_V1.md#73-film-detail-view) projection —
       titles, genres, tags, rating history (most recent first), and an `average_rating` **computed from the
       history on every read**, never stored or stale (`FR-RAT-05/09/10`, `NFR-INT-01`).
 - [ ] Edits update `updated_at`; `id` and `created_at` are never editable (`FR-LIB-07/08`).
@@ -82,10 +82,10 @@ M1 is complete when **all** of the following hold (each is checked by at least o
       genres left on no films are deleted (`FR-LIB-12`, `FR-TAG-04`).
 - [ ] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
       rating deletes the **whole film** (`FR-RAT-01..04/07`).
-- [ ] `GET /tags` and `GET /genres` serve prefix-filtered lookups for autocomplete (`FR-TAG-06` + genre analogue).
+- [x] `GET /tags` and `GET /genres` serve prefix-filtered lookups for autocomplete (`FR-TAG-06` + genre analogue).
 - [ ] Every error response — including the new domain errors — uses the single envelope with **stable codes**
       (`NFR-MAINT-03`, [§5.4](../designs/DESIGN_V1.md#54-validation--error-handling)).
-- [ ] Repository tests run against a **real Postgres** ([§9](../designs/DESIGN_V1.md#9-testing-strategy)); services
+- [x] Repository tests run against a **real Postgres** ([§9](../designs/DESIGN_V1.md#9-testing-strategy)); services
       are unit-tested against fake repositories; strict typecheck, lint, format, and tests are all green.
 - [ ] OpenAPI documents the full M1 surface (`NFR-MAINT-01`).
 
@@ -152,6 +152,8 @@ flowchart LR
 
 ### PR1 — Domain schema & first real migration
 
+> **Status:** ✅ Done — [PR #8](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/8) (`m1-pr1-domain-schema`)
+
 **Goal.** Turn the empty M0 baseline into the seven-table schema of
 [§5.2](../designs/DESIGN_V1.md#52-data-persistence--models): ORM models registered on `Base.metadata` plus the
 first real Alembic revision. This is the milestone's foundation — every rule the database can enforce is
@@ -182,18 +184,20 @@ rules (value steps, year range — those are §5.4 schema/service concerns).
 
 **Acceptance criteria**
 
-- [ ] `alembic upgrade head` on a fresh Postgres creates the seven tables (+ `alembic_version`); downgrade returns
+- [x] `alembic upgrade head` on a fresh Postgres creates the seven tables (+ `alembic_version`); downgrade returns
       to the empty baseline.
-- [ ] `alembic revision --autogenerate` after upgrade produces an **empty diff**.
-- [ ] DB constraints hold: duplicate `natural_key`, case-insensitively duplicate tag/genre names, and a second
+- [x] `alembic revision --autogenerate` after upgrade produces an **empty diff**.
+- [x] DB constraints hold: duplicate `natural_key`, case-insensitively duplicate tag/genre names, and a second
       primary title for the same film are all rejected by the database; deleting a film row cascades.
-- [ ] Strict type-check passes with zero errors; the M0 empty-metadata guard test is replaced by the M1 version.
+- [x] Strict type-check passes with zero errors; the M0 empty-metadata guard test is replaced by the M1 version.
 
 **Size.** M
 
 ---
 
 ### PR2 — Postgres-backed repository test harness
+
+> **Status:** ✅ Done — [PR #9](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/9) (`m1-pr2-test-harness`)
 
 **Goal.** [§9](../designs/DESIGN_V1.md#9-testing-strategy) requires repository tests against a **real Postgres**;
 M0's tests ran fully offline against a placeholder `DATABASE_URL`. Stand up the fixtures every following PR's
@@ -218,16 +222,18 @@ repository tests will use.
 
 **Acceptance criteria**
 
-- [ ] A sample repository round-trip test passes against the composed Postgres.
-- [ ] With Postgres down, the DB-bound tests skip with a clear reason and the offline subset still passes.
-- [ ] A test overriding a setting does not leak it into subsequent tests.
-- [ ] The documented dev loop (README / Makefile) says how to run each subset.
+- [x] A sample repository round-trip test passes against the composed Postgres.
+- [x] With Postgres down, the DB-bound tests skip with a clear reason and the offline subset still passes.
+- [x] A test overriding a setting does not leak it into subsequent tests.
+- [x] The documented dev loop (README / Makefile) says how to run each subset.
 
 **Size.** S–M
 
 ---
 
 ### PR3 — Tags & genres modules (lookups + shared service API)
+
+> **Status:** ✅ Done — [PR #10](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/10) (`m1-pr3-tags-genres`)
 
 **Goal.** Implement the two **identically-shaped leaf modules**
 ([REQ §4.4](../requirements/REQUIREMENTS_V1.md#44-genre): genres are modelled exactly like tags): case-insensitive
@@ -254,17 +260,19 @@ get-or-create, the orphan-cleanup primitive, and the two read-only lookup endpoi
 
 **Acceptance criteria**
 
-- [ ] `get_or_create` returns the existing row for a case-different name; the unique `lower(name)` index is never
+- [x] `get_or_create` returns the existing row for a case-different name; the unique `lower(name)` index is never
       violated under concurrent-ish use (get-or-create handles the race).
-- [ ] `GET /tags?prefix=co` returns only matching tags (same for genres); responses use strict schemas.
-- [ ] Orphan cleanup deletes a label with zero remaining links and leaves shared labels untouched.
-- [ ] Service rules are unit-tested against fake repositories; repository behaviour against real Postgres (§9).
+- [x] `GET /tags?prefix=co` returns only matching tags (same for genres); responses use strict schemas.
+- [x] Orphan cleanup deletes a label with zero remaining links and leaves shared labels untouched.
+- [x] Service rules are unit-tested against fake repositories; repository behaviour against real Postgres (§9).
 
 **Size.** M
 
 ---
 
 ### PR4 — Film create flow & detail read
+
+> **Status:** ✅ Done — [PR #11](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/11) (`m1-pr4-film-create-read`)
 
 **Goal.** The milestone centrepiece: `POST /films` — the "log a watched film" flow creating the film **with its
 mandatory first rating, tags, and genres in one atomic operation** — plus duplicate detection and the full
@@ -307,21 +315,23 @@ idempotent replay (M6).
 
 **Acceptance criteria**
 
-- [ ] A valid `POST /films` returns `201` with the created film; titles, first rating, and tag/genre links all
+- [x] A valid `POST /films` returns `201` with the created film; titles, first rating, and tag/genre links all
       exist; `created_at`/`updated_at` are set; `natural_key` is derived and **absent from the response**.
-- [ ] Missing `first_rating`, zero tags, zero genres, two primary titles, a future `watch_date`, or a lossy-typed
+- [x] Missing `first_rating`, zero tags, zero genres, two primary titles, a future `watch_date`, or a lossy-typed
       field each yield the `VALIDATION_ERROR` envelope (strict base: unknown fields rejected).
-- [ ] Creating a duplicate (case/whitespace-insensitive on the key parts) yields `DUPLICATE_FILM` identifying the
+- [x] Creating a duplicate (case/whitespace-insensitive on the key parts) yields `DUPLICATE_FILM` identifying the
       existing film; `POST /films/duplicate-check` returns the same verdict **without creating anything**.
-- [ ] `GET /films/{id}` returns the full projection with the correctly rounded average; an unknown id yields the
+- [x] `GET /films/{id}` returns the full projection with the correctly rounded average; an unknown id yields the
       `NOT_FOUND` envelope.
-- [ ] Atomicity: a failure mid-create leaves **no** partial rows (verified against real Postgres).
+- [x] Atomicity: a failure mid-create leaves **no** partial rows (verified against real Postgres).
 
 **Size.** L
 
 ---
 
 ### PR5 — Film edit
+
+> **Status:** 🔄 In progress (`m1-pr5-film-edit`)
 
 **Goal.** `PATCH /films/{id}` — edit every user-editable field with natural-key recomputation and
 duplicate-blocking on edit (`FR-LIB-06..09`).
@@ -360,6 +370,8 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 
 ### PR6 — Film delete, cascade & orphan cleanup
 
+> **Status:** ⏳ Not started
+
 **Goal.** `DELETE /films/{id}` — the atomic cascading delete (`FR-LIB-10..12`, `NFR-INT-02`).
 
 **In scope**
@@ -389,6 +401,8 @@ dialogs (M3).
 ---
 
 ### PR7 — Rating endpoints & the last-rating rule
+
+> **Status:** ⏳ Not started
 
 **Goal.** The standalone rating lifecycle (`FR-RAT-01..08`): add a rating any time, delete one with the
 watched-only invariant — deleting a film's **last** rating deletes the **film**.
@@ -426,6 +440,8 @@ watched-only invariant — deleting a film's **last** rating deletes the **film*
 ---
 
 ### PR8 — OpenAPI polish & M1 contract audit
+
+> **Status:** ⏳ Not started
 
 **Goal.** Keep `NFR-MAINT-01` true as the surface grows from one endpoint to ten: every M1 route fully documented,
 the error contract verified across the whole new surface, and the README caught up.
