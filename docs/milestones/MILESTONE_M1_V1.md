@@ -78,7 +78,7 @@ M1 is complete when **all** of the following hold (each is checked by at least o
       titles, genres, tags, rating history (most recent first), and an `average_rating` **computed from the
       history on every read**, never stored or stale (`FR-RAT-05/09/10`, `NFR-INT-01`).
 - [x] Edits update `updated_at`; `id` and `created_at` are never editable (`FR-LIB-07/08`).
-- [ ] Deleting a film removes its titles, ratings, and tag/genre links **atomically** (`NFR-INT-02`); tags and
+- [x] Deleting a film removes its titles, ratings, and tag/genre links **atomically** (`NFR-INT-02`); tags and
       genres left on no films are deleted (`FR-LIB-12`, `FR-TAG-04`).
 - [ ] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
       rating deletes the **whole film** (`FR-RAT-01..04/07`).
@@ -370,7 +370,7 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 
 ### PR6 — Film delete, cascade & orphan cleanup
 
-> **Status:** 🔄 In progress (`m1-pr6-film-delete`)
+> **Status:** ✅ Done — [PR #13](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/13) (`m1-pr6-film-delete`)
 
 **Goal.** `DELETE /films/{id}` — the atomic cascading delete (`FR-LIB-10..12`, `NFR-INT-02`).
 
@@ -391,10 +391,10 @@ dialogs (M3).
 
 **Acceptance criteria**
 
-- [ ] Deleting a film removes the film, its titles, its ratings, and its links; no partial state survives a
+- [x] Deleting a film removes the film, its titles, its ratings, and its links; no partial state survives a
       mid-delete failure (verified against real Postgres).
-- [ ] Labels used only by the deleted film are gone afterwards; labels shared with other films remain.
-- [ ] Unknown id — and a repeat of a successful delete — yield the `NOT_FOUND` envelope.
+- [x] Labels used only by the deleted film are gone afterwards; labels shared with other films remain.
+- [x] Unknown id — and a repeat of a successful delete — yield the `NOT_FOUND` envelope.
 
 **Size.** S–M
 
@@ -402,7 +402,7 @@ dialogs (M3).
 
 ### PR7 — Rating endpoints & the last-rating rule
 
-> **Status:** ⏳ Not started
+> **Status:** 🔄 In progress (`m1-pr7-ratings`)
 
 **Goal.** The standalone rating lifecycle (`FR-RAT-01..08`): add a rating any time, delete one with the
 watched-only invariant — deleting a film's **last** rating deletes the **film**.
