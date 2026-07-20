@@ -1,7 +1,7 @@
 # Milestone M1 — Core Domain (Backend)
 
 **Version:** 1.0  
-**Status:** In delivery — PR1–PR4 done, PR5 in progress  
+**Status:** All 8 PRs implemented & open — awaiting review/merge into `m1`  
 **Created:** 2026-07-12  
 **Last updated:** 2026-07-18  
 **Companion to:** [DESIGN_V1.md](../designs/DESIGN_V1.md) · [REQUIREMENTS_V1.md](../requirements/REQUIREMENTS_V1.md) · [OPEN_DECISIONS_V1.md](../requirements/OPEN_DECISIONS_V1.md) · [FUTURE_WORK_V1.md](../requirements/FUTURE_WORK_V1.md)  
@@ -70,7 +70,7 @@ M1 is complete when **all** of the following hold (each is checked by at least o
       (models and schema in sync).
 - [x] A film can be created **only together with** its first rating, ≥1 tag, and ≥1 genre — the watched-only
       library invariant (`FR-LIB-01/03`); the whole create commits **atomically**.
-- [ ] `natural_key` is derived server-side from primary title + release year + director, recomputed on relevant
+- [x] `natural_key` is derived server-side from primary title + release year + director, recomputed on relevant
       edits, and **never appears** in any request or response (`FR-LIB-04/08`).
 - [x] Duplicate creation and colliding edits are **blocked** with a `DUPLICATE_FILM` error identifying the
       existing film; `POST /films/duplicate-check` answers the same question without side effects (`FR-LIB-05/09`).
@@ -83,11 +83,11 @@ M1 is complete when **all** of the following hold (each is checked by at least o
 - [x] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
       rating deletes the **whole film** (`FR-RAT-01..04/07`).
 - [x] `GET /tags` and `GET /genres` serve prefix-filtered lookups for autocomplete (`FR-TAG-06` + genre analogue).
-- [ ] Every error response — including the new domain errors — uses the single envelope with **stable codes**
+- [x] Every error response — including the new domain errors — uses the single envelope with **stable codes**
       (`NFR-MAINT-03`, [§5.4](../designs/DESIGN_V1.md#54-validation--error-handling)).
 - [x] Repository tests run against a **real Postgres** ([§9](../designs/DESIGN_V1.md#9-testing-strategy)); services
       are unit-tested against fake repositories; strict typecheck, lint, format, and tests are all green.
-- [ ] OpenAPI documents the full M1 surface (`NFR-MAINT-01`).
+- [x] OpenAPI documents the full M1 surface (`NFR-MAINT-01`).
 
 ---
 
@@ -441,7 +441,7 @@ watched-only invariant — deleting a film's **last** rating deletes the **film*
 
 ### PR8 — OpenAPI polish & M1 contract audit
 
-> **Status:** 🔄 In progress (`m1-pr8-openapi-audit`)
+> **Status:** ✅ Done — [PR #15](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/15) (`m1-pr8-openapi-audit`)
 
 **Goal.** Keep `NFR-MAINT-01` true as the surface grows from one endpoint to ten: every M1 route fully documented,
 the error contract verified across the whole new surface, and the README caught up.
@@ -462,9 +462,9 @@ the error contract verified across the whole new surface, and the README caught 
 
 **Acceptance criteria**
 
-- [ ] `/openapi.json` lists every M1 endpoint with request/response schemas under the `v1` namespace.
-- [ ] The envelope contract test passes over all M1 routes, including each domain error code.
-- [ ] The README's run/test instructions are accurate, including the DB-backed test subset.
+- [x] `/openapi.json` lists every M1 endpoint with request/response schemas under the `v1` namespace.
+- [x] The envelope contract test passes over all M1 routes, including each domain error code.
+- [x] The README's run/test instructions are accurate, including the DB-backed test subset.
 
 **Size.** S
 
