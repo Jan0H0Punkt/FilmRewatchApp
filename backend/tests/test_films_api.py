@@ -1,11 +1,12 @@
-"""End-to-end film-flow tests against real Postgres (M1 PR4/PR5/PR6 — §9, §5.4).
+"""End-to-end film-flow tests against real Postgres (M1 PR4/PR5/PR6/PR7 — §9, §5.4).
 
 The full stack — router → service → repositories → Postgres — through
 ``TestClient`` over the PR2 harness session: the atomic create (FR-LIB-01..03),
 the duplicate block and probe (FR-LIB-05), the §7.3 detail read with its
 computed average (FR-RAT-05/06/09), the edit (FR-LIB-06..09), the cascading
-delete (FR-LIB-10..12), and the envelope contract of every error path
-(NFR-MAINT-03).
+delete (FR-LIB-10..12), the standalone rating lifecycle and the
+last-rating-deletes-the-film rule (FR-RAT-01..08), and the envelope contract
+of every error path (NFR-MAINT-03).
 
 The overridden session dependency rolls back after each request, mirroring
 production's ``get_session`` close semantics: a request that failed leaves
@@ -634,3 +635,214 @@ def test_deleting_an_unknown_or_already_deleted_film_yields_not_found(
     repeat = client.delete(f"/api/v1/films/{film_id}")
     assert repeat.status_code == 404
     assert _error_code(repeat.json()) == "NOT_FOUND"
+
+
+# --------------------------------------------------------------------------- #
+# The standalone rating lifecycle (M1 PR7, FR-RAT-01..08)
+# --------------------------------------------------------------------------- #
+
+
+def test_add_rating_returns_201_and_the_detail_read_reflects_the_updated_average(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+
+    response = client.post(
+        f"/api/v1/films/{film_id}/ratings",
+        json={"value": 3.5, "watch_date": "1995-12-20"},
+    )
+    assert response.status_code == 201
+    added = cast(dict[str, object], response.json())
+    assert set(added) == {"id", "value", "watch_date", "created_at"}
+    assert added["value"] == 3.5
+
+    detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
+    history = cast(list[dict[str, object]], detail["rating_history"])
+    # Most recent watch_date first (FR-RAT-05/06); the original 4.5@12-15 vs
+    # the new 3.5@12-20 — the later watch_date leads.
+    assert [entry["watch_date"] for entry in history] == ["1995-12-20", "1995-12-15"]
+    # (4.5 + 3.5) / 2 = 4.0 (FR-RAT-09/10), fresh on this read (NFR-INT-01).
+    assert detail["average_rating"] == 4.0
+    assert _count(db_session, RatingEntry) == 2
+
+
+def test_add_rating_future_watch_date_yields_the_future_watch_date_envelope(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+
+    response = client.post(
+        f"/api/v1/films/{created['id']}/ratings",
+        json={"value": 3.5, "watch_date": "2999-01-01"},
+    )
+    assert response.status_code == 422
+    assert _error_code(response.json()) == "FUTURE_WATCH_DATE"
+    assert _count(db_session, RatingEntry) == 1  # only the mandatory first rating
+
+
+def test_add_rating_off_step_value_yields_validation_error(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+
+    response = client.post(
+        f"/api/v1/films/{created['id']}/ratings",
+        json={"value": 3.3, "watch_date": "1995-12-20"},
+    )
+    assert response.status_code == 422
+    assert _error_code(response.json()) == "VALIDATION_ERROR"
+    assert _count(db_session, RatingEntry) == 1
+
+
+def test_two_ratings_on_the_same_watch_date_coexist(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+
+    # FR-RAT-04: same-day repeats are allowed — the mandatory first rating was
+    # already recorded on 1995-12-15.
+    response = client.post(
+        f"/api/v1/films/{film_id}/ratings",
+        json={"value": 5.0, "watch_date": "1995-12-15"},
+    )
+    assert response.status_code == 201
+    assert _count(db_session, RatingEntry) == 2
+
+    history = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())["rating_history"],
+    )
+    assert len(history) == 2
+    assert {entry["watch_date"] for entry in history} == {"1995-12-15"}
+
+
+def test_add_rating_unknown_film_id_yields_not_found(db_session: Session) -> None:
+    client = _client_over(db_session)
+    response = client.post(
+        f"/api/v1/films/{uuid.uuid4()}/ratings",
+        json={"value": 3.5, "watch_date": "1995-12-20"},
+    )
+    assert response.status_code == 404
+    assert _error_code(response.json()) == "NOT_FOUND"
+
+
+def test_delete_rating_removes_only_that_entry_when_others_remain(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+    second = cast(
+        dict[str, object],
+        client.post(
+            f"/api/v1/films/{film_id}/ratings",
+            json={"value": 3.0, "watch_date": "1995-12-20"},
+        ).json(),
+    )
+
+    response = client.delete(f"/api/v1/ratings/{second['id']}")
+    assert response.status_code == 200
+    body = cast(dict[str, object], response.json())
+    assert body == {"rating_id": second["id"], "film_id": film_id, "film_deleted": False}
+
+    assert _count(db_session, RatingEntry) == 1
+    assert client.get(f"/api/v1/films/{film_id}").status_code == 200  # the film survives
+
+
+def test_delete_rating_deletes_the_whole_film_when_it_was_the_last_one(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+    film_id = created["id"]
+    history = cast(list[dict[str, object]], created["rating_history"])
+    (only_rating,) = history
+
+    response = client.delete(f"/api/v1/ratings/{only_rating['id']}")
+    assert response.status_code == 200
+    body = cast(dict[str, object], response.json())
+    assert body == {"rating_id": only_rating["id"], "film_id": film_id, "film_deleted": True}
+
+    # The film, its rating, and its now-orphaned labels are all gone —
+    # PR6's cascade + orphan-cleanup flow, reused verbatim (FR-RAT-07).
+    assert client.get(f"/api/v1/films/{film_id}").status_code == 404
+    assert _count(db_session, RatingEntry) == 0
+    assert (
+        db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one_or_none() is None
+    )
+    assert (
+        db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one_or_none()
+        is None
+    )
+
+
+def test_delete_rating_unknown_id_yields_not_found(db_session: Session) -> None:
+    client = _client_over(db_session)
+    response = client.delete(f"/api/v1/ratings/{uuid.uuid4()}")
+    assert response.status_code == 404
+    assert _error_code(response.json()) == "NOT_FOUND"
+
+
+def test_no_patch_or_put_route_exists_for_ratings(db_session: Session) -> None:
+    # FR-RAT-08: corrections are delete-then-recreate, never an edit.
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    history = cast(list[dict[str, object]], created["rating_history"])
+    (rating,) = history
+
+    assert client.patch(f"/api/v1/ratings/{rating['id']}", json={"value": 5.0}).status_code == 405
+    assert client.put(f"/api/v1/ratings/{rating['id']}", json={"value": 5.0}).status_code == 405
+
+
+def test_fixing_a_films_only_rating_requires_add_then_delete_not_delete_then_add(
+    db_session: Session,
+) -> None:
+    # FR-RAT-08: there is no rating-edit endpoint, so "fixing" a film's only
+    # rating means adding the corrected entry *first*, then deleting the
+    # wrong one — deleting the sole rating first is destructive, since it
+    # triggers the last-rating-deletes-the-film rule (FR-RAT-07) before the
+    # correction ever lands.
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post(
+            "/api/v1/films", json=_payload(first_rating={"value": 3.0, "watch_date": "1995-12-15"})
+        ).json(),
+    )
+    film_id = created["id"]
+    history = cast(list[dict[str, object]], created["rating_history"])
+    (wrong_rating,) = history
+
+    # The safe order: add the correction, then delete the mistake.
+    corrected = cast(
+        dict[str, object],
+        client.post(
+            f"/api/v1/films/{film_id}/ratings",
+            json={"value": 4.5, "watch_date": "1995-12-15"},
+        ).json(),
+    )
+    delete_response = client.delete(f"/api/v1/ratings/{wrong_rating['id']}")
+    assert delete_response.status_code == 200
+    assert cast(dict[str, object], delete_response.json())["film_deleted"] is False
+
+    detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
+    remaining = cast(list[dict[str, object]], detail["rating_history"])
+    assert [entry["id"] for entry in remaining] == [corrected["id"]]
+    assert detail["average_rating"] == 4.5
+
+
+def test_deleting_a_films_sole_rating_first_is_destructive(db_session: Session) -> None:
+    # The other ordering: deleting the (only) rating before adding a
+    # replacement destroys the film — demonstrated as a warning against it.
+    client = _client_over(db_session)
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+    history = cast(list[dict[str, object]], created["rating_history"])
+    (only_rating,) = history
+
+    response = client.delete(f"/api/v1/ratings/{only_rating['id']}")
+    assert cast(dict[str, object], response.json())["film_deleted"] is True
+    assert client.get(f"/api/v1/films/{film_id}").status_code == 404
