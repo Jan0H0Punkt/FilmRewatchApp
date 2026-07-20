@@ -1,4 +1,4 @@
-"""Offline tests for the films module (M1 PR4/PR5/PR6 — FR-LIB-01..12, §5.4, §9).
+"""Offline tests for the films module (M1 PR4/PR5/PR6/PR7 — FR-LIB-01..12, §5.4, §9).
 
 The service and schema rules, no database: the create schema's §5.4 shape
 (title rules, bounds, strictness), natural-key derivation (FR-LIB-04), and the
@@ -9,7 +9,10 @@ and flow (FR-LIB-06..09): immutable fields, poster set/replace/remove,
 natural-key recomputation, and the duplicate block applied to edits. PR6 adds
 the delete flow (FR-LIB-10..12): NOT_FOUND on an unknown id, and that both
 label kinds' orphan sweeps are reached — the cascade itself is a
-repository/database behaviour, verified end to end below.
+repository/database behaviour, verified end to end below. PR7 adds the
+standalone rating lifecycle's film-side half (FR-RAT-01..08): adding a rating
+to an existing film, and the last-rating-deletes-the-film invariant, which
+reuses PR6's :meth:`FilmService.delete` verbatim.
 
 The same rules are exercised end to end (envelope and all) against real
 Postgres in ``test_films_api.py``.
@@ -34,6 +37,7 @@ from app.films.service import (
 )
 from app.genres.models import Genre
 from app.ratings.models import RatingEntry
+from app.ratings.service import FutureWatchDateError, RatingNotFoundError
 from app.tags.models import Tag
 
 # --------------------------------------------------------------------------- #
@@ -166,8 +170,11 @@ class FakeRatingService:
 
     def __init__(self) -> None:
         self.by_film: dict[uuid.UUID, list[RatingEntry]] = {}
+        self.by_id: dict[uuid.UUID, RatingEntry] = {}
 
     def add_entry(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntry:
+        if watch_date > _now().date():
+            raise FutureWatchDateError()
         entry = RatingEntry(
             id=uuid.uuid4(),
             film_id=film_id,
@@ -176,7 +183,23 @@ class FakeRatingService:
             created_at=_now(),
         )
         self.by_film.setdefault(film_id, []).append(entry)
+        self.by_id[entry.id] = entry
         return entry
+
+    def get_or_raise(self, rating_id: uuid.UUID) -> RatingEntry:
+        entry = self.by_id.get(rating_id)
+        if entry is None:
+            raise RatingNotFoundError(rating_id)
+        return entry
+
+    def count_for_film(self, film_id: uuid.UUID) -> int:
+        return len(self.by_film.get(film_id, []))
+
+    def delete(self, entry: RatingEntry) -> None:
+        self.by_film[entry.film_id] = [
+            row for row in self.by_film.get(entry.film_id, []) if row.id != entry.id
+        ]
+        del self.by_id[entry.id]
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[RatingEntry]:
         rows = self.by_film.get(film_id, [])
@@ -711,3 +734,95 @@ def test_delete_unknown_film_id_maps_to_not_found_and_changes_nothing() -> None:
     assert repository.commits == commits_before
     assert tags.orphan_sweeps == 0
     assert genres.orphan_sweeps == 0
+
+
+# --------------------------------------------------------------------------- #
+# The standalone rating lifecycle (M1 PR7, FR-RAT-01..08)
+# --------------------------------------------------------------------------- #
+
+# FakeRatingService already raises FutureWatchDateError from add_entry and
+# implements get_or_raise/count_for_film/delete (mirroring the real
+# RatingService), so these tests exercise FilmService.add_rating/delete_rating
+# orchestrating it — the rating-side rules themselves are covered offline in
+# test_ratings_module.py.
+
+
+def test_add_rating_persists_a_new_entry_and_returns_it() -> None:
+    service, repository, _, ratings = make_service()
+    created = service.create(payload())
+    commits_before = repository.commits
+
+    added = service.add_rating(created.id, Decimal("3.0"), date(1995, 12, 20))
+
+    assert added.value == 3.0
+    assert added.watch_date == date(1995, 12, 20)
+    assert len(ratings.by_film[created.id]) == 2
+    assert repository.commits == commits_before + 1
+
+
+def test_add_rating_unknown_film_id_maps_to_not_found() -> None:
+    service, repository, _, ratings = make_service()
+    commits_before = repository.commits
+
+    with pytest.raises(FilmNotFoundError) as caught:
+        service.add_rating(uuid.uuid4(), Decimal("3.0"), date(2026, 1, 1))
+
+    assert caught.value.code == "NOT_FOUND"
+    assert repository.commits == commits_before
+    assert ratings.by_film == {}
+
+
+def test_add_rating_future_watch_date_bubbles_the_domain_error() -> None:
+    service, repository, _, _ = make_service()
+    created = service.create(payload())
+    commits_before = repository.commits
+
+    with pytest.raises(FutureWatchDateError) as caught:
+        service.add_rating(created.id, Decimal("3.0"), date(2999, 1, 1))
+
+    assert caught.value.code == "FUTURE_WATCH_DATE"
+    assert caught.value.status_code == 422
+    assert repository.commits == commits_before  # add_rating's own commit never ran
+
+
+def test_delete_rating_removes_only_the_entry_when_the_film_has_others_left() -> None:
+    service, repository, tags, ratings = make_service()
+    created = service.create(payload())  # one rating already, from create
+    second = service.add_rating(created.id, Decimal("3.0"), date(1995, 12, 20))
+    commits_before = repository.commits
+
+    result = service.delete_rating(second.id)
+
+    assert result.film_deleted is False
+    assert result.rating_id == second.id
+    assert result.film_id == created.id
+    assert len(ratings.by_film[created.id]) == 1
+    assert created.id in repository.films  # the film itself survives
+    assert repository.commits == commits_before + 1
+    assert tags.orphan_sweeps == 0  # no film-level delete was triggered
+
+
+def test_delete_rating_deletes_the_whole_film_when_it_was_the_last_one() -> None:
+    service, repository, tags, genres, ratings = make_service_with_genres()
+    created = service.create(payload())  # exactly one rating (the mandatory first)
+    (only_rating,) = ratings.by_film[created.id]
+
+    result = service.delete_rating(only_rating.id)
+
+    assert result.film_deleted is True
+    assert result.rating_id == only_rating.id
+    assert result.film_id == created.id
+    assert created.id not in repository.films  # PR6's delete flow, reused verbatim
+    assert tags.orphan_sweeps == 1
+    assert genres.orphan_sweeps == 1
+
+
+def test_delete_rating_unknown_id_maps_to_not_found() -> None:
+    service, repository, _, _ = make_service()
+    commits_before = repository.commits
+
+    with pytest.raises(RatingNotFoundError) as caught:
+        service.delete_rating(uuid.uuid4())
+
+    assert caught.value.code == "NOT_FOUND"
+    assert repository.commits == commits_before
