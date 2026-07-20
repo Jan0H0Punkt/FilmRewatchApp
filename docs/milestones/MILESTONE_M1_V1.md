@@ -72,12 +72,12 @@ M1 is complete when **all** of the following hold (each is checked by at least o
       library invariant (`FR-LIB-01/03`); the whole create commits **atomically**.
 - [ ] `natural_key` is derived server-side from primary title + release year + director, recomputed on relevant
       edits, and **never appears** in any request or response (`FR-LIB-04/08`).
-- [ ] Duplicate creation and colliding edits are **blocked** with a `DUPLICATE_FILM` error identifying the
+- [x] Duplicate creation and colliding edits are **blocked** with a `DUPLICATE_FILM` error identifying the
       existing film; `POST /films/duplicate-check` answers the same question without side effects (`FR-LIB-05/09`).
 - [x] `GET /films/{id}` returns the full [§7.3](../requirements/REQUIREMENTS_V1.md#73-film-detail-view) projection —
       titles, genres, tags, rating history (most recent first), and an `average_rating` **computed from the
       history on every read**, never stored or stale (`FR-RAT-05/09/10`, `NFR-INT-01`).
-- [ ] Edits update `updated_at`; `id` and `created_at` are never editable (`FR-LIB-07/08`).
+- [x] Edits update `updated_at`; `id` and `created_at` are never editable (`FR-LIB-07/08`).
 - [ ] Deleting a film removes its titles, ratings, and tag/genre links **atomically** (`NFR-INT-02`); tags and
       genres left on no films are deleted (`FR-LIB-12`, `FR-TAG-04`).
 - [ ] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
@@ -331,7 +331,7 @@ idempotent replay (M6).
 
 ### PR5 — Film edit
 
-> **Status:** 🔄 In progress (`m1-pr5-film-edit`)
+> **Status:** ✅ Done — [PR #12](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/12) (`m1-pr5-film-edit`)
 
 **Goal.** `PATCH /films/{id}` — edit every user-editable field with natural-key recomputation and
 duplicate-blocking on edit (`FR-LIB-06..09`).
@@ -357,12 +357,12 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 
 **Acceptance criteria**
 
-- [ ] Editing the director (or primary title / year) recomputes `natural_key`; a colliding edit leaves the film
+- [x] Editing the director (or primary title / year) recomputes `natural_key`; a colliding edit leaves the film
       **unchanged** and returns `DUPLICATE_FILM` identifying the collision.
-- [ ] Removing a film's last link to a tag/genre deletes the orphaned label; shared labels survive.
-- [ ] Poster URL can be set, replaced, and removed; an invalid or over-long URL yields `VALIDATION_ERROR`.
-- [ ] Attempts to edit `id`, `created_at`, `natural_key`, or `average_rating` are rejected.
-- [ ] `updated_at` changes on success; `created_at` never does. Title rules still hold after any titles edit.
+- [x] Removing a film's last link to a tag/genre deletes the orphaned label; shared labels survive.
+- [x] Poster URL can be set, replaced, and removed; an invalid or over-long URL yields `VALIDATION_ERROR`.
+- [x] Attempts to edit `id`, `created_at`, `natural_key`, or `average_rating` are rejected.
+- [x] `updated_at` changes on success; `created_at` never does. Title rules still hold after any titles edit.
 
 **Size.** M
 
@@ -370,7 +370,7 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 
 ### PR6 — Film delete, cascade & orphan cleanup
 
-> **Status:** ⏳ Not started
+> **Status:** 🔄 In progress (`m1-pr6-film-delete`)
 
 **Goal.** `DELETE /films/{id}` — the atomic cascading delete (`FR-LIB-10..12`, `NFR-INT-02`).
 
