@@ -1,10 +1,11 @@
-"""End-to-end film-flow tests against real Postgres (M1 PR4/PR5 — §9, §5.4).
+"""End-to-end film-flow tests against real Postgres (M1 PR4/PR5/PR6 — §9, §5.4).
 
 The full stack — router → service → repositories → Postgres — through
 ``TestClient`` over the PR2 harness session: the atomic create (FR-LIB-01..03),
 the duplicate block and probe (FR-LIB-05), the §7.3 detail read with its
-computed average (FR-RAT-05/06/09), the edit (FR-LIB-06..09), and the envelope
-contract of every error path (NFR-MAINT-03).
+computed average (FR-RAT-05/06/09), the edit (FR-LIB-06..09), the cascading
+delete (FR-LIB-10..12), and the envelope contract of every error path
+(NFR-MAINT-03).
 
 The overridden session dependency rolls back after each request, mirroring
 production's ``get_session`` close semantics: a request that failed leaves
@@ -18,6 +19,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import cast
 
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
@@ -25,6 +27,7 @@ from starlette.testclient import TestClient
 from app.core.db import get_session
 from app.films.models import Film, Title
 from app.genres.models import Genre
+from app.genres.service import GenreService
 from app.main import create_app
 from app.ratings.models import RatingEntry
 from app.tags.models import FilmTag, Tag
@@ -520,3 +523,114 @@ def test_edit_unknown_film_id_maps_to_the_not_found_envelope(db_session: Session
     response = client.patch(f"/api/v1/films/{uuid.uuid4()}", json={"is_favorite": True})
     assert response.status_code == 404
     assert _error_code(response.json()) == "NOT_FOUND"
+
+
+# --------------------------------------------------------------------------- #
+# The delete flow (M1 PR6, FR-LIB-10..12, NFR-INT-02)
+# --------------------------------------------------------------------------- #
+
+
+def test_delete_cascades_everything_and_spares_labels_shared_with_other_films(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    solo = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+    film_id = uuid.UUID(cast(str, solo["id"]))
+    other = cast(
+        dict[str, object],
+        client.post(
+            "/api/v1/films",
+            json=_payload(
+                titles=[{"value": "Collateral", "is_primary": True}],
+                release_year=2004,
+                tags=["heist"],
+                genre=["Crime"],
+            ),
+        ).json(),
+    )
+
+    response = client.delete(f"/api/v1/films/{film_id}")
+    assert response.status_code == 204
+    assert response.content == b""
+
+    # The film, its title, and its rating are gone (PR1's ON DELETE CASCADE).
+    assert db_session.get(Film, film_id) is None
+    assert db_session.scalars(select(Title).where(Title.film_id == film_id)).all() == []
+    assert db_session.scalars(select(RatingEntry).where(RatingEntry.film_id == film_id)).all() == []
+    assert db_session.scalars(select(FilmTag).where(FilmTag.film_id == film_id)).all() == []
+
+    # "heist"/"Crime" are solely this film's no longer — but the other film
+    # still uses them, so they survive (FR-LIB-12/FR-TAG-04).
+    assert db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one()
+    assert db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one()
+    assert client.get(f"/api/v1/films/{other['id']}").status_code == 200
+
+
+def test_delete_removes_a_films_only_label_link_as_an_orphan(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+
+    response = client.delete(f"/api/v1/films/{created['id']}")
+    assert response.status_code == 204
+
+    assert (
+        db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one_or_none() is None
+    )
+    assert (
+        db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one_or_none()
+        is None
+    )
+
+
+def test_a_failure_mid_delete_leaves_no_partial_rows(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # By the time the genre orphan sweep runs, the film delete and the tag
+    # orphan sweep have already joined the same not-yet-committed unit of
+    # work (NFR-INT-02) — an unexpected failure here must roll back all of
+    # it, leaving the film, its rating, its title, and its labels untouched.
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(tags=["heist"], genre=["Crime"])).json(),
+    )
+    film_id = uuid.UUID(cast(str, created["id"]))
+
+    def boom(self: GenreService) -> int:
+        raise RuntimeError(
+            "simulated failure after the film delete already joined the unit of work"
+        )
+
+    monkeypatch.setattr(GenreService, "delete_orphans", boom)
+
+    with pytest.raises(RuntimeError):
+        client.delete(f"/api/v1/films/{film_id}")
+
+    assert db_session.get(Film, film_id) is not None
+    for model in (Title, RatingEntry, FilmTag):
+        assert db_session.scalars(select(model).where(model.film_id == film_id)).all() != []
+    assert db_session.scalars(select(Tag).where(func.lower(Tag.name) == "heist")).one()
+    assert db_session.scalars(select(Genre).where(func.lower(Genre.name) == "crime")).one()
+
+
+def test_deleting_an_unknown_or_already_deleted_film_yields_not_found(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    missing = client.delete(f"/api/v1/films/{uuid.uuid4()}")
+    assert missing.status_code == 404
+    assert _error_code(missing.json()) == "NOT_FOUND"
+
+    created = cast(dict[str, object], client.post("/api/v1/films", json=_payload()).json())
+    film_id = created["id"]
+    assert client.delete(f"/api/v1/films/{film_id}").status_code == 204
+
+    repeat = client.delete(f"/api/v1/films/{film_id}")
+    assert repeat.status_code == 404
+    assert _error_code(repeat.json()) == "NOT_FOUND"

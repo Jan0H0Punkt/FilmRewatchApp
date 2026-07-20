@@ -1,4 +1,4 @@
-"""Offline tests for the films module (M1 PR4/PR5 — FR-LIB-01..09, §5.4, §9).
+"""Offline tests for the films module (M1 PR4/PR5/PR6 — FR-LIB-01..12, §5.4, §9).
 
 The service and schema rules, no database: the create schema's §5.4 shape
 (title rules, bounds, strictness), natural-key derivation (FR-LIB-04), and the
@@ -6,7 +6,10 @@ The service and schema rules, no database: the create schema's §5.4 shape
 protocols — duplicate block (FR-LIB-05), client-minted ids (§5.5 note),
 label dedupe, and the computed average (FR-RAT-09). PR5 adds the edit schema
 and flow (FR-LIB-06..09): immutable fields, poster set/replace/remove,
-natural-key recomputation, and the duplicate block applied to edits.
+natural-key recomputation, and the duplicate block applied to edits. PR6 adds
+the delete flow (FR-LIB-10..12): NOT_FOUND on an unknown id, and that both
+label kinds' orphan sweeps are reached — the cascade itself is a
+repository/database behaviour, verified end to end below.
 
 The same rules are exercised end to end (envelope and all) against real
 Postgres in ``test_films_api.py``.
@@ -77,6 +80,13 @@ class FakeFilmRepository:
     def delete_titles(self, film_id: uuid.UUID) -> None:
         self.titles = [title for title in self.titles if title.film_id != film_id]
 
+    def delete_film(self, film: Film) -> None:
+        # Mirrors the one dependent table this fake itself owns; ratings and
+        # label links live in the other fakes and are, like the real FK
+        # cascade, out of this repository's reach (M1 PR6).
+        self.titles = [title for title in self.titles if title.film_id != film.id]
+        del self.films[film.id]
+
     def commit(self) -> None:
         self.commits += 1
 
@@ -123,6 +133,7 @@ class FakeGenreService:
     def __init__(self) -> None:
         self.by_lower: dict[str, Genre] = {}
         self.links: set[tuple[uuid.UUID, uuid.UUID]] = set()
+        self.orphan_sweeps = 0
 
     def get_or_create(self, name: str) -> Genre:
         trimmed = name.strip()
@@ -138,6 +149,7 @@ class FakeGenreService:
         self.links.discard((film_id, genre_id))
 
     def delete_orphans(self) -> int:
+        self.orphan_sweeps += 1
         linked_ids = {genre_id for _, genre_id in self.links}
         orphans = [genre for genre in self.by_lower.values() if genre.id not in linked_ids]
         for genre in orphans:
@@ -176,6 +188,18 @@ def make_service() -> tuple[FilmService, FakeFilmRepository, FakeTagService, Fak
     tags = FakeTagService()
     ratings = FakeRatingService()
     return FilmService(repository, tags, FakeGenreService(), ratings), repository, tags, ratings
+
+
+def make_service_with_genres() -> tuple[
+    FilmService, FakeFilmRepository, FakeTagService, FakeGenreService, FakeRatingService
+]:
+    """Like :func:`make_service`, but also exposes the genre fake — needed by
+    the delete tests to assert *both* label kinds are swept (M1 PR6)."""
+    repository = FakeFilmRepository()
+    tags = FakeTagService()
+    genres = FakeGenreService()
+    ratings = FakeRatingService()
+    return FilmService(repository, tags, genres, ratings), repository, tags, genres, ratings
 
 
 def payload(**overrides: object) -> FilmCreate:
@@ -646,3 +670,44 @@ def test_update_removing_a_films_only_label_link_deletes_the_orphan() -> None:
 
     assert "heist" not in tags.by_lower  # orphaned and reaped (FR-TAG-04)
     assert "la" in tags.by_lower
+
+
+# --------------------------------------------------------------------------- #
+# Delete flow (M1 PR6, FR-LIB-10..12)
+# --------------------------------------------------------------------------- #
+
+# The fakes for tags/genres are independent of FakeFilmRepository, so they do
+# not simulate the real ``film_tags``/``film_genres`` FK cascade a film
+# deletion triggers — that cascade, and the orphan sweep it enables, is a
+# repository/database behaviour verified against real Postgres in
+# ``test_films_api.py``. What the service *owns* and what these tests check:
+# the film (and, in this repository, its titles) is gone, both label kinds'
+# ``delete_orphans`` are reached exactly once, and it all shares one commit.
+
+
+def test_delete_removes_the_film_and_its_titles_and_sweeps_both_label_kinds() -> None:
+    service, repository, tags, genres, _ = make_service_with_genres()
+    created = service.create(payload())
+    commits_before = repository.commits
+
+    service.delete(created.id)
+
+    assert created.id not in repository.films
+    assert repository.list_titles(created.id) == []
+    assert repository.commits == commits_before + 1
+    assert tags.orphan_sweeps == 1
+    assert genres.orphan_sweeps == 1
+
+
+def test_delete_unknown_film_id_maps_to_not_found_and_changes_nothing() -> None:
+    service, repository, tags, genres, _ = make_service_with_genres()
+    commits_before = repository.commits
+
+    with pytest.raises(FilmNotFoundError) as caught:
+        service.delete(uuid.uuid4())
+
+    assert caught.value.code == "NOT_FOUND"
+    assert caught.value.status_code == 404
+    assert repository.commits == commits_before
+    assert tags.orphan_sweeps == 0
+    assert genres.orphan_sweeps == 0
