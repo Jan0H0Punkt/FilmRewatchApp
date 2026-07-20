@@ -54,6 +54,6 @@ test:
 test-offline:
 	$(MAKE) -C backend test-offline
 
-# Apply Alembic migrations to the DB in DATABASE_URL (M0: empty baseline).
+# Apply Alembic migrations to the DB in DATABASE_URL (the M1 seven-table schema).
 migrate:
 	$(MAKE) -C backend migrate

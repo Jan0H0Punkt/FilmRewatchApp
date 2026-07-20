@@ -265,6 +265,22 @@ def test_a_failure_mid_create_leaves_no_partial_rows(db_session: Session) -> Non
         assert _count(db_session, model) == 0, model.__name__
 
 
+def test_an_over_long_genre_name_also_yields_validation_error_and_rolls_back(
+    db_session: Session,
+) -> None:
+    # The genre-side mirror of the tag case above (REQ §4.4: genres share the
+    # same get-or-create/validation shape as tags, just a different bound —
+    # 1-100 chars, not 1-50) — PR8 contract audit gap-fill: only the tag path
+    # was previously exercised through the real API.
+    client = _client_over(db_session)
+    response = client.post("/api/v1/films", json=_payload(genre=["x" * 101]))
+
+    assert response.status_code == 422
+    assert _error_code(response.json()) == "VALIDATION_ERROR"
+    for model in (Film, Title, RatingEntry, Tag, Genre):
+        assert _count(db_session, model) == 0, model.__name__
+
+
 # --------------------------------------------------------------------------- #
 # The detail read (§7.3, FR-RAT-05/06/09)
 # --------------------------------------------------------------------------- #
