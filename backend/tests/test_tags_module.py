@@ -61,6 +61,9 @@ class FakeTagRepository:
     def link_film(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
         self.links.add((film_id, tag_id))
 
+    def unlink_film(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        self.links.discard((film_id, tag_id))
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]:
         linked = [tag for tag in self.by_lower_name.values() if (film_id, tag.id) in self.links]
         return sorted(linked, key=lambda tag: tag.name.lower())

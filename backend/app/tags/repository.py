@@ -104,6 +104,16 @@ class TagRepository:
         )
         self._session.execute(statement)
 
+    def unlink_film(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        """Remove a tag's ``film_tags`` link to a film (FR-TAG-04, M1 PR5).
+
+        Deleting an absent link is a no-op, mirroring :meth:`link_film`'s
+        idempotency. The tag row itself is untouched — whether it survives is
+        :meth:`delete_orphans`' question, asked by the film flows afterwards.
+        """
+        statement = delete(FilmTag).where(FilmTag.film_id == film_id, FilmTag.tag_id == tag_id)
+        self._session.execute(statement)
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]:
         """The tags assigned to one film, alphabetically (the §7.3 projection)."""
         statement = (
