@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
+from app.core.errors import error_responses
 from app.tags.dependencies import get_tag_service
 from app.tags.schemas import TagRead
 from app.tags.service import TagService
@@ -25,6 +26,7 @@ router = APIRouter()
         "Returns all tags alphabetically; `?prefix=` narrows to labels starting "
         "with the given text, case-insensitively."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"]}),
 )
 def list_tags(
     service: Annotated[TagService, Depends(get_tag_service)],

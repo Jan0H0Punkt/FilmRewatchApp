@@ -11,15 +11,38 @@ is a human-readable, safe-to-surface summary. The app factory (``app/main.py``)
 calls :func:`register_exception_handlers`, which overrides FastAPI's defaults so
 **no route can bypass the envelope**.
 
-M0 ships only generic, framework-level codes: ``VALIDATION_ERROR`` for a
+M0 shipped only generic, framework-level codes: ``VALIDATION_ERROR`` for a
 request-validation failure, the HTTP status name for an ``HTTPException`` (e.g.
-404 → ``NOT_FOUND``), and ``INTERNAL_ERROR`` for an unexpected crash. Domain
-codes (``DUPLICATE_FILM``, ``FUTURE_WATCH_DATE``, …) arrive with their features
-in M1+ as :class:`AppError` subclasses.
+404 → ``NOT_FOUND``), and ``INTERNAL_ERROR`` for an unexpected crash. M1 adds
+domain codes as :class:`AppError` subclasses, one per feature module. The
+single, stable inventory (NFR-MAINT-01/03) — every code any M1 route can
+return, and why:
+
+======================  =====  ==========================================
+Code                    HTTP   Raised by
+======================  =====  ==========================================
+``VALIDATION_ERROR``    422    Request-schema failures; also
+                               ``FilmIdCollisionError``, ``InvalidTagNameError``,
+                               ``InvalidGenreNameError`` (domain rules that
+                               are still "the payload was invalid")
+``NOT_FOUND``           404    Unknown route; ``FilmNotFoundError``,
+                               ``RatingNotFoundError``
+``DUPLICATE_FILM``      409    ``DuplicateFilmError`` (FR-LIB-05/09)
+``FUTURE_WATCH_DATE``   422    ``FutureWatchDateError`` (FR-RAT-03)
+``INTERNAL_ERROR``      500    Unexpected crash; a genuine race past the
+                               natural-key pre-check (§3.6)
+======================  =====  ==========================================
+
+:func:`error_responses` turns a ``{status_code: [codes]}`` mapping into the
+FastAPI ``responses=`` kwarg, documenting :class:`ErrorResponse` as the schema
+for that status — including overriding FastAPI's automatically-added 422
+entry, which otherwise advertises its own default validation-error shape
+instead of this API's actual envelope.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from http import HTTPStatus
+from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -135,6 +158,30 @@ async def _handle_unexpected_error(request: Request, exc: Exception) -> JSONResp
         "INTERNAL_ERROR",
         "An unexpected error occurred.",
     )
+
+
+def error_responses(
+    codes_by_status: Mapping[int, Sequence[str]],
+) -> dict[int | str, dict[str, Any]]:
+    """Build an OpenAPI ``responses=`` mapping documenting the single envelope.
+
+    ``codes_by_status`` is ``{status_code: [domain codes possible at that
+    status]}`` — a route that can return ``DUPLICATE_FILM`` (409) and
+    ``NOT_FOUND``/``VALIDATION_ERROR`` (from the table above) passes
+    ``{409: ["DUPLICATE_FILM"], 404: ["NOT_FOUND"], 422: ["VALIDATION_ERROR"]}``.
+    Every entry documents :class:`ErrorResponse` as the schema, so Swagger and
+    ``/openapi.json`` show the envelope actually returned — this also
+    overrides FastAPI's automatically-generated 422 entry (see module
+    docstring), which otherwise documents the wrong shape for every route with
+    a body or typed parameter.
+    """
+    return {
+        status_code: {
+            "model": ErrorResponse,
+            "description": " / ".join(f"`{code}`" for code in codes),
+        }
+        for status_code, codes in codes_by_status.items()
+    }
 
 
 def register_exception_handlers(app: FastAPI) -> None:

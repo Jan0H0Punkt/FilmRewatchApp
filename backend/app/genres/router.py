@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
+from app.core.errors import error_responses
 from app.genres.dependencies import get_genre_service
 from app.genres.schemas import GenreRead
 from app.genres.service import GenreService
@@ -25,6 +26,7 @@ router = APIRouter()
         "Returns all genres alphabetically; `?prefix=` narrows to labels "
         "starting with the given text, case-insensitively."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"]}),
 )
 def list_genres(
     service: Annotated[GenreService, Depends(get_genre_service)],
