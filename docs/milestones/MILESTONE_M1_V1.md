@@ -80,7 +80,7 @@ M1 is complete when **all** of the following hold (each is checked by at least o
 - [x] Edits update `updated_at`; `id` and `created_at` are never editable (`FR-LIB-07/08`).
 - [x] Deleting a film removes its titles, ratings, and tag/genre links **atomically** (`NFR-INT-02`); tags and
       genres left on no films are deleted (`FR-LIB-12`, `FR-TAG-04`).
-- [ ] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
+- [x] Ratings can be added (0.5–5.0 in 0.5 steps; no future `watch_date`) and deleted; deleting a film's **last**
       rating deletes the **whole film** (`FR-RAT-01..04/07`).
 - [x] `GET /tags` and `GET /genres` serve prefix-filtered lookups for autocomplete (`FR-TAG-06` + genre analogue).
 - [ ] Every error response — including the new domain errors — uses the single envelope with **stable codes**
@@ -402,7 +402,7 @@ dialogs (M3).
 
 ### PR7 — Rating endpoints & the last-rating rule
 
-> **Status:** 🔄 In progress (`m1-pr7-ratings`)
+> **Status:** ✅ Done — [PR #14](https://github.com/Jan0H0Punkt/FilmRewatchApp/pull/14) (`m1-pr7-ratings`)
 
 **Goal.** The standalone rating lifecycle (`FR-RAT-01..08`): add a rating any time, delete one with the
 watched-only invariant — deleting a film's **last** rating deletes the **film**.
@@ -427,13 +427,13 @@ watched-only invariant — deleting a film's **last** rating deletes the **film*
 
 **Acceptance criteria**
 
-- [ ] Adding a rating returns `201`; the detail read shows it in descending `watch_date` order and an updated
+- [x] Adding a rating returns `201`; the detail read shows it in descending `watch_date` order and an updated
       average (never stale, never zero — `FR-RAT-11`).
-- [ ] A future `watch_date` yields the `FUTURE_WATCH_DATE` envelope; an off-step value yields `VALIDATION_ERROR`.
-- [ ] Two ratings on the same `watch_date` coexist (`FR-RAT-04`).
-- [ ] Deleting a non-last rating removes only that entry; deleting the last one removes the film (and orphaned
+- [x] A future `watch_date` yields the `FUTURE_WATCH_DATE` envelope; an off-step value yields `VALIDATION_ERROR`.
+- [x] Two ratings on the same `watch_date` coexist (`FR-RAT-04`).
+- [x] Deleting a non-last rating removes only that entry; deleting the last one removes the film (and orphaned
       labels), and the response says so.
-- [ ] No `PATCH`/`PUT` route for ratings exists.
+- [x] No `PATCH`/`PUT` route for ratings exists.
 
 **Size.** M
 
@@ -441,7 +441,7 @@ watched-only invariant — deleting a film's **last** rating deletes the **film*
 
 ### PR8 — OpenAPI polish & M1 contract audit
 
-> **Status:** ⏳ Not started
+> **Status:** 🔄 In progress (`m1-pr8-openapi-audit`)
 
 **Goal.** Keep `NFR-MAINT-01` true as the surface grows from one endpoint to ten: every M1 route fully documented,
 the error contract verified across the whole new surface, and the README caught up.
