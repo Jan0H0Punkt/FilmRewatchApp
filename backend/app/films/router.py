@@ -1,10 +1,14 @@
-"""Presentation layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6).
+"""Presentation layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6/PR7).
 
 FastAPI routes under ``/api/v1/films`` (mounted by the app factory): the
 "log a watched film" create (FR-LIB-01..05), the side-effect-free duplicate
-probe (FR-LIB-05), the §7.3 detail read, the edit (FR-LIB-06..09), and the
-cascading delete (FR-LIB-10..12). Routing and (de)serialisation only — every
-rule lives in the service layer (NFR-MAINT-02).
+probe (FR-LIB-05), the §7.3 detail read, the edit (FR-LIB-06..09), the
+cascading delete (FR-LIB-10..12), and the add-a-rating flow (FR-RAT-01..04).
+Routing and (de)serialisation only — every rule lives in the service layer
+(NFR-MAINT-02). The rating add lives here, under ``/films``, rather than in
+the ratings module's own router — it is ``FilmService`` that owns the
+standalone rating orchestration (see that module's docstring); the ratings
+router is the mirror image for ``DELETE /ratings/{id}`` (§5.3).
 """
 
 from typing import Annotated
@@ -21,6 +25,7 @@ from app.films.schemas import (
     FilmUpdate,
 )
 from app.films.service import FilmService
+from app.ratings.schemas import RatingCreate, RatingEntryRead
 
 router = APIRouter()
 
@@ -114,3 +119,24 @@ def delete_film(
     service: Annotated[FilmService, Depends(get_film_service)],
 ) -> None:
     service.delete(film_id)
+
+
+@router.post(
+    "/{film_id}/ratings",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a rating to a film",
+    description=(
+        "Records a new rating event for an existing film — the user may rate a "
+        "film again any time (FR-RAT-01..04); same-day repeat ratings are "
+        "allowed. A future `watch_date` is rejected with the `FUTURE_WATCH_DATE` "
+        "error; an unknown film id yields `NOT_FOUND`. The film's "
+        "`average_rating` reflects the new entry on the next detail read "
+        "(computed on read, never stored — FR-RAT-09/10)."
+    ),
+)
+def add_rating(
+    film_id: UUID,
+    payload: RatingCreate,
+    service: Annotated[FilmService, Depends(get_film_service)],
+) -> RatingEntryRead:
+    return service.add_rating(film_id, payload.value, payload.watch_date)
