@@ -19,17 +19,12 @@ length (1-100) is §5.4 schema/service validation; the column width matches it.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base
-
-
-def _utc_now() -> datetime:
-    """Timezone-aware UTC timestamp default (REQ §4.4)."""
-    return datetime.now(UTC)
+from app.core.db import Base, utc_now
 
 
 class Genre(Base):
@@ -39,7 +34,7 @@ class Genre(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class FilmGenre(Base):

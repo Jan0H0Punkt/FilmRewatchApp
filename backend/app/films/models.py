@@ -23,17 +23,12 @@ service concerns, deliberately **not** duplicated as CHECK constraints.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base
-
-
-def _utc_now() -> datetime:
-    """Timezone-aware UTC timestamp default (REQ §4.1 ISO-8601 UTC timestamps)."""
-    return datetime.now(UTC)
+from app.core.db import Base, utc_now
 
 
 class Film(Base):
@@ -56,8 +51,8 @@ class Film(Base):
     # Rewatch-engine inputs (REQ §4.1): columns land in M1, their consumer is M4.
     is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class Title(Base):

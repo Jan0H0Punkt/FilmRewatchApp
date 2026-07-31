@@ -17,18 +17,13 @@ intentionally **not** unique.
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base
-
-
-def _utc_now() -> datetime:
-    """Timezone-aware UTC timestamp default (REQ §4.2)."""
-    return datetime.now(UTC)
+from app.core.db import Base, utc_now
 
 
 class RatingEntry(Base):
@@ -45,4 +40,4 @@ class RatingEntry(Base):
     # When the film was watched — distinct from when the rating was recorded
     # (``created_at``); both are stored (REQ §4.2 note).
     watch_date: Mapped[date] = mapped_column(Date)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
