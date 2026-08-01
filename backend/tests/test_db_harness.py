@@ -1,14 +1,4 @@
-"""Tests for the Postgres-backed repository-test harness itself (§9, M1 PR2).
-
-The sample round-trip below is the template every M1 repository test builds on:
-request ``db_session`` and read/write real rows. The two "isolation" tests
-insert the *same* unique ``natural_key`` and ``commit()`` — they can only both
-pass (in either order) if each test's work is rolled back afterwards, which is
-exactly the per-test isolation the harness promises.
-
-These tests are auto-marked ``db`` (they use the harness fixtures) and skip
-with a reason when the composed Postgres is down.
-"""
+"""Tests for the Postgres-backed repository-test harness itself (§9)."""
 
 import uuid
 
@@ -18,11 +8,17 @@ from sqlalchemy.orm import Session
 
 from app.films.models import Film, Title
 
-# Deliberately shared by both isolation tests — see the module docstring.
+# Shared on purpose: the two isolation tests must collide if teardown ever
+# stops rolling back.
 _ISOLATION_KEY = "harness isolation probe|1927|fritz lang"
 
 
 def _make_film(natural_key: str) -> Film:
+    """A film row with only the DB-required columns — no title, genre, tag or rating.
+
+    Invalid per FR-LIB-01/03, but those are service-layer rules; the database
+    accepts it, and these tests exercise the harness, not the domain.
+    """
     return Film(
         id=uuid.uuid4(),
         natural_key=natural_key,
@@ -32,8 +28,7 @@ def _make_film(natural_key: str) -> Film:
 
 
 def test_migrated_schema_has_the_seven_domain_tables(db_engine: Engine) -> None:
-    # The session fixture ran the real Alembic chain (not create_all): the §5.2
-    # tables plus Alembic's own bookkeeping table must exist.
+    # The fixture ran the real Alembic chain, not create_all.
     assert set(inspect(db_engine).get_table_names()) == {
         "films",
         "titles",
@@ -47,6 +42,7 @@ def test_migrated_schema_has_the_seven_domain_tables(db_engine: Engine) -> None:
 
 
 def test_round_trip_persists_and_reads_back(db_session: Session) -> None:
+    """The template repository tests copy: request ``db_session``, read/write real rows."""
     film = _make_film("metropolis|1927|fritz lang")
     db_session.add(film)
     db_session.add(Title(film_id=film.id, value="Metropolis", is_primary=True, is_original=True))

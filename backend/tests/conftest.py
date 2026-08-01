@@ -1,27 +1,16 @@
-"""Shared environment + Postgres-backed test harness (DESIGN §9, M1 PR2).
+"""Shared environment + Postgres-backed test harness (DESIGN §9).
 
 Two concerns live here:
 
 1. **Offline app construction.** Building the FastAPI app (``create_app``)
    loads settings, which require ``DATABASE_URL`` (DESIGN §3.5). Offline tests
    never open a connection — the engine is created lazily — so a placeholder
-   URL is enough to construct the app without a database. ``setdefault``
-   leaves a real value from the environment intact.
+   URL is enough to construct the app without a database.
 
-2. **The §9 repository-test harness.** Repository tests run against a *real*
+2. **The §9 repository-test harness.** Repository tests run against a real
    Postgres: a dedicated, disposable ``filmrewatch_test`` database on the
-   composed server (never the dev ``filmrewatch`` data), dropped and recreated
-   once per session and migrated to ``head`` through the real Alembic chain.
-   Each test runs inside an outer transaction that is rolled back afterwards
-   (savepoint mode, so ``session.commit()`` inside a test stays isolated) —
-   tests are order-independent. Tests using :func:`db_session` /
-   :func:`db_engine` are auto-marked ``db`` (see ``pyproject.toml``); when the
-   database is unreachable they **skip with a reason** instead of erroring, so
-   the offline subset (``pytest -m "not db"``) always runs cleanly.
-
-The harness talks to the loopback-published composed Postgres
-(``docker compose up postgres``); point ``TEST_DATABASE_URL`` at another
-server to override — that database is *owned by the suite* and gets dropped.
+   composed server, never the dev ``filmrewatch`` data. See the README for the
+   database setup.
 """
 
 import os
@@ -89,9 +78,18 @@ def _database_unreachable_reason() -> str | None:
 
 
 def _recreate_test_database(test_url: URL) -> None:
-    """Drop and recreate the disposable test database (clean slate per run)."""
+    """Drop and recreate the disposable test database (clean slate per run).
+
+    The target is whatever ``TEST_DATABASE_URL`` names — that database is
+    *owned by the suite*: it is dropped without confirmation. The ``_test``
+    suffix requirement is what keeps a mistyped override from destroying a
+    database someone cares about.
+    """
     database = test_url.database
     assert database is not None
+    assert database.endswith("_test"), (
+        f"refusing to drop {database!r}: the suite-owned test database must end in `_test`"
+    )
     admin = create_engine(
         test_url.set(database="postgres"), isolation_level="AUTOCOMMIT", poolclass=NullPool
     )
@@ -113,6 +111,8 @@ def _migrate_to_head(test_url: URL) -> None:
     restore both afterwards so no other test sees the test-database settings.
     """
     config = AlembicConfig(str(_BACKEND_DIR / "alembic.ini"))
+    # ``alembic.ini`` resolves script_location relative to the CWD; overriding it
+    # absolutely lets pytest run from any directory.
     config.set_main_option("script_location", str(_BACKEND_DIR / "migrations"))
     previous = os.environ["DATABASE_URL"]  # always set — see the top of this file
     os.environ["DATABASE_URL"] = test_url.render_as_string(hide_password=False)

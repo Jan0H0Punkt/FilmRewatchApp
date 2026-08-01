@@ -40,10 +40,8 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
-# Test-suite split (DESIGN §9, M1 PR2): tests bound to a real Postgres carry the
-# `db` marker (auto-applied by conftest.py to tests using the harness fixtures)
-# and skip with a reason when the database is down. `pytest -m "not db"` is the
-# offline subset; --strict-markers turns a typo'd marker into an error.
+# DB-bound tests carry the `db` marker, auto-applied in tests/conftest.py
+# (DESIGN §9); --strict-markers turns a typo'd marker into an error.
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 markers = [
