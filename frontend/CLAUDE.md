@@ -47,4 +47,4 @@ Routes are driven by the **route registry** (`src/app/core/route-registry.ts`): 
 
 - **Strict type-safety everywhere** (§5.7): the `tsconfig.json` strict family plus `strictTemplates` are on — set explicitly in M0 PR7 (Angular 22's `ng new` no longer emits `"strict": true`; do not remove it). No `any` leakage.
 - **Standalone components** (no NgModules); Angular Material for UI components (§2).
-- Match the heavily-documented comment style that cites design sections and requirement IDs (`§6.5`, `FR-EXT-02`) — see the existing stubs.
+- Cite design sections and requirement IDs (`§6.5`, `FR-EXT-02`) as pointers in comments, not paraphrases. Comment length and placement follow the `code-docs` skill.

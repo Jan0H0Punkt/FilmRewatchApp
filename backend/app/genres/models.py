@@ -1,35 +1,21 @@
-"""SQLAlchemy ORM models for the genres module (DESIGN §5.2, REQ §4.4).
+"""Genres module tables (DESIGN §5.2, REQ §4.4).
 
-Two of the seven M1 tables: ``genres`` and the ``film_genres`` join table.
-Genres are modelled **identically to tags** (REQ §4.4): a shared entity table
-holding every distinct label once, connected to films many-to-many — free text,
-not an enum, so casing stays consistent for exact-match filtering (FR-SF-07)
-and genres get autocomplete the same way tags do (§5.2).
+Genres are free text rather than an enum, modelled exactly like tags: one shared
+row per distinct label, many-to-many to films, so casing stays consistent for
+exact-match filtering (FR-SF-07).
 
-Database-enforced rules (§5.2):
-
-- *No two genres with the same name, ignoring case* → a unique index on
-  ``lower(name)``.
-- *Removing a film removes its genre links* → ``ON DELETE CASCADE`` on both
-  join columns (§4.5, NFR-INT-02).
-
-Like a tag, a genre never exists standalone: implicit get-or-create and
-service-layer orphan cleanup arrive in M1 PR3 (FR-TAG-01/04 analogues). Name
-length (1-100) is §5.4 schema/service validation; the column width matches it.
+A genre never exists standalone — the service layer does implicit get-or-create
+and orphan cleanup (FR-TAG-01/04 analogues). The 1-100 name length is §5.4
+validation; the column width only matches it.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base
-
-
-def _utc_now() -> datetime:
-    """Timezone-aware UTC timestamp default (REQ §4.4)."""
-    return datetime.now(UTC)
+from app.core.db import Base, utc_now
 
 
 class Genre(Base):
@@ -39,11 +25,11 @@ class Genre(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class FilmGenre(Base):
-    """Film ↔ genre association row (§5.2 join table, REQ §4.5)."""
+    """Film ↔ genre association row (§5.2 join table, REQ §4.5, NFR-INT-02)."""
 
     __tablename__ = "film_genres"
 
@@ -55,5 +41,6 @@ class FilmGenre(Base):
     )
 
 
-# Case-insensitive uniqueness (§5.2, FR-TAG-02 analogue): one row per name.
+# Case-insensitive uniqueness (§5.2, FR-TAG-02 analogue). An expression index,
+# because Postgres unique *constraints* cannot be built over ``lower(name)``.
 Index("uq_genres_name_lower", func.lower(Genre.name), unique=True)

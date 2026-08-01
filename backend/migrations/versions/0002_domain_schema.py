@@ -1,20 +1,12 @@
 """domain schema — the seven §5.2 tables (M1 PR1)
 
-Creates the core-domain schema on top of the empty M0 baseline: ``films`` +
-``titles``, ``rating_entries``, ``tags`` + ``film_tags``, ``genres`` +
-``film_genres`` (DESIGN §5.2, REQ §4.1-4.5), with every rule the database can
-enforce:
+Creates the core-domain schema on top of the empty M0 baseline (DESIGN §5.2,
+REQ §4.1-4.5). The rationale for each constraint lives with the models; this
+revision is the snapshot that builds them.
 
-- unique ``natural_key`` on ``films`` (no duplicate films, FR-LIB-04/05)
-- unique indexes on ``lower(name)`` for ``tags`` and ``genres`` (FR-TAG-02)
-- partial unique indexes: at most one primary and at most one original title
-  per film (§4.1 title rules)
-- ``ON DELETE CASCADE`` foreign keys on ``titles``, ``rating_entries``,
-  ``film_tags``, ``film_genres`` (§4.5, NFR-INT-02)
-
-No ``average_rating`` column — computed on read (NFR-INT-01). Value-range
-rules (rating steps, year range) stay schema/service concerns (§5.4), not
-CHECK constraints.
+Two deliberate absences: no ``average_rating`` column (computed on read,
+NFR-INT-01), and no CHECK constraints for value ranges (rating steps, year
+range) — those stay §5.4 schema/service concerns.
 
 Revision ID: 0002_domain_schema
 Revises: 0001_baseline
@@ -34,7 +26,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Create the seven domain tables, constraints first-class (§5.2)."""
     op.create_table(
         "films",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -122,7 +113,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Drop the seven tables — back to the empty M0 baseline."""
+    # Children before parents: the join tables and every table holding a film_id
+    # must go before ``films``, or the FKs block the drop.
     op.drop_table("film_genres")
     op.drop_index("uq_genres_name_lower", table_name="genres")
     op.drop_table("genres")
