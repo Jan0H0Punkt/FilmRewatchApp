@@ -4,7 +4,7 @@
 # Every target goes through `uv run`, which resolves tools from the project
 # venv (syncing it first if stale) — no manual activation needed.
 
-.PHONY: typecheck lint format format-check test migrate
+.PHONY: typecheck lint format format-check test test-offline migrate
 
 # Strict static type-check over the whole backend (pyright, §5.7). Config lives
 # in pyproject.toml's [tool.pyright]; this is the one-command target (PR8 docs it).
@@ -23,9 +23,13 @@ format:
 format-check:
 	uv run ruff format --check .
 
-# Unit tests.
+# Full backend suite, including the DB-bound §9 tests (see README).
 test:
 	uv run pytest
+
+# Offline subset only.
+test-offline:
+	uv run pytest -m "not db"
 
 # Apply Alembic migrations up to head against DATABASE_URL (M0: the empty
 # baseline only — domain tables arrive in M1). Needs a reachable Postgres,

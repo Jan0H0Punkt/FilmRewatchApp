@@ -67,11 +67,19 @@ uv run uvicorn app.main:app --reload    # Swagger at http://localhost:8000/docs
 There is no CI — these commands are the **local gate for every change**:
 
 ```bash
-make test          # pytest
+make test          # full pytest suite — includes the DB-bound repository tests (§9)
+make test-offline  # offline subset only (pytest -m "not db"; no database needed)
 make typecheck     # pyright in strict mode (§5.7) — must be zero errors
 make lint          # ruff check — must be clean
 make format-check  # ruff format --check (fix findings with `make format`)
 ```
+
+Repository tests run against a **real Postgres** (DESIGN §9): a disposable
+`filmrewatch_test` database on the composed server, recreated and migrated per run — dev data in
+`filmrewatch` is never touched. Start the database with `docker compose up postgres`; when it is
+down, the `db`-marked tests **skip with a reason** and the offline subset still passes. A
+non-default server/credentials setup can point `TEST_DATABASE_URL` at another Postgres (that
+database is owned — and dropped — by the suite).
 
 Strict type-safety is enforced from the first commit: treat a pyright or Ruff error as a build
 break. The make targets run through `uv run`, which resolves the tools from `backend/.venv` — no
@@ -115,7 +123,8 @@ All targets run from the repo root; the backend ones also run from `backend/` (t
 | `make typecheck`    | pyright in strict mode over the whole backend — must be zero errors                   |
 | `make lint`         | Ruff lint over the whole backend — must be clean                                      |
 | `make format-check` | Ruff format check (`make -C backend format` rewrites)                                 |
-| `make test`         | Backend unit tests (frontend tests: `npm test` from `frontend/`)                      |
+| `make test`         | Backend tests incl. DB-bound (frontend tests: `npm test` from `frontend/`)            |
+| `make test-offline` | Backend offline tests only — skips the `db`-marked repository tests (§9)              |
 | `make migrate`      | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
 
 `make dev` leaves the containers running when you Ctrl+C the dev server — stop them with

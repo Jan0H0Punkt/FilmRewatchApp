@@ -40,6 +40,14 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
+# DB-bound tests carry the `db` marker, auto-applied in tests/conftest.py
+# (DESIGN §9); --strict-markers turns a typo'd marker into an error.
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+markers = [
+    "db: repository test against the real composed Postgres (offline subset: -m \"not db\")",
+]
+
 # Strict static type-safety baseline (DESIGN §5.7). Pyright is the checker — the
 # same engine as Pylance in the editor — so `make typecheck` and editor feedback
 # agree. `strict` is enforced over the whole backend from M0's first commit.
