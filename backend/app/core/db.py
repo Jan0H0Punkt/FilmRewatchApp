@@ -16,6 +16,7 @@ is opened on first use.
 """
 
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
@@ -31,6 +32,11 @@ class Base(DeclarativeBase):
     checker (DESIGN §5.7) and their tables register on ``Base.metadata`` for
     Alembic autogeneration.
     """
+
+
+def utc_now() -> datetime:
+    """Timezone-aware UTC timestamp default (REQ §4.1 ISO-8601 UTC timestamps)."""
+    return datetime.now(UTC)
 
 
 @lru_cache
