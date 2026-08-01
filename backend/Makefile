@@ -23,14 +23,11 @@ format:
 format-check:
 	uv run ruff format --check .
 
-# Full test suite (§9, M1 PR2): the offline tests plus the DB-bound repository
-# tests, which run against the composed Postgres (`docker compose up postgres`)
-# and skip with a reason when it is down.
+# Full backend suite, including the DB-bound §9 tests (see README).
 test:
 	uv run pytest
 
-# Offline subset only — excludes the `db`-marked repository tests; no database
-# needed (the placeholder DATABASE_URL from tests/conftest.py suffices).
+# Offline subset only.
 test-offline:
 	uv run pytest -m "not db"
 
