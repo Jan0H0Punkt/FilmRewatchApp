@@ -58,6 +58,6 @@ Alembic lives in `backend/migrations/`. `env.py` reads `DATABASE_URL` from `core
 ## Conventions
 
 - **Type safety is strict everywhere** (§5.7): pyright strict statically, Pydantic strict at the API boundary, SQLAlchemy 2.x `Mapped[...]` on ORM columns.
-- **Docstrings** cite design sections and requirement IDs as pointers (`§5.2`, `NFR-MAINT-03`) — a reference, not a paraphrase of the section. Length follows the `code-docs` skill: a one-line summary by default, prose only for the why or the non-obvious.
+- **Docstrings** cite design sections and requirement IDs (`§5.2`, `NFR-MAINT-03`) as pointers, not paraphrases. Length and placement follow the `code-docs` skill.
 - **Lint/format is Ruff** (REVIEW_M0 §4): `ruff check` and `ruff format --check` must be clean — config in `pyproject.toml` (`[tool.ruff]`, line length 100, `extend-select` E/W/F/I/UP/B/C4/RUF). Never hand-format against the formatter; run `make format`.
 - **Tests** (`backend/tests/`): `conftest.py` sets a placeholder `DATABASE_URL` via `os.environ.setdefault` so the app can be built offline; real HTTP tests drive the app through Starlette's `TestClient`, which requires **`httpx2`** (already in the `[dev]` deps) — plain `httpx` will make strict pyright fail.

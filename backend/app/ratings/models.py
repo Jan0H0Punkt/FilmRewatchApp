@@ -1,19 +1,17 @@
-"""SQLAlchemy ORM models for the ratings module (DESIGN §5.2, REQ §4.2).
+"""Ratings module tables (DESIGN §5.2, REQ §4.2).
 
-``rating_entries`` — one row per rating *event*. A film's rating history lives
-in its own table (not packed into the film row) so it can be queried and
-constrained independently (§5.2), and the film's ``average_rating`` is computed
-from these rows on every read, never stored (FR-RAT-09/10, NFR-INT-01).
+One row per rating *event*. The history lives in its own table rather than packed
+into the film row so it can be queried and constrained independently, and a film's
+``average_rating`` is computed from these rows on every read, never stored
+(FR-RAT-09/10, NFR-INT-01).
 
-``ON DELETE CASCADE`` on ``film_id`` implements the §4.5 rule that deleting a
-film deletes its whole history (NFR-INT-02). The inverse invariant — a film
-must always keep ≥ 1 rating, so deleting the *last* entry deletes the film
-(FR-RAT-07, §5.3) — is service-layer behaviour (M1 PR7).
+Deleting a film deletes its whole history (§4.5, NFR-INT-02). The inverse is not
+symmetric: a film must always keep ≥ 1 rating, so deleting the *last* entry deletes
+the film — service-layer behaviour (FR-RAT-07, §5.3).
 
-Value rules (0.5-5.0 in 0.5 steps, no future ``watch_date``) are §5.4 schema/
-service validation, deliberately not duplicated as CHECK constraints. Same-day
-repeat ratings are allowed (FR-RAT-04), so ``(film_id, watch_date)`` is
-intentionally **not** unique.
+Value rules are §5.4 schema validation, deliberately not duplicated as CHECK
+constraints. Same-day repeat ratings are allowed (FR-RAT-04), so
+``(film_id, watch_date)`` is intentionally **not** unique.
 """
 
 import uuid
