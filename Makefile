@@ -44,13 +44,12 @@ lint:
 format-check:
 	$(MAKE) -C backend format-check
 
-# Backend tests, full suite: offline plus the DB-bound repository tests (§9),
-# which need the composed Postgres up and skip with a reason otherwise.
+# Full backend suite, including the DB-bound §9 tests (see README).
 # (Frontend unit tests run via `npm test` from frontend/.)
 test:
 	$(MAKE) -C backend test
 
-# Backend offline subset only — skips the `db`-marked repository tests.
+# Backend offline subset only.
 test-offline:
 	$(MAKE) -C backend test-offline
 
