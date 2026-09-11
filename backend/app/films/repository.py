@@ -66,6 +66,16 @@ class FilmRepository:
         """
         self._session.execute(delete(Title).where(Title.film_id == film_id))
 
+    def delete_film(self, film: Film) -> None:
+        """Stage a film's removal in the unit of work (M1 PR6, FR-LIB-10..12).
+
+        No ORM ``relationship()`` links ``Film`` to its titles, ratings, or
+        label links, so this only ever emits ``DELETE FROM films WHERE id =
+        ...`` on flush — the PR1 ``ON DELETE CASCADE`` foreign keys are what
+        remove the dependent rows (NFR-INT-02), entirely database-side.
+        """
+        self._session.delete(film)
+
     def commit(self) -> None:
         """Seal the caller's unit of work (the service decides when)."""
         self._session.commit()
