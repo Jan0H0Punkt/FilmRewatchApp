@@ -55,6 +55,9 @@ class FakeGenreRepository:
     def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
         self.links.add((film_id, genre_id))
 
+    def unlink_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        self.links.discard((film_id, genre_id))
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         linked = [
             genre for genre in self.by_lower_name.values() if (film_id, genre.id) in self.links

@@ -1,8 +1,9 @@
 """Pydantic request/response schemas for the films module (DESIGN §5.3, §5.4).
 
-The M1 PR4 surface: the ``POST /films`` create payload ("log a watched film",
-FR-LIB-01..03), the side-effect-free duplicate probe (FR-LIB-05), and the full
-§7.3 detail projection returned by ``GET /films/{id}`` and the create.
+The M1 PR4/PR5 surface: the ``POST /films`` create payload ("log a watched
+film", FR-LIB-01..03), the ``PATCH /films/{id}`` edit payload (FR-LIB-06..09),
+the side-effect-free duplicate probe (FR-LIB-05), and the full §7.3 detail
+projection returned by ``GET /films/{id}``, the create, and the edit.
 
 Everything inherits the strict base (§5.7): unknown fields are rejected and
 lossy coercion is refused; the ``Json*`` aliases re-admit the wire form of
@@ -39,6 +40,35 @@ def _validated_key_part(text: str) -> str:
     if not text.strip():
         raise ValueError("must not be blank")
     return text
+
+
+def _validated_poster_url(url: str | None) -> str | None:
+    """The FR-LIB-14 rule: a well-formed http(s) URL, nothing more."""
+    if url is None:
+        return url
+    try:
+        parts = urlsplit(url)
+    except ValueError as error:
+        raise ValueError("poster_image must be a well-formed URL") from error
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        raise ValueError("poster_image must be a well-formed http(s) URL")
+    return url
+
+
+def _titles_with_rules_applied(titles: list["TitleCreate"]) -> list["TitleCreate"]:
+    """The REQ §4.1 Title rules, shared by create and edit (FR-LIB-01/06).
+
+    A lone unflagged title is designated primary automatically; otherwise
+    exactly one primary; at most one original.
+    """
+    primaries = [title for title in titles if title.is_primary]
+    if len(titles) == 1 and not primaries:
+        titles[0].is_primary = True
+    elif len(primaries) != 1:
+        raise ValueError("exactly one title must be marked primary")
+    if sum(1 for title in titles if title.is_original) > 1:
+        raise ValueError("at most one title may be marked original")
+    return titles
 
 
 class TitleCreate(StrictSchema):
@@ -114,27 +144,58 @@ class FilmCreate(StrictSchema):
     @classmethod
     def _poster_is_a_well_formed_url(cls, url: str | None) -> str | None:
         # FR-LIB-14: well-formed URL, nothing more — no format/file-type checks.
-        if url is None:
-            return url
-        try:
-            parts = urlsplit(url)
-        except ValueError as error:
-            raise ValueError("poster_image must be a well-formed URL") from error
-        if parts.scheme not in {"http", "https"} or not parts.netloc:
-            raise ValueError("poster_image must be a well-formed http(s) URL")
-        return url
+        return _validated_poster_url(url)
 
     @model_validator(mode="after")
     def _enforce_title_rules(self) -> Self:
-        # REQ §4.1 Title rules: a lone title is automatically primary
-        # (FR-LIB-01); otherwise exactly one primary; at most one original.
-        primaries = [title for title in self.titles if title.is_primary]
-        if len(self.titles) == 1 and not primaries:
-            self.titles[0].is_primary = True
-        elif len(primaries) != 1:
-            raise ValueError("exactly one title must be marked primary")
-        if sum(1 for title in self.titles if title.is_original) > 1:
-            raise ValueError("at most one title may be marked original")
+        self.titles = _titles_with_rules_applied(self.titles)
+        return self
+
+
+class FilmUpdate(StrictSchema):
+    """The ``PATCH /films/{id}`` payload — the user-editable fields (FR-LIB-06).
+
+    Every field is optional; a field left out is left unchanged. ``null`` is
+    likewise "unchanged" for every field except ``poster_image``, where an
+    explicit ``null`` removes the poster (FR-LIB-15) — the one field whose
+    stored value is itself nullable; the service tells the two apart via
+    ``model_fields_set``. An empty body is a valid no-op.
+
+    ``titles`` is a full replacement list, revalidated against the REQ §4.1
+    Title rules; per-field validation matches the create where they overlap
+    (§5.4). ``id``, ``created_at``, ``natural_key``, and ``average_rating``
+    are not user-editable (FR-LIB-07) — the strict base rejects them as
+    unknown fields.
+    """
+
+    titles: list[TitleCreate] | None = Field(default=None, min_length=1)
+    release_year: int | None = None
+    director: str | None = Field(default=None, min_length=1, max_length=255)
+    genre: list[str] | None = Field(default=None, min_length=1)
+    tags: list[str] | None = Field(default=None, min_length=1)
+    poster_image: str | None = Field(default=None, max_length=2048)
+    is_favorite: bool | None = None
+    delay_days: int | None = Field(default=None, ge=0)
+
+    @field_validator("release_year")
+    @classmethod
+    def _release_year_in_range(cls, year: int | None) -> int | None:
+        return year if year is None else _validated_release_year(year)
+
+    @field_validator("director")
+    @classmethod
+    def _director_not_blank(cls, director: str | None) -> str | None:
+        return director if director is None else _validated_key_part(director)
+
+    @field_validator("poster_image")
+    @classmethod
+    def _poster_is_a_well_formed_url(cls, url: str | None) -> str | None:
+        return _validated_poster_url(url)
+
+    @model_validator(mode="after")
+    def _enforce_title_rules(self) -> Self:
+        if self.titles is not None:
+            self.titles = _titles_with_rules_applied(self.titles)
         return self
 
 

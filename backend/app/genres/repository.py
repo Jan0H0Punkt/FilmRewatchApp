@@ -108,6 +108,18 @@ class GenreRepository:
         )
         self._session.execute(statement)
 
+    def unlink_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        """Remove a genre's ``film_genres`` link to a film (FR-TAG-04 analogue).
+
+        Deleting an absent link is a no-op, mirroring :meth:`link_film`'s
+        idempotency. The genre row itself is untouched — whether it survives is
+        :meth:`delete_orphans`' question, asked by the film flows afterwards.
+        """
+        statement = delete(FilmGenre).where(
+            FilmGenre.film_id == film_id, FilmGenre.genre_id == genre_id
+        )
+        self._session.execute(statement)
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         """The genres assigned to one film, alphabetically (the §7.3 projection)."""
         statement = (

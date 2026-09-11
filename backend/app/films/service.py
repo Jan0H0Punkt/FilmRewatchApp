@@ -1,26 +1,29 @@
-"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4).
+"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4/PR5).
 
 The "log a watched film" flow (FR-LIB-01..05): create a film **together with**
 its mandatory first rating, tags, and genres in one atomic unit of work
 (FR-LIB-03), duplicate detection over the derived ``natural_key``
 (FR-LIB-04/05), and the full §7.3 detail projection with the average computed
-on every read (FR-RAT-09/10, NFR-INT-01).
+on every read (FR-RAT-09/10, NFR-INT-01). PR5 adds the edit flow
+(FR-LIB-06..09): every user-editable field, natural-key recomputation, and the
+same duplicate block applied to edits.
 
 Layering (§5.1): this service depends on the films repository *interface* and
 reaches the other modules **service-to-service** — tags/genres via their
-``get_or_create``/``assign`` APIs (FR-TAG-01..03), ratings via ``add_entry`` —
-all sharing the request's session, so one ``commit()`` seals the whole create
-and any failure rolls everything back (nothing here commits partially).
+``get_or_create``/``assign``/``unassign``/``delete_orphans`` APIs
+(FR-TAG-01..04), ratings via ``add_entry`` — all sharing the request's
+session, so one ``commit()`` seals the whole create (or edit) and any failure
+rolls everything back (nothing here commits partially).
 
 Duplicate detection is the pre-check against the derived key; the §5.2 unique
 constraint on ``films.natural_key`` remains the database backstop should two
-creates ever genuinely race (single-user deployment, §3.6 — a race surfaces as
-an ``INTERNAL_ERROR`` rather than a partial write).
+creates/edits ever genuinely race (single-user deployment, §3.6 — a race
+surfaces as an ``INTERNAL_ERROR`` rather than a partial write).
 """
 
 import uuid
 from collections.abc import Sequence
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Protocol
 
@@ -33,6 +36,7 @@ from app.films.schemas import (
     FilmCreate,
     FilmDetailRead,
     FilmSummary,
+    FilmUpdate,
     TitleRead,
 )
 from app.genres.models import Genre
@@ -118,6 +122,8 @@ class FilmRepositoryProtocol(Protocol):
 
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]: ...
 
+    def delete_titles(self, film_id: uuid.UUID) -> None: ...
+
     def commit(self) -> None: ...
 
 
@@ -128,6 +134,10 @@ class TagAssignmentProtocol(Protocol):
 
     def assign(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None: ...
 
+    def unassign(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None: ...
+
+    def delete_orphans(self) -> int: ...
+
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]: ...
 
 
@@ -137,6 +147,10 @@ class GenreAssignmentProtocol(Protocol):
     def get_or_create(self, name: str) -> Genre: ...
 
     def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+
+    def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+
+    def delete_orphans(self) -> int: ...
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]: ...
 
@@ -256,6 +270,105 @@ class FilmService:
             created_at=film.created_at,
             updated_at=film.updated_at,
         )
+
+    def update(self, film_id: uuid.UUID, data: FilmUpdate) -> FilmDetailRead:
+        """Edit a film's user-editable fields (FR-LIB-06..09).
+
+        Every field is optional; a field absent from the request — and, for
+        every field except ``poster_image``, an explicit ``null`` too — is
+        left unchanged (the schema docstring). ``updated_at`` is bumped only
+        when the request actually names at least one field; a body with none
+        (``{}``) is a pure no-op that leaves ``updated_at`` untouched.
+
+        All validation, including the duplicate check, runs **before** any
+        mutation: a colliding edit raises :class:`DuplicateFilmError` while
+        the film is still byte-for-byte as stored (FR-LIB-09) — nothing here
+        commits partially, mirroring :meth:`create`.
+        """
+        film = self._repository.find_by_id(film_id)
+        if film is None:
+            raise FilmNotFoundError(film_id)
+
+        current_titles = self._repository.list_titles(film_id)
+        current_primary = next(title for title in current_titles if title.is_primary)
+        effective_primary_value = (
+            next(title.value for title in data.titles if title.is_primary)
+            if data.titles is not None
+            else current_primary.value
+        )
+        effective_release_year = (
+            data.release_year if data.release_year is not None else film.release_year
+        )
+        effective_director = data.director if data.director is not None else film.director
+        new_natural_key = derive_natural_key(
+            effective_primary_value, effective_release_year, effective_director
+        )
+
+        natural_key_changed = new_natural_key != film.natural_key
+        if natural_key_changed:
+            collision = self._repository.find_by_natural_key(new_natural_key)
+            if collision is not None and collision.id != film.id:
+                raise DuplicateFilmError(self._summary_of(collision))
+            film.natural_key = new_natural_key
+
+        # Everything below only runs once the duplicate check has passed —
+        # the film is guaranteed to end up either fully edited or untouched.
+        if data.titles is not None:
+            self._repository.delete_titles(film.id)
+            for title in data.titles:
+                self._repository.add_title(
+                    Title(
+                        film_id=film.id,
+                        value=title.value,
+                        is_primary=title.is_primary,
+                        is_original=title.is_original,
+                    )
+                )
+        if data.release_year is not None:
+            film.release_year = data.release_year
+        if data.director is not None:
+            film.director = data.director
+        if "poster_image" in data.model_fields_set:
+            # The one field whose stored value is itself nullable: an explicit
+            # null here means "remove" (FR-LIB-15), not "unchanged".
+            film.poster_image = data.poster_image
+        if data.is_favorite is not None:
+            film.is_favorite = data.is_favorite
+        if data.delay_days is not None:
+            film.delay_days = data.delay_days
+        if data.tags is not None:
+            self._reassign_tags(film.id, data.tags)
+        if data.genre is not None:
+            self._reassign_genres(film.id, data.genre)
+
+        if data.model_fields_set:
+            film.updated_at = datetime.now(UTC)
+        self._repository.commit()
+        return self.get_detail(film.id)
+
+    def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
+        """Replace a film's tags with ``names`` (FR-TAG-03/04), orphans reaped."""
+        desired = _deduplicated(names)
+        desired_keys = {name.strip().lower() for name in desired}
+        for tag in self._tags.list_for_film(film_id):
+            if tag.name.strip().lower() not in desired_keys:
+                self._tags.unassign(film_id, tag.id)
+        for name in desired:
+            tag = self._tags.get_or_create(name)
+            self._tags.assign(film_id, tag.id)
+        self._tags.delete_orphans()
+
+    def _reassign_genres(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
+        """Replace a film's genres with ``names`` (FR-TAG-03/04 analogue)."""
+        desired = _deduplicated(names)
+        desired_keys = {name.strip().lower() for name in desired}
+        for genre in self._genres.list_for_film(film_id):
+            if genre.name.strip().lower() not in desired_keys:
+                self._genres.unassign(film_id, genre.id)
+        for name in desired:
+            genre = self._genres.get_or_create(name)
+            self._genres.assign(film_id, genre.id)
+        self._genres.delete_orphans()
 
     def check_duplicate(
         self, primary_title: str, release_year: int, director: str
