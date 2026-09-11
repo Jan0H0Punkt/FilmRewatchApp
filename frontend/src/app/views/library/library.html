@@ -1,0 +1,50 @@
+<h2 class="library__heading">Library</h2>
+
+@if (isLoading()) {
+  <p class="library__state" role="status">Loading your library…</p>
+} @else if (error()) {
+  <div class="library__state" role="alert">
+    <p>The library could not be loaded. Is the backend running?</p>
+    <button matButton="outlined" type="button" (click)="reload()">Try again</button>
+  </div>
+} @else if (rows().length === 0) {
+  <p class="library__state">
+    No films yet. Add one through the API docs at
+    <code>http://localhost:8000/docs</code> — the Add Film form is next.
+  </p>
+} @else {
+  <ul class="library__list">
+    @for (row of rows(); track row.id) {
+      <li class="film">
+        @if (row.posterImage) {
+          <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
+        } @else {
+          <div class="film__poster film__poster--empty" aria-hidden="true">
+            <mat-icon>movie</mat-icon>
+          </div>
+        }
+        <div class="film__body">
+          <h3 class="film__title">
+            {{ row.title }}
+            @if (row.isFavorite) {
+              <mat-icon class="film__favorite" aria-label="Favourite">star</mat-icon>
+            }
+          </h3>
+          <p class="film__subtitle">{{ row.subtitle }}</p>
+          @if (row.tags.length > 0) {
+            <ul class="film__tags">
+              @for (tag of row.tags; track tag) {
+                <li class="film__tag">{{ tag }}</li>
+              }
+            </ul>
+          }
+        </div>
+        <p class="film__rating">
+          <span aria-hidden="true">★</span>
+          <span class="visually-hidden">Average rating</span>
+          {{ row.rating }}
+        </p>
+      </li>
+    }
+  </ul>
+}
