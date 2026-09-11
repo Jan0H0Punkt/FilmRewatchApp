@@ -16,6 +16,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
+from app.core.errors import error_responses
 from app.films.dependencies import get_film_service
 from app.films.schemas import (
     DuplicateCheckRequest,
@@ -41,6 +42,7 @@ router = APIRouter()
         "release year, and director — case/whitespace-insensitive) is rejected "
         "with the `DUPLICATE_FILM` error identifying the existing film (FR-LIB-05)."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"], 409: ["DUPLICATE_FILM"]}),
 )
 def create_film(
     payload: FilmCreate,
@@ -57,6 +59,7 @@ def create_film(
         "probe run while the user fills in the create form (FR-LIB-05). Returns "
         "the same verdict the create would apply, without creating anything."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"]}),
 )
 def check_duplicate(
     payload: DuplicateCheckRequest,
@@ -73,6 +76,7 @@ def check_duplicate(
         "recent first) and the `average_rating` computed from that history on "
         "every read — never stored, never stale (FR-RAT-05/06/09, NFR-INT-01)."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"], 404: ["NOT_FOUND"]}),
 )
 def get_film(
     film_id: UUID,
@@ -94,6 +98,9 @@ def get_film(
         "with another film is rejected, unapplied, with `DUPLICATE_FILM` "
         "identifying the collision (FR-LIB-09)."
     ),
+    responses=error_responses(
+        {422: ["VALIDATION_ERROR"], 404: ["NOT_FOUND"], 409: ["DUPLICATE_FILM"]}
+    ),
 )
 def update_film(
     film_id: UUID,
@@ -113,6 +120,7 @@ def update_film(
         "deletion leaves on no films is deleted too (FR-TAG-04). An unknown id "
         "yields the `NOT_FOUND` envelope."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"], 404: ["NOT_FOUND"]}),
 )
 def delete_film(
     film_id: UUID,
@@ -133,6 +141,7 @@ def delete_film(
         "`average_rating` reflects the new entry on the next detail read "
         "(computed on read, never stored — FR-RAT-09/10)."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR", "FUTURE_WATCH_DATE"], 404: ["NOT_FOUND"]}),
 )
 def add_rating(
     film_id: UUID,

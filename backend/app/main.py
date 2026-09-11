@@ -27,16 +27,16 @@ API_V1_PREFIX = "/api/v1"
 
 
 def health() -> dict[str, str]:
-    """Liveness probe — a placeholder until M1 adds real routes (DESIGN §10, M0)."""
+    """Liveness probe (DESIGN §10, M0) — the only route with no domain logic."""
     return {"status": "ok"}
 
 
 def build_api_router() -> APIRouter:
     """Assemble the versioned ``/api/v1`` router from each feature module.
 
-    The module routers are empty stubs in M0; including them here establishes
-    the §5.1 wiring (a router never imports a repository) so M1 only has to add
-    routes inside each module.
+    Films, ratings, tags, and genres carry the full M1 core-domain surface
+    (§5.1 wiring: a router never imports a repository); rewatch stays the M0
+    empty stub its module docstring describes — its route arrives in M4.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
     api.add_api_route("/health", health, methods=["GET"], tags=["health"], summary="Liveness probe")
@@ -59,12 +59,19 @@ def create_app() -> FastAPI:
         title="Film Rewatch API",
         # App version (SemVer 2.0.0, policy in the root README). The /api/vN
         # contract is SemVer's "public API": breaking it bumps MAJOR and the
-        # URL version together.
-        version="0.1.0",
+        # URL version together. M1 is a completed milestone of new,
+        # backwards-compatible functionality, so this is the 0.2.0 MINOR bump.
+        version="0.2.0",
         summary="Backend API for the Film Rewatch application.",
         description=(
-            "Versioned (`v1`) HTTP/JSON API. M0 ships only the structural "
-            "skeleton and a liveness endpoint; domain endpoints arrive in M1+."
+            "Versioned (`v1`) HTTP/JSON API. M1 ships the core domain: log a "
+            "watched film with its first rating, tags, and genres in one "
+            "atomic create; read, edit, rate again, and delete it. Every "
+            "error response uses the single envelope "
+            '`{ "error": { "code", "message" } }` (NFR-MAINT-03) — each '
+            "route below documents the specific codes it can return. "
+            "Listing/search, merge, and rewatch suggestions are later "
+            "milestones."
         ),
     )
     # Allowed origins come from config — the backend hardcodes no client origin

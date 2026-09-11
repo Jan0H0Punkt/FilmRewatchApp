@@ -15,6 +15,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
+from app.core.errors import error_responses
 from app.films.dependencies import get_film_service
 from app.films.service import FilmService
 from app.ratings.schemas import RatingDeletionResult
@@ -34,6 +35,7 @@ router = APIRouter()
         "`PATCH`/`PUT` route for ratings (FR-RAT-08): corrections are "
         "delete-then-recreate. An unknown rating id yields `NOT_FOUND`."
     ),
+    responses=error_responses({422: ["VALIDATION_ERROR"], 404: ["NOT_FOUND"]}),
 )
 def delete_rating(
     rating_id: UUID,
