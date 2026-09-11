@@ -16,10 +16,10 @@ It is a monorepo with **per-tier guidance** — when working inside a tier, read
 Development is **design-doc-driven and milestone-sequenced**. Before writing feature code, read the relevant sections of `docs/`:
 
 - `docs/designs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
-- `docs/milestones/MILESTONE_M0_V1.md` — the current milestone (M0, "Scaffolding"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
+- `docs/milestones/MILESTONE_M1_V1.md` — the current milestone (M1, "Core domain"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
 - `docs/requirements/REQUIREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
 
-**The repo is currently in M0.** M0 delivers *structure without behaviour*: the layout exists, but there is no domain logic, no ORM tables, and no real screens or routes — those arrive in M1+. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the milestone doc). This discipline applies to **both tiers**.
+**The repo is currently in M1**, which builds the core domain (films, ratings, tags, genres) on M0's scaffolding. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the milestone doc). This discipline applies to **both tiers**.
 
 ## Workflow
 

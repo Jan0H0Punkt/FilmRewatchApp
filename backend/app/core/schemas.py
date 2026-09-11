@@ -17,6 +17,7 @@ stays strict for primitives like ``int``/``bool``, where coercion is lossy.
 """
 
 from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
@@ -30,6 +31,12 @@ JsonDate = Annotated[date, Field(strict=False)]
 JsonDateTime = Annotated[datetime, Field(strict=False)]
 JsonTime = Annotated[time, Field(strict=False)]
 JsonUUID = Annotated[UUID, Field(strict=False)]
+
+# ``Decimal``'s wire form is a JSON *number* (there is no JSON decimal type), so
+# the same reasoning applies: accepting the parsed ``float``/``int`` is not a
+# lossy coercion — Pydantic converts via ``str()``, so ``4.5`` becomes exactly
+# ``Decimal("4.5")``. Used for the rating ``value`` (REQ §4.2).
+JsonDecimal = Annotated[Decimal, Field(strict=False)]
 
 
 class StrictSchema(BaseModel):

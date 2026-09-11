@@ -6,11 +6,12 @@ Python/FastAPI backend with PostgreSQL — communicating exclusively over a vers
 HTTP/JSON API. It is designed to run entirely on your own machine via Docker Compose, with the PWA
 installable on a phone over the LAN.
 
-> **Status: Milestone M0 — Scaffolding.** The repo contains the empty, runnable shells of both
-> tiers: the backend's layout, config, strict typing, migrations harness, error envelope, and
-> Docker stack, plus the buildable Angular workspace with the §4 folder skeleton. There is
-> deliberately **no domain behaviour yet** (no entities, no business rules, no real screens) —
-> that arrives in M1+. See [docs/milestones/MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md).
+> **Status: Milestone M1 — Core Domain (backend).** The backend now has a working core domain:
+> log a watched film — atomically, with its mandatory first rating, tags, and genres — read it
+> back in full, edit it, rate it again, and delete it, with every data-model rule
+> ([REQUIREMENTS §4](docs/requirements/REQUIREMENTS_V1.md#4-data-model)) enforced server-side. M1
+> is backend-only; listing/search (`GET /films`), the frontend, and rewatch suggestions are later
+> milestones — see [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md).
 
 ## Quick start (Docker)
 
@@ -21,15 +22,27 @@ docker compose up        # or: make up
 ```
 
 This starts **PostgreSQL 17 + the backend** as one stack. The backend applies database migrations
-on startup (an empty baseline in M0) and reports healthy once `GET /api/v1/health` returns `200`.
+on startup (the M1 seven-table schema — DESIGN §5.2) and reports healthy once
+`GET /api/v1/health` returns `200`.
 
-Then open:
+Then open http://localhost:8000/docs (**Swagger UI**) to try the API interactively, or
+http://localhost:8000/openapi.json for the raw schema. The M1 surface:
 
-| URL | What |
+| Route | What |
 | --- | --- |
-| http://localhost:8000/api/v1/health | Liveness endpoint (the only route in M0) |
-| http://localhost:8000/docs | **API docs** — Swagger UI |
-| http://localhost:8000/openapi.json | OpenAPI schema |
+| `GET /api/v1/health` | Liveness probe |
+| `POST /api/v1/films` | Log a watched film — atomically, with its first rating, ≥1 tag, ≥1 genre |
+| `POST /api/v1/films/duplicate-check` | Side-effect-free probe for a colliding film |
+| `GET /api/v1/films/{id}` | Full detail read — titles, genres, tags, rating history, computed average |
+| `PATCH /api/v1/films/{id}` | Edit a film's user-editable fields |
+| `DELETE /api/v1/films/{id}` | Delete a film, cascading its titles/ratings/links, reaping orphan labels |
+| `POST /api/v1/films/{id}/ratings` | Add a rating to an existing film |
+| `DELETE /api/v1/ratings/{id}` | Delete a rating — deleting a film's last rating deletes the film |
+| `GET /api/v1/tags` / `GET /api/v1/genres` | Prefix-filterable lookups for autocomplete |
+
+Every error response — including domain codes like `DUPLICATE_FILM` and `FUTURE_WATCH_DATE` — uses
+the single envelope `{ "error": { "code", "message" } }`; Swagger documents the exact codes each
+route can return. `GET /films` (list/search/filter/sort) is **M2**; the frontend is **M3**.
 
 Database data survives `docker compose down && docker compose up` (named volume `pgdata`).
 Nothing environment-specific is hardcoded (§3.5 config-over-code): the compose file has working
@@ -58,7 +71,7 @@ cp .env.example .env         # local config — every variable is documented the
 Run the API against the composed Postgres (`docker compose up postgres` gives you just the DB):
 
 ```bash
-make migrate                            # alembic upgrade head (M0: empty baseline)
+make migrate                            # alembic upgrade head (the M1 seven-table schema)
 uv run uvicorn app.main:app --reload    # Swagger at http://localhost:8000/docs
 ```
 
@@ -67,11 +80,19 @@ uv run uvicorn app.main:app --reload    # Swagger at http://localhost:8000/docs
 There is no CI — these commands are the **local gate for every change**:
 
 ```bash
-make test          # pytest
+make test          # full pytest suite — includes the DB-bound repository tests (§9)
+make test-offline  # offline subset only (pytest -m "not db"; no database needed)
 make typecheck     # pyright in strict mode (§5.7) — must be zero errors
 make lint          # ruff check — must be clean
 make format-check  # ruff format --check (fix findings with `make format`)
 ```
+
+Repository tests run against a **real Postgres** (DESIGN §9): a disposable
+`filmrewatch_test` database on the composed server, recreated and migrated per run — dev data in
+`filmrewatch` is never touched. Start the database with `docker compose up postgres`; when it is
+down, the `db`-marked tests **skip with a reason** and the offline subset still passes. A
+non-default server/credentials setup can point `TEST_DATABASE_URL` at another Postgres (that
+database is owned — and dropped — by the suite).
 
 Strict type-safety is enforced from the first commit: treat a pyright or Ruff error as a build
 break. The make targets run through `uv run`, which resolves the tools from `backend/.venv` — no
@@ -115,7 +136,8 @@ All targets run from the repo root; the backend ones also run from `backend/` (t
 | `make typecheck`    | pyright in strict mode over the whole backend — must be zero errors                   |
 | `make lint`         | Ruff lint over the whole backend — must be clean                                      |
 | `make format-check` | Ruff format check (`make -C backend format` rewrites)                                 |
-| `make test`         | Backend unit tests (frontend tests: `npm test` from `frontend/`)                      |
+| `make test`         | Backend tests incl. DB-bound (frontend tests: `npm test` from `frontend/`)            |
+| `make test-offline` | Backend offline tests only — skips the `db`-marked repository tests (§9)              |
 | `make migrate`      | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
 
 `make dev` leaves the containers running when you Ctrl+C the dev server — stop them with
@@ -147,7 +169,7 @@ The app follows [Semantic Versioning 2.0.0](https://semver.org) (`MAJOR.MINOR.PA
   it (M1 → `0.2.0`, M2 → `0.3.0`, …).
 - **PATCH** — backwards-compatible bug fixes.
 
-The current version is **0.1.0** (M0 scaffolding). Per SemVer, `0.x` is the development phase —
+The current version is **0.2.0** (M1 core domain). Per SemVer, `0.x` is the development phase —
 anything may change at any time. **`1.0.0`** declares the public API stable and is reserved for
 when [REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) is fully implemented (Future Work
 excluded).
@@ -159,8 +181,9 @@ sections (`§5.7`) and requirement IDs (`NFR-MAINT-03`) throughout.
 
 - [docs/designs/DESIGN_V1.md](docs/designs/DESIGN_V1.md) — the authoritative technical design
   (stack, architecture, API contract, delivery plan).
-- [docs/milestones/MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md) — the current milestone,
-  broken into per-PR work items with acceptance criteria.
+- [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md) — the current milestone,
+  broken into per-PR work items with acceptance criteria
+  ([MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md) is its complete predecessor).
 - [docs/requirements/REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) — functional and
   non-functional requirements, with
   [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md) and
