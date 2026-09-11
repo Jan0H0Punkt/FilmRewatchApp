@@ -40,6 +40,8 @@ Each domain module (`app/<feature>/`) realises the three-layer architecture as *
 
 Within a module, calls flow `router → service → repository` (injected via FastAPI dependencies). **Cross-module calls go service-to-service**, never into another module's repository.
 
+**Escape hatch:** a layer file becomes a subfolder once it crosses ~200 lines *or* holds concerns that aren't tightly coupled (e.g. orchestration vs. validation vs. domain error types) — whichever comes first. Default is still one file; only split when a trigger actually fires. Shape, e.g. `app/films/service/`: `__init__.py` re-exports the public API so `from app.films.service import FilmService` keeps working, then `orchestration.py`, `validation.py`, `errors.py`, etc. per concern. Same rule for `router.py`/`repository.py`.
+
 ### Application assembly
 
 `app/main.py` is an app factory (`create_app()`): it builds the FastAPI app, adds CORS from config, registers the error handlers, then assembles the `/api/v1` router in `build_api_router()`, mounting each module's router. There is **no** `app/adapters/` folder — the adapter pattern (§5.6) is future work, if ever; the layering (core logic never imports an adapter) is what keeps it hook-in-able, and the folder is created only together with the first adapter. It would then be an internal integration surface, never mounted as a public namespace.
