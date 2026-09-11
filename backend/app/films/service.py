@@ -130,6 +130,8 @@ class FilmRepositoryProtocol(Protocol):
 
     def find_by_natural_key(self, natural_key: str) -> Film | None: ...
 
+    def list_films(self) -> Sequence[Film]: ...
+
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]: ...
 
     def delete_titles(self, film_id: uuid.UUID) -> None: ...
@@ -263,6 +265,18 @@ class FilmService:
             self._genres.assign(film.id, genre.id)
         self._repository.commit()
         return self.get_detail(film.id)
+
+    def list_all(self) -> list[FilmDetailRead]:
+        """The whole library, primary title alphabetical (the §7.2 result list).
+
+        Each entry is the same §7.3 projection a detail read returns: the list
+        needs poster, title, year, director, genre, tags, and the average, and
+        reusing one shape keeps the client on a single film type.
+        """
+        # ponytail: one detail projection per film (a handful of queries each)
+        # — a single-user library stays small. Fold the per-film lookups into
+        # joined/aggregate queries if the list read ever gets slow.
+        return [self.get_detail(film.id) for film in self._repository.list_films()]
 
     def get_detail(self, film_id: uuid.UUID) -> FilmDetailRead:
         """The full §7.3 projection — history most recent first (FR-RAT-05/06),

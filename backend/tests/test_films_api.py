@@ -309,6 +309,28 @@ def test_detail_orders_history_desc_and_computes_the_rounded_average(
     assert body["average_rating"] == 4.3
 
 
+def test_list_returns_every_film_in_primary_title_order(db_session: Session) -> None:
+    client = _client_over(db_session)
+    assert client.get("/api/v1/films").json() == []
+
+    for title in ("Solaris", "Alien", "Heat"):
+        client.post(
+            "/api/v1/films",
+            json=_payload(titles=[{"value": title, "is_primary": True}], director=title),
+        )
+
+    body = cast(list[dict[str, object]], client.get("/api/v1/films").json())
+    assert [cast(list[dict[str, object]], film["titles"])[0]["value"] for film in body] == [
+        "Alien",
+        "Heat",
+        "Solaris",
+    ]
+    # Each entry is the same §7.3 projection the detail read returns.
+    assert set(body[0]) == set(
+        cast(dict[str, object], client.get(f"/api/v1/films/{body[0]['id']}").json())
+    )
+
+
 def test_unknown_and_malformed_film_ids_map_to_the_envelope(db_session: Session) -> None:
     client = _client_over(db_session)
     missing = client.get(f"/api/v1/films/{uuid.uuid4()}")

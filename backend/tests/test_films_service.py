@@ -77,6 +77,10 @@ class FakeFilmRepository:
     def find_by_natural_key(self, natural_key: str) -> Film | None:
         return next((film for film in self.films.values() if film.natural_key == natural_key), None)
 
+    def list_films(self) -> Sequence[Film]:
+        primary = {title.film_id: title.value for title in self.titles if title.is_primary}
+        return sorted(self.films.values(), key=lambda film: primary[film.id].lower())
+
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]:
         rows = [title for title in self.titles if title.film_id == film_id]
         return sorted(rows, key=lambda title: (not title.is_primary, title.value.lower()))

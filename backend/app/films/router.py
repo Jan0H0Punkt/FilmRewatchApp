@@ -2,7 +2,9 @@
 
 FastAPI routes under ``/api/v1/films`` (mounted by the app factory): the
 "log a watched film" create (FR-LIB-01..05), the side-effect-free duplicate
-probe (FR-LIB-05), the §7.3 detail read, the edit (FR-LIB-06..09), the
+probe (FR-LIB-05), the unfiltered library list (the §7.2 result list's data
+source; M2 adds this route's FR-SF query parameters), the §7.3 detail read,
+the edit (FR-LIB-06..09), the
 cascading delete (FR-LIB-10..12), and the add-a-rating flow (FR-RAT-01..04).
 Routing and (de)serialisation only — every rule lives in the service layer
 (NFR-MAINT-02). The rating add lives here, under ``/films``, rather than in
@@ -29,6 +31,22 @@ from app.films.service import FilmService
 from app.ratings.schemas import RatingCreate, RatingEntryRead
 
 router = APIRouter()
+
+
+@router.get(
+    "",
+    summary="List the library",
+    description=(
+        "Every film in the library, ordered by primary title. Each entry is the "
+        "same §7.3 projection `GET /films/{film_id}` returns. Search, filter and "
+        "sort query parameters (FR-SF-01..11) extend this same route in M2; "
+        "until then the list is unconditional."
+    ),
+)
+def list_films(
+    service: Annotated[FilmService, Depends(get_film_service)],
+) -> list[FilmDetailRead]:
+    return service.list_all()
 
 
 @router.post(

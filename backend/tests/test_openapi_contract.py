@@ -31,6 +31,9 @@ from app.main import create_app
 
 _M1_ROUTES = {
     ("GET", "/api/v1/health"),
+    # The unfiltered library list, pulled forward from M2 to give the Angular
+    # library view a data source; M2 adds this route's FR-SF query parameters.
+    ("GET", "/api/v1/films"),
     ("POST", "/api/v1/films"),
     ("POST", "/api/v1/films/duplicate-check"),
     ("GET", "/api/v1/films/{film_id}"),

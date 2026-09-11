@@ -37,6 +37,20 @@ class FilmRepository:
         """Primary-key lookup."""
         return self._session.get(Film, film_id)
 
+    def list_films(self) -> Sequence[Film]:
+        """Every film, ordered by primary title (the §7.2 library list).
+
+        The join is on the primary title alone, which the §5.2 partial unique
+        index guarantees is exactly one row per film — so the join neither
+        drops a film nor duplicates one.
+        """
+        statement = (
+            select(Film)
+            .join(Title, (Title.film_id == Film.id) & Title.is_primary)
+            .order_by(func.lower(Title.value))
+        )
+        return self._session.scalars(statement).all()
+
     def find_by_natural_key(self, natural_key: str) -> Film | None:
         """Exact lookup on the derived duplicate-detection key (FR-LIB-05).
 
