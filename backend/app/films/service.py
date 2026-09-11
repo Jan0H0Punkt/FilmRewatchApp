@@ -1,4 +1,4 @@
-"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6).
+"""Business-logic layer for the films module (DESIGN §5.1, M1 PR4/PR5/PR6/PR7).
 
 The "log a watched film" flow (FR-LIB-01..05): create a film **together with**
 its mandatory first rating, tags, and genres in one atomic unit of work
@@ -8,14 +8,22 @@ on every read (FR-RAT-09/10, NFR-INT-01). PR5 adds the edit flow
 (FR-LIB-06..09): every user-editable field, natural-key recomputation, and the
 same duplicate block applied to edits. PR6 adds the delete flow
 (FR-LIB-10..12): the film and everything cascading from it, plus the
-now-orphaned tags/genres, removed atomically.
+now-orphaned tags/genres, removed atomically. PR7 adds the standalone rating
+lifecycle's film-side half (FR-RAT-01..08): adding a rating to an existing
+film, and the last-rating-deletes-the-film invariant, reusing PR6's delete
+flow verbatim for the cascade + orphan cleanup.
 
 Layering (§5.1): this service depends on the films repository *interface* and
 reaches the other modules **service-to-service** — tags/genres via their
 ``get_or_create``/``assign``/``unassign``/``delete_orphans`` APIs
-(FR-TAG-01..04), ratings via ``add_entry`` — all sharing the request's
-session, so one ``commit()`` seals the whole create (or edit, or delete) and
-any failure rolls everything back (nothing here commits partially).
+(FR-TAG-01..04), ratings via ``add_entry``/``get_or_raise``/``count_for_film``/
+``delete`` — all sharing the request's session, so one ``commit()`` seals the
+whole create (or edit, delete, or rating operation) and any failure rolls
+everything back (nothing here commits partially). The standalone rating
+endpoints are owned by this service, not ``RatingService``, precisely because
+the last-rating case must call back into :meth:`FilmService.delete` — the
+reverse dependency direction would be circular (this service already depends
+on ``RatingService`` for the create flow's first rating).
 
 Duplicate detection is the pre-check against the derived key; the §5.2 unique
 constraint on ``films.natural_key`` remains the database backstop should two
@@ -43,7 +51,7 @@ from app.films.schemas import (
 )
 from app.genres.models import Genre
 from app.ratings.models import RatingEntry
-from app.ratings.schemas import RatingEntryRead
+from app.ratings.schemas import RatingDeletionResult, RatingEntryRead
 from app.tags.models import Tag
 
 
@@ -163,6 +171,12 @@ class RatingHistoryProtocol(Protocol):
     """What the film flow needs of the rating service (service-to-service)."""
 
     def add_entry(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntry: ...
+
+    def get_or_raise(self, rating_id: uuid.UUID) -> RatingEntry: ...
+
+    def count_for_film(self, film_id: uuid.UUID) -> int: ...
+
+    def delete(self, entry: RatingEntry) -> None: ...
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[RatingEntry]: ...
 
@@ -368,6 +382,43 @@ class FilmService:
         self._tags.delete_orphans()
         self._genres.delete_orphans()
         self._repository.commit()
+
+    def add_rating(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntryRead:
+        """Record a new rating event for an existing film (FR-RAT-01..04).
+
+        Unknown film id → :class:`FilmNotFoundError`. A future ``watch_date``
+        raises :class:`~app.ratings.service.FutureWatchDateError` from
+        :meth:`RatingHistoryProtocol.add_entry` (its own stable code, not
+        ``VALIDATION_ERROR``). The average the next detail read computes
+        reflects the new entry automatically — it is never stored
+        (FR-RAT-10, NFR-INT-01).
+        """
+        film = self._repository.find_by_id(film_id)
+        if film is None:
+            raise FilmNotFoundError(film_id)
+        entry = self._ratings.add_entry(film_id, value, watch_date)
+        self._repository.commit()
+        return RatingEntryRead.model_validate(entry)
+
+    def delete_rating(self, rating_id: uuid.UUID) -> RatingDeletionResult:
+        """Delete one rating entry, applying the last-rating rule (FR-RAT-07).
+
+        Unknown rating id → ``NOT_FOUND``. If the entry is the film's *last*
+        remaining rating, the whole film is deleted via :meth:`delete` — the
+        same atomic cascade + orphan cleanup PR6 built — rather than deleting
+        the rating row directly (the ``ON DELETE CASCADE`` FK removes it as
+        part of that one commit). Otherwise only the rating entry is removed.
+        The response tells the two outcomes apart (``film_deleted``) so the M3
+        UI knows whether to stay on the film or navigate away from it.
+        """
+        entry = self._ratings.get_or_raise(rating_id)
+        film_id = entry.film_id
+        if self._ratings.count_for_film(film_id) <= 1:
+            self.delete(film_id)
+            return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=True)
+        self._ratings.delete(entry)
+        self._repository.commit()
+        return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=False)
 
     def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
         """Replace a film's tags with ``names`` (FR-TAG-03/04), orphans reaped."""
