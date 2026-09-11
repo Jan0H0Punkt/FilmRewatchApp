@@ -11,9 +11,11 @@ Transaction control stays with the caller: nothing here commits. The film flows
 inside their own atomic unit of work; the lookup route only reads.
 """
 
+import uuid
 from collections.abc import Sequence
 
 from sqlalchemy import CursorResult, delete, exists, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -91,3 +93,27 @@ class GenreRepository:
         """Case-insensitive lookup via the ``lower(name)`` unique index (§5.2)."""
         statement = select(Genre).where(func.lower(Genre.name) == func.lower(name))
         return self._session.scalars(statement).one_or_none()
+
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
+        """Associate a genre with a film via the ``film_genres`` join row.
+
+        ``ON CONFLICT DO NOTHING`` on the composite primary key makes assigning
+        an already-present link a no-op (§5.5 natural idempotency) instead of a
+        constraint violation.
+        """
+        statement = (
+            insert(FilmGenre)
+            .values(film_id=film_id, genre_id=genre_id)
+            .on_conflict_do_nothing(index_elements=[FilmGenre.film_id, FilmGenre.genre_id])
+        )
+        self._session.execute(statement)
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
+        """The genres assigned to one film, alphabetically (the §7.3 projection)."""
+        statement = (
+            select(Genre)
+            .join(FilmGenre, FilmGenre.genre_id == Genre.id)
+            .where(FilmGenre.film_id == film_id)
+            .order_by(func.lower(Genre.name))
+        )
+        return self._session.scalars(statement).all()

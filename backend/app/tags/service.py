@@ -17,6 +17,7 @@ Rules enforced here (authoritatively server-side, NFR-INT-03):
   never a user-facing route.
 """
 
+import uuid
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -49,6 +50,10 @@ class TagRepositoryProtocol(Protocol):
 
     def delete_orphans(self) -> int: ...
 
+    def link_film(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None: ...
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]: ...
+
 
 class TagService:
     """Tag business rules over an injected repository interface."""
@@ -74,3 +79,15 @@ class TagService:
     def delete_orphans(self) -> int:
         """Delete tags left on no films (FR-TAG-04); returns how many died."""
         return self._repository.delete_orphans()
+
+    def assign(self, film_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        """Assign a tag to a film (FR-TAG-03) — idempotent, per the repository.
+
+        Called service-to-service by the film flows (M1 PR4/PR5) inside their
+        atomic unit of work; there is no standalone assignment route.
+        """
+        self._repository.link_film(film_id, tag_id)
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Tag]:
+        """The film's tags for the §7.3 detail projection, alphabetically."""
+        return self._repository.list_for_film(film_id)
