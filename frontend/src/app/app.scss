@@ -1,5 +1,20 @@
-/* M0 placeholder root styles (MILESTONE M0 PR7). */
-.placeholder {
-  padding: 2rem;
-  text-align: center;
+.app-bar {
+  align-items: center;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.app-bar__title {
+  font: var(--mat-sys-title-large);
+  margin: 0;
+}
+
+.app-main {
+  margin: 0 auto;
+  max-width: 60rem;
+  padding: 1.5rem 1rem;
 }

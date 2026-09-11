@@ -1,8 +1,18 @@
-<!-- M0 placeholder root (MILESTONE M0 PR7): a buildable, empty shell.
-     The real views and the adaptive navigation (DESIGN §6.5) arrive in M3. -->
-<main class="placeholder">
-  <h1>{{ title() }}</h1>
-  <p>M0 scaffolding — the Rewatch, Library and Film Detail views arrive in M3.</p>
-</main>
+<header class="app-bar">
+  <h1 class="app-bar__title">{{ title() }}</h1>
+  <mat-button-toggle-group
+    class="app-bar__theme"
+    aria-label="Colour theme"
+    hideSingleSelectionIndicator
+    [value]="theme()"
+    (valueChange)="theme.set($event)"
+  >
+    <mat-button-toggle value="light">Light</mat-button-toggle>
+    <mat-button-toggle value="dark">Dark</mat-button-toggle>
+    <mat-button-toggle value="auto">Auto</mat-button-toggle>
+  </mat-button-toggle-group>
+</header>
 
-<router-outlet />
+<main class="app-main">
+  <router-outlet />
+</main>
