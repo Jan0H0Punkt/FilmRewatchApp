@@ -24,6 +24,7 @@ def _make_film(natural_key: str) -> Film:
         natural_key=natural_key,
         release_year=1927,
         director="Fritz Lang",
+        runtime_minutes=153,
     )
 
 

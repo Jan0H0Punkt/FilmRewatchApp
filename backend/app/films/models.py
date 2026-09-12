@@ -35,6 +35,7 @@ class Film(Base):
     natural_key: Mapped[str] = mapped_column(String(600), unique=True)
     release_year: Mapped[int] = mapped_column(Integer)
     director: Mapped[str] = mapped_column(String(255))
+    runtime_minutes: Mapped[int] = mapped_column(Integer)
     # User-entered, not fetched from a metadata provider (FR-LIB-13/14).
     poster_image: Mapped[str | None] = mapped_column(String(2048))
     # Rewatch-engine inputs (REQ §4.1).

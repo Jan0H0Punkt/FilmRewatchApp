@@ -185,6 +185,7 @@ def test_link_film_is_idempotent_and_lists_only_that_films_tags(db_session: Sess
             natural_key=f"link probe {n}|2001|jane doe",
             release_year=2001,
             director="Jane Doe",
+            runtime_minutes=100,
         )
         for n in (1, 2)
     ]
@@ -213,6 +214,7 @@ def test_delete_orphans_spares_labels_still_linked_to_a_film(db_session: Session
         natural_key="tag cleanup probe|2001|jane doe",
         release_year=2001,
         director="Jane Doe",
+        runtime_minutes=100,
     )
     db_session.add(film)
     db_session.flush()

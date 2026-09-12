@@ -176,6 +176,7 @@ same film can only exist once in the library).
 | `titles`         | List\<Title\>       | Yes                | 1–∞ titles; exactly one primary            | All titles for the film (main + alternatives); see the Title Object below                                |
 | `release_year`   | Integer             | Yes                | 1888–current year                          | Year the film was first released                                                                         |
 | `director`       | String              | Yes                | 1–255 characters; anyUnicode(any language) | Name of the director(s)                                                                                  |
+| `runtime_minutes`| Integer             | Yes                | ≥ 1                                        | The film's runtime, in minutes                                                                           |
 | `genre`          | List\<Genre\>       | Yes                | 1–∞ genres                                 | Genres assigned to the film; at least one is required. Free text, not an enum; see the Genre entity (§4.4) |
 | `poster_image`   | URL                 | No                 | Valid URL; max 2048 characters             | URL pointing to a poster image; entered by the user                                                      |
 | `tags`           | List\<Tag\>         | Yes                | 1–∞ tags                                   | User-defined tags assigned to this film; at least one is required                                        |
@@ -280,7 +281,7 @@ Film  1..*   ──── 1..*   Genre
 #### 5.1.1 Create Film
 
 - **FR-LIB-01:** The user shall be able to create a new film record. The following are mandatory at creation: at least one `title`,
-  `release_year`, `director`, at least one `genre`, and at least one `tag`. If only one title is provided it becomes the primary title
+  `release_year`, `director`, `runtime_minutes`, at least one `genre`, and at least one `tag`. If only one title is provided it becomes the primary title
   automatically; if several are provided the user designates which one is primary. The user may optionally mark one title as the
   original-language title (see Section 4.1, Title Object).
 - **FR-LIB-02:** Several fields are not required input at creation time: `poster_image` is optional and may be omitted entirely;
@@ -300,8 +301,8 @@ Film  1..*   ──── 1..*   Genre
 
 #### 5.1.2 Edit Film
 
-- **FR-LIB-06:** The user shall be able to edit any user-editable field of a film record (`titles`, `release_year`, `director`, `genre`,
-  `poster_image`, `tags`, `is_favorite`, `delay_days`). Editing `titles` includes adding/removing titles and changing which title is marked
+- **FR-LIB-06:** The user shall be able to edit any user-editable field of a film record (`titles`, `release_year`, `director`,
+  `runtime_minutes`, `genre`, `poster_image`, `tags`, `is_favorite`, `delay_days`). Editing `titles` includes adding/removing titles and changing which title is marked
   primary or original, subject to the Title rules in Section 4.1.
 - **FR-LIB-07:** `id` and `created_at` shall never be editable.
 - **FR-LIB-08:** Upon any successful edit, `updated_at` shall be updated to the current UTC timestamp. If the primary title (its `value` or
@@ -652,6 +653,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Title                    | Film primary title  |
 | Release year             | Film.release_year   |
 | Director                 | Film.director       |
+| Runtime                  | Film.runtime_minutes |
 | Genre                    | Film.genre          |
 | Average rating           | Film.average_rating |
 | Tags                     | Film.tags           |
@@ -682,6 +684,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Titles                       | Primary title shown prominently; any alternative titles listed beneath it (original-language title indicated). Editable via edit form                                                                                              |
 | Release year                 |                                                                                                                                                                                                                                    |
 | Director                     |                                                                                                                                                                                                                                    |
+| Runtime                      | `Film.runtime_minutes`, in minutes                                                                                                                                                                                                |
 | Genre                        | Displayed as a list (a film may have multiple genres)                                                                                                                                                                              |
 | Tags                         | Displayed as chips; add/remove tags directly from this view                                                                                                                                                                        |
 | Favourite                    | Toggle reflecting `Film.is_favorite`; user can switch it directly from this view or via the Edit form                                                                                                                              |

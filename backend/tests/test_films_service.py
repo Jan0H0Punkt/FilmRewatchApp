@@ -235,6 +235,7 @@ def payload(**overrides: object) -> FilmCreate:
         "titles": [{"value": "Heat", "is_primary": True}],
         "release_year": 1995,
         "director": "Michael Mann",
+        "runtime_minutes": 170,
         "genre": ["Crime"],
         "tags": ["heist"],
         "first_rating": {"value": 4.5, "watch_date": "1995-12-15"},
@@ -316,6 +317,12 @@ def test_release_year_bounds_are_1888_through_the_current_year() -> None:
     for bad_year in (1887, current_year + 1):
         with pytest.raises(ValidationError):
             payload(release_year=bad_year)
+
+
+def test_runtime_minutes_must_be_at_least_1() -> None:
+    assert payload(runtime_minutes=1).runtime_minutes == 1
+    with pytest.raises(ValidationError):
+        payload(runtime_minutes=0)
 
 
 def test_rating_value_must_be_a_half_step_in_range() -> None:

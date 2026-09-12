@@ -125,6 +125,7 @@ class FilmCreate(StrictSchema):
     titles: list[TitleCreate] = Field(min_length=1)
     release_year: int
     director: str = Field(min_length=1, max_length=255)
+    runtime_minutes: int = Field(ge=1)
     genre: list[str] = Field(min_length=1)
     tags: list[str] = Field(min_length=1)
     poster_image: str | None = Field(default=None, max_length=2048)
@@ -171,6 +172,7 @@ class FilmUpdate(StrictSchema):
     titles: list[TitleCreate] | None = Field(default=None, min_length=1)
     release_year: int | None = None
     director: str | None = Field(default=None, min_length=1, max_length=255)
+    runtime_minutes: int | None = Field(default=None, ge=1)
     genre: list[str] | None = Field(default=None, min_length=1)
     tags: list[str] | None = Field(default=None, min_length=1)
     poster_image: str | None = Field(default=None, max_length=2048)
@@ -260,6 +262,7 @@ class FilmDetailRead(StrictSchema):
     titles: list[TitleRead]
     release_year: int
     director: str
+    runtime_minutes: int
     genre: list[str]
     tags: list[str]
     poster_image: str | None

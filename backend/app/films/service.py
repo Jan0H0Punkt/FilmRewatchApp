@@ -244,6 +244,7 @@ class FilmService:
             natural_key=natural_key,
             release_year=data.release_year,
             director=data.director,
+            runtime_minutes=data.runtime_minutes,
             poster_image=data.poster_image,
         )
         self._repository.add_film(film)
@@ -292,6 +293,7 @@ class FilmService:
             ],
             release_year=film.release_year,
             director=film.director,
+            runtime_minutes=film.runtime_minutes,
             genre=[genre.name for genre in self._genres.list_for_film(film.id)],
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
             poster_image=film.poster_image,
@@ -360,6 +362,8 @@ class FilmService:
             film.release_year = data.release_year
         if data.director is not None:
             film.director = data.director
+        if data.runtime_minutes is not None:
+            film.runtime_minutes = data.runtime_minutes
         if "poster_image" in data.model_fields_set:
             # The one field whose stored value is itself nullable: an explicit
             # null here means "remove" (FR-LIB-15), not "unchanged".

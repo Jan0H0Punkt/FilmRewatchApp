@@ -66,6 +66,7 @@ def _payload(**overrides: object) -> dict[str, object]:
         ],
         "release_year": 1995,
         "director": "Michael Mann",
+        "runtime_minutes": 170,
         "genre": ["Crime", "Thriller"],
         "tags": ["heist", "la"],
         "poster_image": "https://example.org/heat.jpg",
@@ -106,6 +107,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "titles",
         "release_year",
         "director",
+        "runtime_minutes",
         "genre",
         "tags",
         "poster_image",
@@ -157,6 +159,7 @@ def test_each_validation_failure_yields_the_validation_error_envelope(
         _payload(first_rating={"value": 4.5, "watch_date": "2999-01-01"}),  # future date
         _payload(first_rating={"value": 4.3, "watch_date": "1995-12-15"}),  # off-step value
         _payload(release_year="1995"),  # lossy-typed field (§5.7)
+        _payload(runtime_minutes=0),  # must be ≥ 1
         _payload(natural_key="heat|1995|michael mann"),  # unknown/system field
         _payload(is_favorite=True),  # not accepted at create (FR-LIB-02)
         _payload(poster_image="not a url"),  # FR-LIB-14

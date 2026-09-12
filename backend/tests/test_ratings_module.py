@@ -159,6 +159,7 @@ def test_history_is_most_recent_first_with_same_day_repeats(db_session: Session)
         natural_key="rating order probe|2001|jane doe",
         release_year=2001,
         director="Jane Doe",
+        runtime_minutes=100,
     )
     db_session.add(film)
     db_session.flush()

@@ -108,7 +108,7 @@ def get_film(
     summary="Edit a film",
     description=(
         "Edits the user-editable fields of a film — titles, release year, "
-        "director, genres, tags, poster, favourite flag, rewatch delay "
+        "director, runtime, genres, tags, poster, favourite flag, rewatch delay "
         "(FR-LIB-06). Every field is optional (absent = unchanged); `id`, "
         "`created_at`, `natural_key`, and `average_rating` are never editable "
         "(FR-LIB-07). Editing the primary title, release year, or director "
