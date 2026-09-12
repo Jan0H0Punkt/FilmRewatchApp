@@ -10,7 +10,7 @@ const HEAT: Film = {
   id: 'f1',
   primaryTitle: 'Heat',
   releaseYear: 1995,
-  director: 'Michael Mann',
+  directors: ['Michael Mann'],
   runtimeMinutes: 170,
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
@@ -47,8 +47,9 @@ describe('Library', () => {
 
     expect(element.querySelector('.film__title')?.textContent).toContain('Heat');
     expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 · Michael Mann · 170 min');
-    // A whole-number average still prints its decimal, so the column aligns.
-    expect(element.querySelector('.film__rating')?.textContent).toContain('4.0');
+    // The stars are decorative; the exact average lives in the screen-reader
+    // label, where a whole-number average still prints its decimal.
+    expect(element.querySelector('.film__rating')?.getAttribute('aria-label')).toBe('Average rating: 4.0 out of 5');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
   });
 
