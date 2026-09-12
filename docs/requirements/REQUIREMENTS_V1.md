@@ -175,7 +175,7 @@ same film can only exist once in the library).
 | `natural_key`    | String              | Yes (system)       | Unique; derived                            | System-generated key for duplicate detection and sync deduplication; see note below                      |
 | `titles`         | List\<Title\>       | Yes                | 1–∞ titles; exactly one primary            | All titles for the film (main + alternatives); see the Title Object below                                |
 | `release_year`   | Integer             | Yes                | 1888–current year                          | Year the film was first released                                                                         |
-| `directors`      | List\<String\>     | Yes                | 1–∞ directors; each 1–255 characters; anyUnicode(any language) | Names of the film's directors, in credited order — a film may be co-directed                             |
+| `directors`      | List\<Director\>   | Yes                | 1–∞ directors; credited order preserved    | The film's directors — a shared entity like Genre; see the Director Object below                          |
 | `runtime_minutes`| Integer             | Yes                | ≥ 1                                        | The film's runtime, in minutes                                                                           |
 | `genre`          | List\<Genre\>       | Yes                | 1–∞ genres                                 | Genres assigned to the film; at least one is required. Free text, not an enum; see the Genre entity (§4.4) |
 | `poster_image`   | URL                 | No                 | Valid URL; max 2048 characters             | URL pointing to a poster image; entered by the user                                                      |
@@ -214,6 +214,31 @@ Title rules:
 - Title text accepts any Unicode characters, so titles in any language or script can be entered.
 - The `natural_key` (and therefore duplicate detection) is derived from the **primary title**. Editing the primary title's `value`, or
   designating a different title as primary, changes the `natural_key` (see FR-LIB-08, FR-LIB-09).
+
+#### Director Object
+
+A Film has one or more **directors**, stored in the `directors` list. A Director is a **shared entity**, modelled like Tag and Genre: created
+implicitly when a film is saved, deduplicated by name (case-insensitively), and automatically removed when no film credits it.
+
+| Field        | Type              | Required     | Constraints                                                             | Description                                   |
+| ------------ | ----------------- | ------------ | ----------------------------------------------------------------------- | --------------------------------------------- |
+| `id`         | UUID              | Yes (system) | Unique, immutable                                                       | System-generated identifier                   |
+| `name`       | String            | Yes          | 1–255 characters; any Unicode (any language); unique (case-insensitive) | The director's name                           |
+| `created_at` | ISO 8601 DateTime | Yes (system) | Immutable                                                               | Timestamp when the director was first created |
+
+Director rules:
+
+- Every Film has **at least one** Director; films with no director are not permitted.
+- A Film may have **several** Directors — co-directed and anthology films name all of them.
+- The association is **ordered**: a film's director list preserves the credited order the user entered. This is the one way Directors differ
+  from Tags and Genres, whose assignments are unordered. The order is per film — the same person may be first-credited on one film and
+  second on another.
+- A Director cannot exist independently of films: a Director left credited on no film is automatically deleted (mirroring the Tag rules,
+  §5.3).
+- A name entered in different casing or with surrounding whitespace resolves to the **same** Director; the first spelling entered is the one
+  stored and displayed.
+- The `natural_key` (and therefore duplicate detection) is derived from **all** of a film's directors, independent of their order (see
+  Section 4.1, FR-LIB-04).
 
 ### 4.2 RatingEntry
 
@@ -264,14 +289,16 @@ implicitly when a film is saved, deduplicated by name, and automatically removed
 Film  1      ──── 1..*   RatingEntry
 Film  1..*   ──── 1..*   Tag
 Film  1..*   ──── 1..*   Genre
+Film  1..*   ──── 1..*   Director   (ordered)
 ```
 
 - A Film has **one or more** RatingEntries — never zero (the library holds only watched films; see FR-LIB-03). A RatingEntry belongs to
   exactly one Film.
 - A Film must have **at least one** Tag, and a Tag must be assigned to **at least one** Film (many-to-many); orphan (unused) tags are not
-  permitted. **Genres follow the same many-to-many rule**, with the same orphan-deletion behaviour.
-- Deleting a Film cascades to delete all its associated RatingEntries. Tag and genre associations are also removed; any Tag or Genre left
-  with no remaining Film associations is automatically deleted.
+  permitted. **Genres and Directors follow the same many-to-many rule**, with the same orphan-deletion behaviour — except that a film's
+  director list is *ordered* (see the Director Object, §4.1).
+- Deleting a Film cascades to delete all its associated RatingEntries. Tag, genre, and director associations are also removed; any Tag,
+  Genre, or Director left with no remaining Film associations is automatically deleted.
 
 ---
 

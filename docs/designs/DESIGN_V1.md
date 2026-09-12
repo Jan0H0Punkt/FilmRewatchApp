@@ -207,7 +207,7 @@ into another module's repository.
 §4 already lists every field and rule. This section only covers what is **new at the database level**: how those
 entities become Postgres tables, what the database stores versus computes, and how the harder rules are enforced.
 
-The eight tables and how they relate (keys only — full fields live in §4):
+The nine tables and how they relate (keys only — full fields live in §4):
 
 ```mermaid
 erDiagram
@@ -222,7 +222,11 @@ erDiagram
     }
     directors {
         uuid id PK
+        string name UK
+    }
+    film_directors {
         uuid film_id FK
+        uuid director_id FK
         int position
     }
     rating_entries {
@@ -246,7 +250,8 @@ erDiagram
         uuid genre_id FK
     }
     films ||--o{ titles : "has"
-    films ||--o{ directors : "has"
+    films ||--o{ film_directors : ""
+    directors ||--o{ film_directors : ""
     films ||--o{ rating_entries : "has"
     films ||--o{ film_tags : ""
     tags  ||--o{ film_tags : ""
@@ -254,11 +259,14 @@ erDiagram
     genres ||--o{ film_genres : ""
 ```
 
-**How the §4 entities become tables.** A film's titles, its directors, and its rating history each become their
-*own* table (`titles`, `directors`, `rating_entries`), linked back to `films` by a `film_id` foreign key — rather
-than being packed into the film row — so they can be queried and constrained independently. Directors are a plain
-child table rather than a shared entity like `tags`: nothing yet asks to browse the library *by* director, and a
-`position` column keeps the credited order a co-directed film's list carries. **Tags and genres are modelled
+**How the §4 entities become tables.** A film's list of titles and its rating history each become their *own*
+table (`titles`, `rating_entries`), linked back to `films` by a `film_id` foreign key — rather than being packed
+into the film row — so they can be queried and constrained independently. **Directors, tags, and genres are
+modelled identically**: each is a shared entity table holding every distinct name once (`directors`, `tags`,
+`genres`), connected to films by a many-to-many **join table** (`film_directors`, `film_tags`, `film_genres`), so
+one person is stored once however many films they directed. The director join carries one extra column the label
+joins don't need — `position`, the film's credited order — because a credit list is ordered where a label set is
+not. **Tags and genres are modelled
 identically**: each is a shared entity table holding every distinct label once (`tags`, `genres`), connected to
 films by a many-to-many **join table** (`film_tags`, `film_genres`). So "Drama" — like the tag "comfort-film" —
 is stored once and reused, which keeps casing consistent for exact-match genre filtering (FR-SF-07) and enables

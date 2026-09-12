@@ -184,7 +184,7 @@ rules (value steps, year range — those are §5.4 schema/service concerns).
 
 **Acceptance criteria**
 
-- [x] `alembic upgrade head` on a fresh Postgres creates the seven tables (+ `alembic_version`); downgrade returns
+- [x] `alembic upgrade head` on a fresh Postgres creates the §5.2 tables (+ `alembic_version`); downgrade returns
       to the empty baseline.
 - [x] `alembic revision --autogenerate` after upgrade produces an **empty diff**.
 - [x] DB constraints hold: duplicate `natural_key`, case-insensitively duplicate tag/genre names, and a second
