@@ -33,6 +33,10 @@
                 }
               </h3>
               <p class="film__subtitle">{{ row.subtitle }}</p>
+              <p class="film__end-time">
+                <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+                Done by {{ row.endTime }}
+              </p>
               @if (row.genres.length > 0) {
                 <mat-chip-set class="film__genres" aria-label="Genres">
                   @for (genre of row.genres; track genre) {

@@ -82,6 +82,21 @@ $chip-density-theme: mat.define-theme(
   margin: 0.125rem 0 0;
 }
 
+.film__end-time {
+  align-items: center;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  font: var(--mat-sys-body-small);
+  gap: 0.25rem;
+  margin: 0.125rem 0 0;
+}
+
+.film__end-time mat-icon {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+
 .film__genres,
 .film__tags {
   @include mat.chips-density($chip-density-theme);

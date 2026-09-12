@@ -27,6 +27,17 @@ interface FilmRowVm {
   readonly ratingStars: readonly string[];
   readonly ratingLabel: string;
   readonly isFavorite: boolean;
+  /** Rough clock time the film would end if watching started now, rounded up to the next quarter hour. */
+  readonly endTime: string;
+}
+
+const QUARTER_HOUR_MS = 15 * 60_000;
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+
+function endTimeFrom(runtimeMinutes: number): string {
+  const end = Date.now() + runtimeMinutes * 60_000;
+  const rounded = Math.ceil(end / QUARTER_HOUR_MS) * QUARTER_HOUR_MS;
+  return timeFormat.format(new Date(rounded));
 }
 
 /** Rounds to the nearest half star and maps each of the 5 positions to a Material star icon. */
@@ -64,6 +75,7 @@ export class Library {
       ratingStars: ratingStars(film.averageRating),
       ratingLabel: `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
       isFavorite: film.isFavorite,
+      endTime: endTimeFrom(film.runtimeMinutes),
     })),
   );
 
