@@ -43,8 +43,15 @@ Routes are driven by the **route registry** (`src/app/core/route-registry.ts`): 
 
 `src/environments/environment.ts` is the **single wiring point** to the backend: `apiBaseUrl` is hard-coded into the build — the laptop's **LAN address** (placeholder until known) so the mobile PWA can reach it. `ng serve` swaps in `environment.development.ts` (localhost) via `fileReplacements`. Repointing the production build means rebuilding. The backend's `CORS_ALLOWED_ORIGINS` must include this app's origin (see `docker-compose.yml`).
 
+### Material theming (Material Design 3)
+
+The app is themed exclusively through Angular Material's M3 system (`src/styles.scss`'s single `mat.theme(...)` include) — no M2 `mat.define-light-theme`/`mat.all-component-themes` anywhere. Two consequences for any per-component override (density, color, typography):
+
+- Reach for `var(--mat-sys-*)`/`--mat-<component>-*` custom properties or a scoped `mat.<component>-overrides((...))` first (see `library.scss`'s `.film__genre`/`.film__tag` for the token-override pattern).
+- If a component's density/color/typography mixin (`mat.<component>-density()`, `mat.chips-color()`, etc.) is genuinely needed, pass it a **real M3 theme object** built with `mat.define-theme((...))` — never a bare number or an M2-style config. `inspection.get-theme-version()` can only detect M3 from an actual theme map; a bare density number silently reroutes the mixin through Material's legacy M2 code path. It can produce the same output by coincidence (verified for chips: the M2 and M3 density token tables happen to match, both floored at scale `-2` = `24px`), but that's not guaranteed for other tokens/components, so don't rely on it. Pattern: `$density-theme: mat.define-theme((density: (scale: -2))); @include mat.chips-density($density-theme);`
+
 ## Conventions
 
 - **Strict type-safety everywhere** (§5.7): the `tsconfig.json` strict family plus `strictTemplates` are on — set explicitly in M0 PR7 (Angular 22's `ng new` no longer emits `"strict": true`; do not remove it). No `any` leakage.
-- **Standalone components** (no NgModules); Angular Material for UI components (§2).
+- **Standalone components** (no NgModules); Angular Material for UI components (§2), themed per "Material theming" above.
 - Cite design sections and requirement IDs (`§6.5`, `FR-EXT-02`) as pointers in comments, not paraphrases. Comment length and placement follow the `code-docs` skill.
