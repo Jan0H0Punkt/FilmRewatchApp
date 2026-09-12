@@ -12,6 +12,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 
+import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../../domain/film/facade';
 
 /** One row of the result list (§7.2 "Film Result Item"). */
@@ -34,8 +35,8 @@ interface FilmRowVm {
 const QUARTER_HOUR_MS = 15 * 60_000;
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 
-function endTimeFrom(runtimeMinutes: number): string {
-  const end = Date.now() + runtimeMinutes * 60_000;
+function endTimeFrom(now: number, runtimeMinutes: number): string {
+  const end = now + runtimeMinutes * 60_000;
   const rounded = Math.ceil(end / QUARTER_HOUR_MS) * QUARTER_HOUR_MS;
   return timeFormat.format(new Date(rounded));
 }
@@ -60,12 +61,14 @@ function ratingStars(rating: number): readonly string[] {
 })
 export class Library {
   private readonly films = inject(FilmFacade);
+  private readonly clock = inject(ClockService);
 
   protected readonly isLoading = this.films.isLoading;
   protected readonly error = this.films.error;
 
-  protected readonly rows = computed<readonly FilmRowVm[]>(() =>
-    this.films.films().map((film) => ({
+  protected readonly rows = computed<readonly FilmRowVm[]>(() => {
+    const now = this.clock.now();
+    return this.films.films().map((film) => ({
       id: film.id,
       title: film.primaryTitle,
       posterImage: film.posterImage,
@@ -75,9 +78,9 @@ export class Library {
       ratingStars: ratingStars(film.averageRating),
       ratingLabel: `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
       isFavorite: film.isFavorite,
-      endTime: endTimeFrom(film.runtimeMinutes),
-    })),
-  );
+      endTime: endTimeFrom(now, film.runtimeMinutes),
+    }));
+  });
 
   protected reload(): void {
     this.films.reload();
