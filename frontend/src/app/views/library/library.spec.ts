@@ -11,6 +11,7 @@ const HEAT: Film = {
   primaryTitle: 'Heat',
   releaseYear: 1995,
   director: 'Michael Mann',
+  runtimeMinutes: 170,
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
   posterImage: null,
@@ -45,10 +46,17 @@ describe('Library', () => {
     const element = await render(stubFacade([HEAT]));
 
     expect(element.querySelector('.film__title')?.textContent).toContain('Heat');
-    expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 · Michael Mann · Crime · Thriller');
+    expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 · Michael Mann · 170 min');
     // A whole-number average still prints its decimal, so the column aligns.
     expect(element.querySelector('.film__rating')?.textContent).toContain('4.0');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
+  });
+
+  it('renders each genre as its own chip', async () => {
+    const element = await render(stubFacade([HEAT]));
+
+    const genres = [...element.querySelectorAll('.film__genre')].map((el) => el.textContent);
+    expect(genres).toEqual(['Crime', 'Thriller']);
   });
 
   it('shows the empty state when the library holds no films', async () => {

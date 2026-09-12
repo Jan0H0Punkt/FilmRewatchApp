@@ -8,6 +8,7 @@
  */
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 
 import { FilmFacade } from '../../domain/film/facade';
@@ -17,8 +18,9 @@ interface FilmRowVm {
   readonly id: string;
   readonly title: string;
   readonly posterImage: string | null;
-  /** Year, director, and genres as the one subtitle line the row prints. */
+  /** Year, director, and runtime as the one subtitle line the row prints. */
   readonly subtitle: string;
+  readonly genres: readonly string[];
   readonly tags: readonly string[];
   readonly rating: string;
   readonly isFavorite: boolean;
@@ -26,7 +28,7 @@ interface FilmRowVm {
 
 @Component({
   selector: 'app-library',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatChipsModule, MatIconModule],
   templateUrl: './library.html',
   styleUrl: './library.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,7 +44,8 @@ export class Library {
       id: film.id,
       title: film.primaryTitle,
       posterImage: film.posterImage,
-      subtitle: [String(film.releaseYear), film.director, ...film.genres].join(' · '),
+      subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' · '),
+      genres: film.genres,
       tags: film.tags,
       rating: film.averageRating.toFixed(1),
       isFavorite: film.isFavorite,

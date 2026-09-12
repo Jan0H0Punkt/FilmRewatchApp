@@ -11,6 +11,7 @@ export interface Film {
   readonly primaryTitle: string;
   readonly releaseYear: number;
   readonly director: string;
+  readonly runtimeMinutes: number;
   readonly genres: readonly string[];
   readonly tags: readonly string[];
   readonly posterImage: string | null;

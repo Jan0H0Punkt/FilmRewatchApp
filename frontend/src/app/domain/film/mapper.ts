@@ -12,6 +12,7 @@ export function toFilm(dto: FilmDto): Film {
     primaryTitle: dto.titles[0].value,
     releaseYear: dto.release_year,
     director: dto.director,
+    runtimeMinutes: dto.runtime_minutes,
     genres: dto.genre,
     tags: dto.tags,
     posterImage: dto.poster_image,
