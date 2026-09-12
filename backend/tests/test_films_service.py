@@ -26,7 +26,8 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from app.films.models import Director, Film, Title
+from app.directors.models import Director
+from app.films.models import Film, Title
 from app.films.schemas import FilmCreate, FilmUpdate
 from app.films.service import (
     DuplicateFilmError,
@@ -59,7 +60,6 @@ class FakeFilmRepository:
     def __init__(self) -> None:
         self.films: dict[uuid.UUID, Film] = {}
         self.titles: list[Title] = []
-        self.directors: list[Director] = []
         self.commits = 0
 
     def add_film(self, film: Film) -> None:
@@ -71,9 +71,6 @@ class FakeFilmRepository:
 
     def add_title(self, title: Title) -> None:
         self.titles.append(title)
-
-    def add_director(self, director: Director) -> None:
-        self.directors.append(director)
 
     def find_by_id(self, film_id: uuid.UUID) -> Film | None:
         return self.films.get(film_id)
@@ -89,22 +86,14 @@ class FakeFilmRepository:
         rows = [title for title in self.titles if title.film_id == film_id]
         return sorted(rows, key=lambda title: (not title.is_primary, title.value.lower()))
 
-    def list_directors(self, film_id: uuid.UUID) -> Sequence[Director]:
-        rows = [director for director in self.directors if director.film_id == film_id]
-        return sorted(rows, key=lambda director: director.position)
-
     def delete_titles(self, film_id: uuid.UUID) -> None:
         self.titles = [title for title in self.titles if title.film_id != film_id]
 
-    def delete_directors(self, film_id: uuid.UUID) -> None:
-        self.directors = [director for director in self.directors if director.film_id != film_id]
-
     def delete_film(self, film: Film) -> None:
-        # Mirrors the dependent tables this fake itself owns; ratings and
-        # label links live in the other fakes and are, like the real FK
-        # cascade, out of this repository's reach (M1 PR6).
+        # Mirrors the one dependent table this fake itself owns; ratings and
+        # label/director links live in the other fakes and are, like the real
+        # FK cascade, out of this repository's reach (M1 PR6).
         self.titles = [title for title in self.titles if title.film_id != film.id]
-        self.directors = [director for director in self.directors if director.film_id != film.id]
         del self.films[film.id]
 
     def commit(self) -> None:
@@ -181,6 +170,48 @@ class FakeGenreService:
         return sorted(linked, key=lambda genre: genre.name.lower())
 
 
+class FakeDirectorService:
+    """In-memory :class:`DirectorAssignmentProtocol` implementation.
+
+    Like the label fakes, but the links carry the credited position, so
+    ``list_for_film`` answers in that order instead of alphabetically.
+    """
+
+    def __init__(self) -> None:
+        self.by_lower: dict[str, Director] = {}
+        self.links: dict[tuple[uuid.UUID, uuid.UUID], int] = {}
+        self.orphan_sweeps = 0
+
+    def get_or_create(self, name: str) -> Director:
+        trimmed = name.strip()
+        key = trimmed.lower()
+        if key not in self.by_lower:
+            self.by_lower[key] = Director(id=uuid.uuid4(), name=trimmed, created_at=_now())
+        return self.by_lower[key]
+
+    def assign(self, film_id: uuid.UUID, director_id: uuid.UUID, position: int) -> None:
+        self.links[(film_id, director_id)] = position
+
+    def unassign_all(self, film_id: uuid.UUID) -> None:
+        self.links = {key: at for key, at in self.links.items() if key[0] != film_id}
+
+    def delete_orphans(self) -> int:
+        self.orphan_sweeps += 1
+        linked_ids = {director_id for _, director_id in self.links}
+        orphans = [row for row in self.by_lower.values() if row.id not in linked_ids]
+        for director in orphans:
+            del self.by_lower[director.name.lower()]
+        return len(orphans)
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Director]:
+        credited = [
+            (self.links[(film_id, row.id)], row)
+            for row in self.by_lower.values()
+            if (film_id, row.id) in self.links
+        ]
+        return [row for _, row in sorted(credited, key=lambda pair: pair[0])]
+
+
 class FakeRatingService:
     """In-memory :class:`RatingHistoryProtocol` implementation."""
 
@@ -226,7 +257,8 @@ def make_service() -> tuple[FilmService, FakeFilmRepository, FakeTagService, Fak
     repository = FakeFilmRepository()
     tags = FakeTagService()
     ratings = FakeRatingService()
-    return FilmService(repository, tags, FakeGenreService(), ratings), repository, tags, ratings
+    service = FilmService(repository, tags, FakeGenreService(), FakeDirectorService(), ratings)
+    return service, repository, tags, ratings
 
 
 def make_service_with_genres() -> tuple[
@@ -238,7 +270,8 @@ def make_service_with_genres() -> tuple[
     tags = FakeTagService()
     genres = FakeGenreService()
     ratings = FakeRatingService()
-    return FilmService(repository, tags, genres, ratings), repository, tags, genres, ratings
+    service = FilmService(repository, tags, genres, FakeDirectorService(), ratings)
+    return service, repository, tags, genres, ratings
 
 
 def payload(**overrides: object) -> FilmCreate:

@@ -7,8 +7,9 @@ independently.
   year + directors, and appears in no request or response schema (FR-LIB-04/05).
 - ``average_rating`` is not stored: it is computed from ``rating_entries`` on
   every read (FR-RAT-09/10, NFR-INT-01).
-- Directors live in their own table because a film can have several (a
-  co-directed or anthology film); the "at least one" rule, like the title rules,
+- Directors are **not** here: a film can have several, and they are a shared
+  entity like tags and genres, so they live in ``app/directors/models.py`` with
+  their own join table. The "at least one director" rule, like the title rules,
   is a service-layer concern.
 - The "at least one title, one of them primary" rules cannot be expressed as row
   constraints; the service layer enforces them. Value ranges (year, lengths
@@ -49,24 +50,6 @@ class Film(Base):
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
-
-class Director(Base):
-    """One director credit of a film (REQ §4.1).
-
-    ``position`` preserves the credited order the user entered — unlike a
-    title, a director has no flag to order by, and "first-credited" is
-    information the row order would otherwise lose.
-    """
-
-    __tablename__ = "directors"
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    film_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("films.id", ondelete="CASCADE"), index=True
-    )
-    name: Mapped[str] = mapped_column(String(255))
-    position: Mapped[int] = mapped_column(Integer)
 
 
 class Title(Base):

@@ -5,7 +5,7 @@ This is M0 **plumbing only**: a SQLAlchemy 2.x engine built from ``DATABASE_URL`
 repositories (M1) will depend on, and the typed declarative :class:`Base` every
 ORM model inherits from.
 
-**No domain tables are defined here.** The eight §5.2 tables and their first
+**No domain tables are defined here.** The nine §5.2 tables and their first
 migration arrive in M1, so ``Base.metadata`` is empty in M0 — which is exactly
 what makes ``alembic revision --autogenerate`` produce an empty diff against a
 migrated database (M0 PR4 acceptance).

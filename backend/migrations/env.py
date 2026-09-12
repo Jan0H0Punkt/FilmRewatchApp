@@ -22,6 +22,7 @@ from sqlalchemy.pool import NullPool
 # Load-bearing despite looking unused: importing each module registers its tables
 # on ``Base.metadata``. Drop these and ``--autogenerate`` sees empty metadata, so
 # it emits a DROP for every existing table.
+import app.directors.models
 import app.films.models
 import app.genres.models
 import app.ratings.models

@@ -14,10 +14,10 @@ film, and the last-rating-deletes-the-film invariant, reusing PR6's delete
 flow verbatim for the cascade + orphan cleanup.
 
 Layering (§5.1): this service depends on the films repository *interface* and
-reaches the other modules **service-to-service** — tags/genres via their
-``get_or_create``/``assign``/``unassign``/``delete_orphans`` APIs
-(FR-TAG-01..04), ratings via ``add_entry``/``get_or_raise``/``count_for_film``/
-``delete`` — all sharing the request's session, so one ``commit()`` seals the
+reaches the other modules **service-to-service** — tags/genres/directors via
+their ``get_or_create``/``assign``/``unassign``/``delete_orphans`` APIs
+(FR-TAG-01..04 and their director analogue), ratings via
+``add_entry``/``get_or_raise``/``count_for_film``/``delete`` — all sharing the request's session, so one ``commit()`` seals the
 whole create (or edit, delete, or rating operation) and any failure rolls
 everything back (nothing here commits partially). The standalone rating
 endpoints are owned by this service, not ``RatingService``, precisely because
@@ -40,7 +40,8 @@ from typing import Protocol
 from fastapi import status
 
 from app.core.errors import AppError
-from app.films.models import Director, Film, Title
+from app.directors.models import Director
+from app.films.models import Film, Title
 from app.films.schemas import (
     DuplicateCheckResult,
     FilmCreate,
@@ -134,8 +135,6 @@ class FilmRepositoryProtocol(Protocol):
 
     def add_title(self, title: Title) -> None: ...
 
-    def add_director(self, director: Director) -> None: ...
-
     def find_by_id(self, film_id: uuid.UUID) -> Film | None: ...
 
     def find_by_natural_key(self, natural_key: str) -> Film | None: ...
@@ -144,11 +143,7 @@ class FilmRepositoryProtocol(Protocol):
 
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]: ...
 
-    def list_directors(self, film_id: uuid.UUID) -> Sequence[Director]: ...
-
     def delete_titles(self, film_id: uuid.UUID) -> None: ...
-
-    def delete_directors(self, film_id: uuid.UUID) -> None: ...
 
     def delete_film(self, film: Film) -> None: ...
 
@@ -181,6 +176,25 @@ class GenreAssignmentProtocol(Protocol):
     def delete_orphans(self) -> int: ...
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]: ...
+
+
+class DirectorAssignmentProtocol(Protocol):
+    """What the film flow needs of the director service (service-to-service).
+
+    Ordered, so it differs from the label protocols in two places: ``assign``
+    takes the credited ``position``, and the whole list is dropped at once
+    (``unassign_all``) rather than one entry at a time.
+    """
+
+    def get_or_create(self, name: str) -> Director: ...
+
+    def assign(self, film_id: uuid.UUID, director_id: uuid.UUID, position: int) -> None: ...
+
+    def unassign_all(self, film_id: uuid.UUID) -> None: ...
+
+    def delete_orphans(self) -> int: ...
+
+    def list_for_film(self, film_id: uuid.UUID) -> Sequence[Director]: ...
 
 
 class RatingHistoryProtocol(Protocol):
@@ -227,17 +241,19 @@ class FilmService:
         repository: FilmRepositoryProtocol,
         tags: TagAssignmentProtocol,
         genres: GenreAssignmentProtocol,
+        directors: DirectorAssignmentProtocol,
         ratings: RatingHistoryProtocol,
     ) -> None:
         self._repository = repository
         self._tags = tags
         self._genres = genres
+        self._directors = directors
         self._ratings = ratings
 
     def create(self, data: FilmCreate) -> FilmDetailRead:
         """The atomic "log a watched film" flow (FR-LIB-01..05).
 
-        Film + titles + first rating + tag/genre links join one unit of work,
+        Film + titles + first rating + tag/genre/director links join one unit of work,
         sealed by a single commit — a failure at any step (e.g. an invalid
         label name) leaves no partial rows. Returns the full §7.3 projection
         of the created film.
@@ -261,7 +277,7 @@ class FilmService:
             poster_image=data.poster_image,
         )
         self._repository.add_film(film)
-        self._add_directors(film.id, data.directors)
+        self._assign_directors(film.id, data.directors)
         for title in data.titles:
             self._repository.add_title(
                 Title(
@@ -306,7 +322,7 @@ class FilmService:
                 TitleRead.model_validate(title) for title in self._repository.list_titles(film.id)
             ],
             release_year=film.release_year,
-            directors=[director.name for director in self._repository.list_directors(film.id)],
+            directors=[director.name for director in self._directors.list_for_film(film.id)],
             runtime_minutes=film.runtime_minutes,
             genre=[genre.name for genre in self._genres.list_for_film(film.id)],
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
@@ -350,7 +366,7 @@ class FilmService:
         effective_directors = (
             data.directors
             if data.directors is not None
-            else [director.name for director in self._repository.list_directors(film_id)]
+            else [director.name for director in self._directors.list_for_film(film_id)]
         )
         new_natural_key = derive_natural_key(
             effective_primary_value, effective_release_year, effective_directors
@@ -379,8 +395,7 @@ class FilmService:
         if data.release_year is not None:
             film.release_year = data.release_year
         if data.directors is not None:
-            self._repository.delete_directors(film.id)
-            self._add_directors(film.id, data.directors)
+            self._reassign_directors(film.id, data.directors)
         if data.runtime_minutes is not None:
             film.runtime_minutes = data.runtime_minutes
         if "poster_image" in data.model_fields_set:
@@ -407,7 +422,8 @@ class FilmService:
         The film row's removal cascades to its titles, rating entries, and
         tag/genre links at the database level (PR1's ``ON DELETE CASCADE``
         foreign keys); this method then sweeps for tags/genres the deletion
-        left on no films (FR-LIB-12, FR-TAG-04). Both steps share the film
+        left on no films, and directors left on none (FR-LIB-12, FR-TAG-04).
+        Both steps share the film
         service's one unit of work, sealed by a single commit (NFR-INT-02) —
         a failure anywhere leaves the film, and everything cascading from it,
         exactly as it was.
@@ -418,6 +434,7 @@ class FilmService:
         self._repository.delete_film(film)
         self._tags.delete_orphans()
         self._genres.delete_orphans()
+        self._directors.delete_orphans()
         self._repository.commit()
 
     def add_rating(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntryRead:
@@ -457,15 +474,27 @@ class FilmService:
         self._repository.commit()
         return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=False)
 
-    def _add_directors(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
-        """Stage a film's director rows, credited order preserved (REQ §4.1).
+    def _assign_directors(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
+        """Credit ``names`` on a film in order, creating the people as needed.
 
         Deduplicated the way the natural key is, so a payload naming the same
-        director twice stores one row — and the stored rows stay consistent with
-        the key derived from that same payload.
+        director twice credits them once — and the stored links stay consistent
+        with the key derived from that same payload.
         """
         for position, name in enumerate(_deduplicated(names)):
-            self._repository.add_director(Director(film_id=film_id, name=name, position=position))
+            director = self._directors.get_or_create(name)
+            self._directors.assign(film_id, director.id, position)
+
+    def _reassign_directors(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
+        """Replace a film's whole credit list with ``names``, orphans reaped.
+
+        Wholesale rather than the label services' diff-and-patch: ``position``
+        is only meaningful for a complete list, so re-crediting from scratch is
+        both shorter and the only way to reorder an existing list.
+        """
+        self._directors.unassign_all(film_id)
+        self._assign_directors(film_id, names)
+        self._directors.delete_orphans()
 
     def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
         """Replace a film's tags with ``names`` (FR-TAG-03/04), orphans reaped."""
@@ -511,5 +540,5 @@ class FilmService:
             id=film.id,
             primary_title=primary.value,
             release_year=film.release_year,
-            directors=[director.name for director in self._repository.list_directors(film.id)],
+            directors=[director.name for director in self._directors.list_for_film(film.id)],
         )

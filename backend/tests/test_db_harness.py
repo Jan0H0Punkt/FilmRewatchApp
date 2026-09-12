@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy import Engine, inspect, select
 from sqlalchemy.orm import Session
 
-from app.films.models import Director, Film, Title
+from app.directors.models import Director, FilmDirector
+from app.films.models import Film, Title
 
 # Shared on purpose: the two isolation tests must collide if teardown ever
 # stops rolling back.
@@ -27,12 +28,13 @@ def _make_film(natural_key: str) -> Film:
     )
 
 
-def test_migrated_schema_has_the_eight_domain_tables(db_engine: Engine) -> None:
+def test_migrated_schema_has_the_nine_domain_tables(db_engine: Engine) -> None:
     # The fixture ran the real Alembic chain, not create_all.
     assert set(inspect(db_engine).get_table_names()) == {
         "films",
         "titles",
         "directors",
+        "film_directors",
         "rating_entries",
         "tags",
         "film_tags",
@@ -51,14 +53,21 @@ def test_round_trip_persists_and_reads_back(db_session: Session) -> None:
     # FilmRepository.add_film).
     db_session.flush()
     db_session.add(Title(film_id=film.id, value="Metropolis", is_primary=True, is_original=True))
-    db_session.add(Director(film_id=film.id, name="Fritz Lang", position=0))
+    director = Director(name="Fritz Lang")
+    db_session.add(director)
+    db_session.flush()
+    db_session.add(FilmDirector(film_id=film.id, director_id=director.id, position=0))
     db_session.commit()
 
     loaded = db_session.scalars(
         select(Film).where(Film.natural_key == "metropolis|1927|fritz lang")
     ).one()
-    director = db_session.scalars(select(Director).where(Director.film_id == loaded.id)).one()
-    assert director.name == "Fritz Lang"
+    credited = db_session.scalars(
+        select(Director)
+        .join(FilmDirector, FilmDirector.director_id == Director.id)
+        .where(FilmDirector.film_id == loaded.id)
+    ).one()
+    assert credited.name == "Fritz Lang"
     assert loaded.created_at is not None
     title = db_session.scalars(select(Title).where(Title.film_id == loaded.id)).one()
     assert title.value == "Metropolis"

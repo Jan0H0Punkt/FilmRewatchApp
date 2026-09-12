@@ -2,7 +2,7 @@
 
 Wires the film service and its collaborators for injection into the routes:
 request-scoped session → :class:`FilmRepository` → :class:`FilmService`, with
-the tag, genre, and rating services injected **service-to-service** (§5.1).
+the tag, genre, director, and rating services injected **service-to-service** (§5.1).
 FastAPI caches ``get_session`` per request, so every module's repository
 shares the one session — which is what makes the create flow a single atomic
 unit of work (FR-LIB-03, NFR-INT-02).
@@ -14,6 +14,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.db import get_session
+from app.directors.dependencies import get_director_service
+from app.directors.service import DirectorService
 from app.films.repository import FilmRepository
 from app.films.service import FilmService
 from app.genres.dependencies import get_genre_service
@@ -33,7 +35,8 @@ def get_film_service(
     repository: Annotated[FilmRepository, Depends(get_film_repository)],
     tags: Annotated[TagService, Depends(get_tag_service)],
     genres: Annotated[GenreService, Depends(get_genre_service)],
+    directors: Annotated[DirectorService, Depends(get_director_service)],
     ratings: Annotated[RatingService, Depends(get_rating_service)],
 ) -> FilmService:
     """The film service over its repository and peer services."""
-    return FilmService(repository, tags, genres, ratings)
+    return FilmService(repository, tags, genres, directors, ratings)
