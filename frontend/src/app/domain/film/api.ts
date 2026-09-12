@@ -21,7 +21,7 @@ export interface FilmDto {
   readonly id: string;
   readonly titles: readonly TitleDto[];
   readonly release_year: number;
-  readonly director: string;
+  readonly directors: readonly string[];
   readonly runtime_minutes: number;
   readonly genre: readonly string[];
   readonly tags: readonly string[];

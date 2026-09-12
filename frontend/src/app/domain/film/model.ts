@@ -10,7 +10,8 @@ export interface Film {
   /** The film's primary title (REQ §4.1) — the one every list shows. */
   readonly primaryTitle: string;
   readonly releaseYear: number;
-  readonly director: string;
+  /** Every credited director, in credited order (REQ §4.1). */
+  readonly directors: readonly string[];
   readonly runtimeMinutes: number;
   readonly genres: readonly string[];
   readonly tags: readonly string[];

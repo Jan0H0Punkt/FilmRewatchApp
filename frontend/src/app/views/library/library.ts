@@ -72,7 +72,7 @@ export class Library {
       id: film.id,
       title: film.primaryTitle,
       posterImage: film.posterImage,
-      subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' · '),
+      subtitle: [String(film.releaseYear), film.directors.join(', '), `${film.runtimeMinutes} min`].join(' · '),
       genres: film.genres,
       tags: film.tags,
       ratingStars: ratingStars(film.averageRating),
