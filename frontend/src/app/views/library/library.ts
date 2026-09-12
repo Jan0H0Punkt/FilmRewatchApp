@@ -8,6 +8,7 @@
  */
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -22,13 +23,26 @@ interface FilmRowVm {
   readonly subtitle: string;
   readonly genres: readonly string[];
   readonly tags: readonly string[];
-  readonly rating: string;
+  /** Five Material star icon names ('star' | 'star_half' | 'star_border'), rounded to the nearest half star. */
+  readonly ratingStars: readonly string[];
+  readonly ratingLabel: string;
   readonly isFavorite: boolean;
+}
+
+/** Rounds to the nearest half star and maps each of the 5 positions to a Material star icon. */
+function ratingStars(rating: number): readonly string[] {
+  const rounded = Math.round(rating * 2) / 2;
+  return Array.from({ length: 5 }, (_, index) => {
+    const position = index + 1;
+    if (rounded >= position) return 'star';
+    if (position - rounded === 0.5) return 'star_half';
+    return 'star_border';
+  });
 }
 
 @Component({
   selector: 'app-library',
-  imports: [MatButtonModule, MatChipsModule, MatIconModule],
+  imports: [MatButtonModule, MatCardModule, MatChipsModule, MatIconModule],
   templateUrl: './library.html',
   styleUrl: './library.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +61,8 @@ export class Library {
       subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' · '),
       genres: film.genres,
       tags: film.tags,
-      rating: film.averageRating.toFixed(1),
+      ratingStars: ratingStars(film.averageRating),
+      ratingLabel: `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
       isFavorite: film.isFavorite,
     })),
   );

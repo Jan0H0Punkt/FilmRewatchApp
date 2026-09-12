@@ -15,42 +15,46 @@
 } @else {
   <ul class="library__list">
     @for (row of rows(); track row.id) {
-      <li class="film">
-        @if (row.posterImage) {
-          <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
-        } @else {
-          <div class="film__poster film__poster--empty" aria-hidden="true">
-            <mat-icon>movie</mat-icon>
-          </div>
-        }
-        <div class="film__body">
-          <h3 class="film__title">
-            {{ row.title }}
-            @if (row.isFavorite) {
-              <mat-icon class="film__favorite" aria-label="Favourite">star</mat-icon>
+      <li>
+        <mat-card appearance="outlined">
+          <div class="film">
+            @if (row.posterImage) {
+              <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
+            } @else {
+              <div class="film__poster film__poster--empty" aria-hidden="true">
+                <mat-icon>movie</mat-icon>
+              </div>
             }
-          </h3>
-          <p class="film__subtitle">{{ row.subtitle }}</p>
-          @if (row.genres.length > 0) {
-            <mat-chip-set class="film__genres" aria-label="Genres">
-              @for (genre of row.genres; track genre) {
-                <mat-chip class="film__genre" disableRipple>{{ genre }}</mat-chip>
+            <div class="film__body">
+              <h3 class="film__title">
+                {{ row.title }}
+                @if (row.isFavorite) {
+                  <mat-icon class="film__favorite" aria-label="Favourite">star</mat-icon>
+                }
+              </h3>
+              <p class="film__subtitle">{{ row.subtitle }}</p>
+              @if (row.genres.length > 0) {
+                <mat-chip-set class="film__genres" aria-label="Genres">
+                  @for (genre of row.genres; track genre) {
+                    <mat-chip class="film__genre" disableRipple>{{ genre }}</mat-chip>
+                  }
+                </mat-chip-set>
               }
-            </mat-chip-set>
-          }
-          @if (row.tags.length > 0) {
-            <mat-chip-set class="film__tags" aria-label="Tags">
-              @for (tag of row.tags; track tag) {
-                <mat-chip class="film__tag" disableRipple>{{ tag }}</mat-chip>
+              @if (row.tags.length > 0) {
+                <mat-chip-set class="film__tags" aria-label="Tags">
+                  @for (tag of row.tags; track tag) {
+                    <mat-chip class="film__tag" disableRipple>{{ tag }}</mat-chip>
+                  }
+                </mat-chip-set>
               }
-            </mat-chip-set>
-          }
-        </div>
-        <p class="film__rating">
-          <span aria-hidden="true">★</span>
-          <span class="visually-hidden">Average rating</span>
-          {{ row.rating }}
-        </p>
+            </div>
+            <p class="film__rating" [attr.aria-label]="row.ratingLabel">
+              @for (icon of row.ratingStars; track $index) {
+                <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+              }
+            </p>
+          </div>
+        </mat-card>
       </li>
     }
   </ul>
