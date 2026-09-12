@@ -18,8 +18,11 @@ dev:
 up:
 	docker compose up
 
-# Stop the Docker Compose stack (data survives — named volume, PR6).
+# Stop everything: the Angular dev server (whichever terminal it's running
+# in, found by the port it listens on) and the Docker Compose stack (data
+# survives — named volume, PR6).
 down:
+	-lsof -ti:4200 | xargs kill 2>/dev/null
 	docker compose down
 
 # The full local gate — build everything, run every check and every test on
