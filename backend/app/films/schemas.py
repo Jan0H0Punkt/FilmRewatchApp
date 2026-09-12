@@ -11,7 +11,7 @@ types JSON cannot carry natively.
 
 ``natural_key`` appears in **no** schema here — it is derived and consumed
 server-side only (FR-LIB-04); the client-facing duplicate probe speaks in its
-*parts* (primary title, release year, director).
+*parts* (primary title, release year, directors).
 """
 
 from datetime import UTC, datetime
@@ -40,6 +40,20 @@ def _validated_key_part(text: str) -> str:
     if not text.strip():
         raise ValueError("must not be blank")
     return text
+
+
+def _validated_directors(directors: list[str]) -> list[str]:
+    """Every director name is a non-blank natural-key part within column width.
+
+    The list-level ``min_length=1`` on the field covers "at least one director"
+    (REQ §4.1); this covers the entries themselves, which carry no per-item
+    constraint of their own.
+    """
+    for name in directors:
+        _validated_key_part(name)
+        if len(name) > 255:
+            raise ValueError("a director name must be at most 255 characters")
+    return directors
 
 
 def _validated_poster_url(url: str | None) -> str | None:
@@ -124,7 +138,7 @@ class FilmCreate(StrictSchema):
     id: JsonUUID | None = None
     titles: list[TitleCreate] = Field(min_length=1)
     release_year: int
-    director: str = Field(min_length=1, max_length=255)
+    directors: list[str] = Field(min_length=1)
     runtime_minutes: int = Field(ge=1)
     genre: list[str] = Field(min_length=1)
     tags: list[str] = Field(min_length=1)
@@ -136,10 +150,10 @@ class FilmCreate(StrictSchema):
     def _release_year_in_range(cls, year: int) -> int:
         return _validated_release_year(year)
 
-    @field_validator("director")
+    @field_validator("directors")
     @classmethod
-    def _director_not_blank(cls, director: str) -> str:
-        return _validated_key_part(director)
+    def _directors_are_key_parts(cls, directors: list[str]) -> list[str]:
+        return _validated_directors(directors)
 
     @field_validator("poster_image")
     @classmethod
@@ -171,7 +185,7 @@ class FilmUpdate(StrictSchema):
 
     titles: list[TitleCreate] | None = Field(default=None, min_length=1)
     release_year: int | None = None
-    director: str | None = Field(default=None, min_length=1, max_length=255)
+    directors: list[str] | None = Field(default=None, min_length=1)
     runtime_minutes: int | None = Field(default=None, ge=1)
     genre: list[str] | None = Field(default=None, min_length=1)
     tags: list[str] | None = Field(default=None, min_length=1)
@@ -184,10 +198,10 @@ class FilmUpdate(StrictSchema):
     def _release_year_in_range(cls, year: int | None) -> int | None:
         return year if year is None else _validated_release_year(year)
 
-    @field_validator("director")
+    @field_validator("directors")
     @classmethod
-    def _director_not_blank(cls, director: str | None) -> str | None:
-        return director if director is None else _validated_key_part(director)
+    def _directors_are_key_parts(cls, directors: list[str] | None) -> list[str] | None:
+        return directors if directors is None else _validated_directors(directors)
 
     @field_validator("poster_image")
     @classmethod
@@ -210,12 +224,17 @@ class DuplicateCheckRequest(StrictSchema):
 
     primary_title: str = Field(min_length=1, max_length=255)
     release_year: int
-    director: str = Field(min_length=1, max_length=255)
+    directors: list[str] = Field(min_length=1)
 
-    @field_validator("primary_title", "director")
+    @field_validator("primary_title")
     @classmethod
     def _part_not_blank(cls, part: str) -> str:
         return _validated_key_part(part)
+
+    @field_validator("directors")
+    @classmethod
+    def _directors_are_key_parts(cls, directors: list[str]) -> list[str]:
+        return _validated_directors(directors)
 
     @field_validator("release_year")
     @classmethod
@@ -229,7 +248,7 @@ class FilmSummary(StrictSchema):
     id: JsonUUID
     primary_title: str
     release_year: int
-    director: str
+    directors: list[str]
 
 
 class DuplicateCheckResult(StrictSchema):
@@ -261,7 +280,8 @@ class FilmDetailRead(StrictSchema):
     id: JsonUUID
     titles: list[TitleRead]
     release_year: int
-    director: str
+    #: Credited order, as entered (REQ §4.1).
+    directors: list[str]
     runtime_minutes: int
     genre: list[str]
     tags: list[str]

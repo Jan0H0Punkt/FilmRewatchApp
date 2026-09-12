@@ -4,20 +4,21 @@ Needs no database — the engine is created lazily, on first use.
 """
 
 from app.core.db import Base, get_session
-from app.films.models import Film, Title
+from app.films.models import Director, Film, Title
 from app.genres.models import FilmGenre, Genre
 from app.ratings.models import RatingEntry
 from app.tags.models import FilmTag, Tag
 
 
-def test_metadata_defines_exactly_the_seven_domain_tables() -> None:
+def test_metadata_defines_exactly_the_eight_domain_tables() -> None:
     # One table per entity/join (REQ §4.1-4.5) and nothing else: a stray model
     # would silently widen the schema. Importing the classes is what registers
     # them on ``Base.metadata``.
-    domain_models = (Film, Title, RatingEntry, Tag, FilmTag, Genre, FilmGenre)
+    domain_models = (Film, Title, Director, RatingEntry, Tag, FilmTag, Genre, FilmGenre)
     assert {model.__tablename__ for model in domain_models} == {
         "films",
         "titles",
+        "directors",
         "rating_entries",
         "tags",
         "film_tags",

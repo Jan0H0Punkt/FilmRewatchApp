@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import Engine, inspect, select
 from sqlalchemy.orm import Session
 
-from app.films.models import Film, Title
+from app.films.models import Director, Film, Title
 
 # Shared on purpose: the two isolation tests must collide if teardown ever
 # stops rolling back.
@@ -23,16 +23,16 @@ def _make_film(natural_key: str) -> Film:
         id=uuid.uuid4(),
         natural_key=natural_key,
         release_year=1927,
-        director="Fritz Lang",
         runtime_minutes=153,
     )
 
 
-def test_migrated_schema_has_the_seven_domain_tables(db_engine: Engine) -> None:
+def test_migrated_schema_has_the_eight_domain_tables(db_engine: Engine) -> None:
     # The fixture ran the real Alembic chain, not create_all.
     assert set(inspect(db_engine).get_table_names()) == {
         "films",
         "titles",
+        "directors",
         "rating_entries",
         "tags",
         "film_tags",
@@ -46,13 +46,19 @@ def test_round_trip_persists_and_reads_back(db_session: Session) -> None:
     """The template repository tests copy: request ``db_session``, read/write real rows."""
     film = _make_film("metropolis|1927|fritz lang")
     db_session.add(film)
+    # Flushed before the child rows: the models carry no relationship(), so the
+    # unit of work would otherwise insert them in mapper-name order (see
+    # FilmRepository.add_film).
+    db_session.flush()
     db_session.add(Title(film_id=film.id, value="Metropolis", is_primary=True, is_original=True))
+    db_session.add(Director(film_id=film.id, name="Fritz Lang", position=0))
     db_session.commit()
 
     loaded = db_session.scalars(
         select(Film).where(Film.natural_key == "metropolis|1927|fritz lang")
     ).one()
-    assert loaded.director == "Fritz Lang"
+    director = db_session.scalars(select(Director).where(Director.film_id == loaded.id)).one()
+    assert director.name == "Fritz Lang"
     assert loaded.created_at is not None
     title = db_session.scalars(select(Title).where(Title.film_id == loaded.id)).one()
     assert title.value == "Metropolis"

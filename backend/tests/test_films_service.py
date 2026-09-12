@@ -26,7 +26,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from app.films.models import Film, Title
+from app.films.models import Director, Film, Title
 from app.films.schemas import FilmCreate, FilmUpdate
 from app.films.service import (
     DuplicateFilmError,
@@ -59,6 +59,7 @@ class FakeFilmRepository:
     def __init__(self) -> None:
         self.films: dict[uuid.UUID, Film] = {}
         self.titles: list[Title] = []
+        self.directors: list[Director] = []
         self.commits = 0
 
     def add_film(self, film: Film) -> None:
@@ -70,6 +71,9 @@ class FakeFilmRepository:
 
     def add_title(self, title: Title) -> None:
         self.titles.append(title)
+
+    def add_director(self, director: Director) -> None:
+        self.directors.append(director)
 
     def find_by_id(self, film_id: uuid.UUID) -> Film | None:
         return self.films.get(film_id)
@@ -85,14 +89,22 @@ class FakeFilmRepository:
         rows = [title for title in self.titles if title.film_id == film_id]
         return sorted(rows, key=lambda title: (not title.is_primary, title.value.lower()))
 
+    def list_directors(self, film_id: uuid.UUID) -> Sequence[Director]:
+        rows = [director for director in self.directors if director.film_id == film_id]
+        return sorted(rows, key=lambda director: director.position)
+
     def delete_titles(self, film_id: uuid.UUID) -> None:
         self.titles = [title for title in self.titles if title.film_id != film_id]
 
+    def delete_directors(self, film_id: uuid.UUID) -> None:
+        self.directors = [director for director in self.directors if director.film_id != film_id]
+
     def delete_film(self, film: Film) -> None:
-        # Mirrors the one dependent table this fake itself owns; ratings and
+        # Mirrors the dependent tables this fake itself owns; ratings and
         # label links live in the other fakes and are, like the real FK
         # cascade, out of this repository's reach (M1 PR6).
         self.titles = [title for title in self.titles if title.film_id != film.id]
+        self.directors = [director for director in self.directors if director.film_id != film.id]
         del self.films[film.id]
 
     def commit(self) -> None:
@@ -234,7 +246,7 @@ def payload(**overrides: object) -> FilmCreate:
     data: dict[str, object] = {
         "titles": [{"value": "Heat", "is_primary": True}],
         "release_year": 1995,
-        "director": "Michael Mann",
+        "directors": ["Michael Mann"],
         "runtime_minutes": 170,
         "genre": ["Crime"],
         "tags": ["heist"],
@@ -256,9 +268,20 @@ def update_payload(**fields: object) -> FilmUpdate:
 
 
 def test_natural_key_normalises_case_and_surrounding_whitespace() -> None:
-    key = derive_natural_key("  HEAT ", 1995, " Michael MANN  ")
+    key = derive_natural_key("  HEAT ", 1995, [" Michael MANN  "])
     assert key == "heat|1995|michael mann"
-    assert key == derive_natural_key("Heat", 1995, "Michael Mann")
+    assert key == derive_natural_key("Heat", 1995, ["Michael Mann"])
+
+
+def test_natural_key_is_insensitive_to_director_order_and_repeats() -> None:
+    # The same co-directed film, however its directors were entered.
+    key = derive_natural_key("The Matrix", 1999, ["Lana Wachowski", "Lilly Wachowski"])
+    assert key == derive_natural_key("The Matrix", 1999, ["Lilly Wachowski", "lana wachowski "])
+    assert key == derive_natural_key(
+        "The Matrix", 1999, ["Lana Wachowski", "Lilly Wachowski", "Lana Wachowski"]
+    )
+    # ...and a second director is what tells it apart from the solo film.
+    assert key != derive_natural_key("The Matrix", 1999, ["Lana Wachowski"])
 
 
 # --------------------------------------------------------------------------- #
@@ -302,7 +325,7 @@ def test_mandatory_parts_cannot_be_missing_or_empty() -> None:
             {
                 "titles": [{"value": "Heat"}],
                 "release_year": 1995,
-                "director": "Michael Mann",
+                "directors": ["Michael Mann"],
                 "genre": ["Crime"],
                 "tags": ["heist"],
                 # first_rating missing entirely
@@ -393,7 +416,7 @@ def test_duplicate_create_is_blocked_identifying_the_existing_film() -> None:
     service, repository, _, _ = make_service()
     first = service.create(payload())
     with pytest.raises(DuplicateFilmError) as caught:
-        service.create(payload(titles=[{"value": "  HEAT "}], director="michael mann "))
+        service.create(payload(titles=[{"value": "  HEAT "}], directors=["michael mann "]))
 
     error = caught.value
     assert error.code == "DUPLICATE_FILM"
@@ -408,11 +431,11 @@ def test_duplicate_check_probe_gives_the_same_verdict_without_side_effects() -> 
     service, repository, _, _ = make_service()
     created = service.create(payload())
 
-    hit = service.check_duplicate(" HEAT", 1995, "michael MANN ")
+    hit = service.check_duplicate(" HEAT", 1995, ["michael MANN "])
     assert hit.duplicate is True
     assert hit.film is not None and hit.film.id == created.id
 
-    miss = service.check_duplicate("Heat", 1996, "Michael Mann")
+    miss = service.check_duplicate("Heat", 1996, ["Michael Mann"])
     assert miss.duplicate is False and miss.film is None
     assert len(repository.films) == 1
 
@@ -509,7 +532,9 @@ def test_update_payload_field_bounds_match_create() -> None:
     with pytest.raises(ValidationError):
         update_payload(release_year=current_year + 1)
     with pytest.raises(ValidationError):
-        update_payload(director="   ")
+        update_payload(directors=["   "])
+    with pytest.raises(ValidationError):
+        update_payload(directors=[])
     with pytest.raises(ValidationError):
         update_payload(poster_image="not a url")
     with pytest.raises(ValidationError):
@@ -536,7 +561,7 @@ def test_update_payload_null_poster_is_distinguishable_from_absent() -> None:
 def test_update_unknown_film_id_maps_to_the_not_found_envelope() -> None:
     service, _, _, _ = make_service()
     with pytest.raises(FilmNotFoundError):
-        service.update(uuid.uuid4(), update_payload(director="Someone Else"))
+        service.update(uuid.uuid4(), update_payload(directors=["Someone Else"]))
 
 
 def test_update_empty_body_is_a_no_op_and_leaves_updated_at_untouched() -> None:
@@ -566,16 +591,32 @@ def test_update_bumps_updated_at_on_a_real_change_but_never_created_at() -> None
     assert stored.created_at == original_created_at
 
 
-def test_update_release_year_and_director_persist_and_recompute_the_key() -> None:
+def test_update_release_year_and_directors_persist_and_recompute_the_key() -> None:
     service, repository, _, _ = make_service()
     created = service.create(payload())
 
-    detail = service.update(created.id, update_payload(release_year=1996, director="Someone Else"))
+    detail = service.update(
+        created.id, update_payload(release_year=1996, directors=["Someone Else"])
+    )
 
     assert detail.release_year == 1996
-    assert detail.director == "Someone Else"
+    assert detail.directors == ["Someone Else"]
     assert repository.films[created.id].natural_key == derive_natural_key(
-        "Heat", 1996, "Someone Else"
+        "Heat", 1996, ["Someone Else"]
+    )
+
+
+def test_update_replaces_the_whole_director_list() -> None:
+    # FR-LIB-06: like titles, the list is a full replacement — the film's
+    # previous directors are gone, not merged with the new ones.
+    service, repository, _, _ = make_service()
+    created = service.create(payload(directors=["Michael Mann", "Someone Else"]))
+
+    detail = service.update(created.id, update_payload(directors=["Only Director"]))
+
+    assert detail.directors == ["Only Director"]
+    assert repository.films[created.id].natural_key == derive_natural_key(
+        "Heat", 1995, ["Only Director"]
     )
 
 
@@ -588,13 +629,13 @@ def test_update_a_film_never_collides_with_its_own_unchanged_key() -> None:
         update_payload(
             titles=[{"value": "Heat", "is_primary": True}],
             release_year=1995,
-            director="Michael Mann",
+            directors=["Michael Mann"],
         ),
     )
 
     assert detail.id == created.id
     assert repository.films[created.id].natural_key == derive_natural_key(
-        "Heat", 1995, "Michael Mann"
+        "Heat", 1995, ["Michael Mann"]
     )
 
 
@@ -611,7 +652,7 @@ def test_update_recomputes_natural_key_and_blocks_a_collision_leaving_the_film_u
             update_payload(
                 titles=[{"value": "  HEAT ", "is_primary": True}],
                 release_year=1995,
-                director="michael mann ",
+                directors=["michael mann "],
             ),
         )
     assert caught.value.existing.id == heat.id
@@ -619,7 +660,7 @@ def test_update_recomputes_natural_key_and_blocks_a_collision_leaving_the_film_u
     # Unapplied: the film is byte-for-byte as it was (FR-LIB-09).
     unchanged = repository.films[collateral.id]
     assert unchanged.release_year == 2004
-    assert unchanged.natural_key == derive_natural_key("Collateral", 2004, "Michael Mann")
+    assert unchanged.natural_key == derive_natural_key("Collateral", 2004, ["Michael Mann"])
     titles = repository.list_titles(collateral.id)
     assert [title.value for title in titles] == ["Collateral"]
 
@@ -635,7 +676,7 @@ def test_update_recomputes_natural_key_when_only_the_primary_designation_changes
         )
     )
     assert repository.films[created.id].natural_key == derive_natural_key(
-        "Heat", 1995, "Michael Mann"
+        "Heat", 1995, ["Michael Mann"]
     )
 
     service.update(
@@ -649,7 +690,7 @@ def test_update_recomputes_natural_key_when_only_the_primary_designation_changes
     )
 
     assert repository.films[created.id].natural_key == derive_natural_key(
-        "Fuego", 1995, "Michael Mann"
+        "Fuego", 1995, ["Michael Mann"]
     )
     titles = repository.list_titles(created.id)
     assert {title.value for title in titles} == {"Heat", "Fuego"}

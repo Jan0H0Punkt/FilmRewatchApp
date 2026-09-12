@@ -2,7 +2,7 @@
 
 Guidance for the FastAPI backend under `backend/`. See the repo-root `CLAUDE.md` for cross-cutting orientation, the design-doc-driven / milestone-sequenced workflow, and the `docs/` map.
 
-**The repo is in M1 ("Core domain").** The seven §5.2 tables and their migration exist; `rewatch/` is still an empty stub (M4). Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in `docs/milestones/MILESTONE_M1_V1.md`).
+**The repo is in M1 ("Core domain").** The eight §5.2 tables and their migration exist; `rewatch/` is still an empty stub (M4). Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in `docs/milestones/MILESTONE_M1_V1.md`).
 
 ## Commands
 

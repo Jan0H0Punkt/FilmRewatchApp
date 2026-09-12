@@ -4,9 +4,12 @@ Titles are a separate table so the per-film title rules can be constrained
 independently.
 
 - ``natural_key`` is derived by the service layer from primary title + release
-  year + director, and appears in no request or response schema (FR-LIB-04/05).
+  year + directors, and appears in no request or response schema (FR-LIB-04/05).
 - ``average_rating`` is not stored: it is computed from ``rating_entries`` on
   every read (FR-RAT-09/10, NFR-INT-01).
+- Directors live in their own table because a film can have several (a
+  co-directed or anthology film); the "at least one" rule, like the title rules,
+  is a service-layer concern.
 - The "at least one title, one of them primary" rules cannot be expressed as row
   constraints; the service layer enforces them. Value ranges (year, lengths
   beyond column width) are §5.4 schema concerns, not CHECK constraints.
@@ -30,11 +33,14 @@ class Film(Base):
     # supply their own ids (§5.5).
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     # Derived duplicate-detection key (FR-LIB-04): lowercase(trim(primary_title))
-    # |release_year|lowercase(trim(director)). 600 leaves headroom over the
-    # 255+1+4+1+255 worst case (some Unicode lowercasing expands).
-    natural_key: Mapped[str] = mapped_column(String(600), unique=True)
+    # |release_year|the director names, each lowercased and trimmed, sorted and
+    # comma-joined. Unbounded because the director part grows with the cast of
+    # an anthology film.
+    # ponytail: a Postgres btree entry tops out around 2.7 kB, so a film with
+    # dozens of maximum-length director names would fail to insert. Hash the key
+    # if that ever stops being absurd.
+    natural_key: Mapped[str] = mapped_column(String, unique=True)
     release_year: Mapped[int] = mapped_column(Integer)
-    director: Mapped[str] = mapped_column(String(255))
     runtime_minutes: Mapped[int] = mapped_column(Integer)
     # User-entered, not fetched from a metadata provider (FR-LIB-13/14).
     poster_image: Mapped[str | None] = mapped_column(String(2048))
@@ -43,6 +49,24 @@ class Film(Base):
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class Director(Base):
+    """One director credit of a film (REQ §4.1).
+
+    ``position`` preserves the credited order the user entered — unlike a
+    title, a director has no flag to order by, and "first-credited" is
+    information the row order would otherwise lose.
+    """
+
+    __tablename__ = "directors"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    film_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("films.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    position: Mapped[int] = mapped_column(Integer)
 
 
 class Title(Base):

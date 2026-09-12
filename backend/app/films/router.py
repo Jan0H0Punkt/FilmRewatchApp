@@ -57,7 +57,7 @@ def list_films(
         "Creates a film **together with** its mandatory first rating, tags, and "
         "genres in one atomic operation (FR-LIB-01..03) — the library only holds "
         "watched films. A film duplicating an existing one (same primary title, "
-        "release year, and director — case/whitespace-insensitive) is rejected "
+        "release year, and directors — case/whitespace-insensitive) is rejected "
         "with the `DUPLICATE_FILM` error identifying the existing film (FR-LIB-05)."
     ),
     responses=error_responses({422: ["VALIDATION_ERROR"], 409: ["DUPLICATE_FILM"]}),
@@ -83,7 +83,7 @@ def check_duplicate(
     payload: DuplicateCheckRequest,
     service: Annotated[FilmService, Depends(get_film_service)],
 ) -> DuplicateCheckResult:
-    return service.check_duplicate(payload.primary_title, payload.release_year, payload.director)
+    return service.check_duplicate(payload.primary_title, payload.release_year, payload.directors)
 
 
 @router.get(
@@ -108,10 +108,10 @@ def get_film(
     summary="Edit a film",
     description=(
         "Edits the user-editable fields of a film — titles, release year, "
-        "director, runtime, genres, tags, poster, favourite flag, rewatch delay "
+        "directors, runtime, genres, tags, poster, favourite flag, rewatch delay "
         "(FR-LIB-06). Every field is optional (absent = unchanged); `id`, "
         "`created_at`, `natural_key`, and `average_rating` are never editable "
-        "(FR-LIB-07). Editing the primary title, release year, or director "
+        "(FR-LIB-07). Editing the primary title, release year, or directors "
         "recomputes `natural_key` (FR-LIB-08); an edit that would collide "
         "with another film is rejected, unapplied, with `DUPLICATE_FILM` "
         "identifying the collision (FR-LIB-09)."

@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.films.models import Film, Title
+from app.films.models import Director, Film, Title
 
 
 class FilmRepository:
@@ -26,12 +26,26 @@ class FilmRepository:
         self._session = session
 
     def add_film(self, film: Film) -> None:
-        """Stage a new film row in the unit of work."""
+        """Stage a new film row in the unit of work, flushed immediately.
+
+        The flush is what lets the caller stage child rows in the same unit of
+        work: no ORM ``relationship()`` links ``Film`` to its titles or
+        directors (see :meth:`delete_film`), so the unit of work has no
+        dependency to derive an insert order from and falls back to mapper
+        name — under which ``Director`` sorts *before* ``Film`` and would hit
+        the foreign key before the film row exists. A flush is not a commit:
+        the rows stay inside the service's transaction and roll back with it.
+        """
         self._session.add(film)
+        self._session.flush()
 
     def add_title(self, title: Title) -> None:
         """Stage a new title row in the unit of work."""
         self._session.add(title)
+
+    def add_director(self, director: Director) -> None:
+        """Stage a new director row in the unit of work."""
+        self._session.add(director)
 
     def find_by_id(self, film_id: uuid.UUID) -> Film | None:
         """Primary-key lookup."""
@@ -68,6 +82,20 @@ class FilmRepository:
             .order_by(Title.is_primary.desc(), func.lower(Title.value))
         )
         return self._session.scalars(statement).all()
+
+    def list_directors(self, film_id: uuid.UUID) -> Sequence[Director]:
+        """One film's directors, in the credited order they were entered (§7.3)."""
+        statement = select(Director).where(Director.film_id == film_id).order_by(Director.position)
+        return self._session.scalars(statement).all()
+
+    def delete_directors(self, film_id: uuid.UUID) -> None:
+        """Remove every director for a film (the edit flow's replacement).
+
+        Like :meth:`delete_titles`, an immediate Core DELETE — the replacement
+        rows reuse the same ``position`` values, so they must not coexist with
+        the rows they replace.
+        """
+        self._session.execute(delete(Director).where(Director.film_id == film_id))
 
     def delete_titles(self, film_id: uuid.UUID) -> None:
         """Remove every title for a film (the edit flow's titles replacement).

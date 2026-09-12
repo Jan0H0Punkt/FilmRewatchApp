@@ -40,7 +40,7 @@ from typing import Protocol
 from fastapi import status
 
 from app.core.errors import AppError
-from app.films.models import Film, Title
+from app.films.models import Director, Film, Title
 from app.films.schemas import (
     DuplicateCheckResult,
     FilmCreate,
@@ -55,14 +55,22 @@ from app.ratings.schemas import RatingDeletionResult, RatingEntryRead
 from app.tags.models import Tag
 
 
-def derive_natural_key(primary_title: str, release_year: int, director: str) -> str:
+def derive_natural_key(primary_title: str, release_year: int, directors: Sequence[str]) -> str:
     """The FR-LIB-04 derivation — duplicate detection's whole identity notion.
 
-    ``lowercase(trim(primary_title))|release_year|lowercase(trim(director))``:
-    case- and surrounding-whitespace-insensitive on the text parts (REQ §4.1
-    note). Derived and consumed server-side only; never in a schema.
+    ``lowercase(trim(primary_title))|release_year|<directors>``, where the
+    director part is every name lowercased, trimmed, deduplicated, sorted, and
+    comma-joined: case- and surrounding-whitespace-insensitive on the text parts
+    (REQ §4.1 note), and insensitive to the *order* the co-directors were
+    entered in — the same film logged with its two directors swapped is the same
+    film. Derived and consumed server-side only; never in a schema.
+
+    With exactly one director the key is byte-identical to the single-director
+    form this replaced, which is why revision 0004 needs no key backfill.
     """
-    return f"{primary_title.strip().lower()}|{release_year}|{director.strip().lower()}"
+    assert not isinstance(directors, str), "pass the director names, not one joined string"
+    names = sorted({director.strip().lower() for director in directors})
+    return f"{primary_title.strip().lower()}|{release_year}|{','.join(names)}"
 
 
 class FilmNotFoundError(AppError):
@@ -103,13 +111,13 @@ class DuplicateFilmError(AppError):
 
     code = "DUPLICATE_FILM"
     status_code = status.HTTP_409_CONFLICT
-    message = "A film with the same primary title, release year, and director already exists."
+    message = "A film with the same primary title, release year, and directors already exists."
 
     def __init__(self, existing: FilmSummary) -> None:
         self.existing = existing
         super().__init__(
             f'Duplicate of existing film "{existing.primary_title}" '
-            f"({existing.release_year}, {existing.director}) — id {existing.id}."
+            f"({existing.release_year}, {', '.join(existing.directors)}) — id {existing.id}."
         )
 
 
@@ -126,6 +134,8 @@ class FilmRepositoryProtocol(Protocol):
 
     def add_title(self, title: Title) -> None: ...
 
+    def add_director(self, director: Director) -> None: ...
+
     def find_by_id(self, film_id: uuid.UUID) -> Film | None: ...
 
     def find_by_natural_key(self, natural_key: str) -> Film | None: ...
@@ -134,7 +144,11 @@ class FilmRepositoryProtocol(Protocol):
 
     def list_titles(self, film_id: uuid.UUID) -> Sequence[Title]: ...
 
+    def list_directors(self, film_id: uuid.UUID) -> Sequence[Director]: ...
+
     def delete_titles(self, film_id: uuid.UUID) -> None: ...
+
+    def delete_directors(self, film_id: uuid.UUID) -> None: ...
 
     def delete_film(self, film: Film) -> None: ...
 
@@ -229,7 +243,7 @@ class FilmService:
         of the created film.
         """
         primary = next(title for title in data.titles if title.is_primary)
-        natural_key = derive_natural_key(primary.value, data.release_year, data.director)
+        natural_key = derive_natural_key(primary.value, data.release_year, data.directors)
         existing = self._repository.find_by_natural_key(natural_key)
         if existing is not None:
             raise DuplicateFilmError(self._summary_of(existing))
@@ -243,11 +257,11 @@ class FilmService:
             id=data.id if data.id is not None else uuid.uuid4(),
             natural_key=natural_key,
             release_year=data.release_year,
-            director=data.director,
             runtime_minutes=data.runtime_minutes,
             poster_image=data.poster_image,
         )
         self._repository.add_film(film)
+        self._add_directors(film.id, data.directors)
         for title in data.titles:
             self._repository.add_title(
                 Title(
@@ -292,7 +306,7 @@ class FilmService:
                 TitleRead.model_validate(title) for title in self._repository.list_titles(film.id)
             ],
             release_year=film.release_year,
-            director=film.director,
+            directors=[director.name for director in self._repository.list_directors(film.id)],
             runtime_minutes=film.runtime_minutes,
             genre=[genre.name for genre in self._genres.list_for_film(film.id)],
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
@@ -333,9 +347,13 @@ class FilmService:
         effective_release_year = (
             data.release_year if data.release_year is not None else film.release_year
         )
-        effective_director = data.director if data.director is not None else film.director
+        effective_directors = (
+            data.directors
+            if data.directors is not None
+            else [director.name for director in self._repository.list_directors(film_id)]
+        )
         new_natural_key = derive_natural_key(
-            effective_primary_value, effective_release_year, effective_director
+            effective_primary_value, effective_release_year, effective_directors
         )
 
         natural_key_changed = new_natural_key != film.natural_key
@@ -360,8 +378,9 @@ class FilmService:
                 )
         if data.release_year is not None:
             film.release_year = data.release_year
-        if data.director is not None:
-            film.director = data.director
+        if data.directors is not None:
+            self._repository.delete_directors(film.id)
+            self._add_directors(film.id, data.directors)
         if data.runtime_minutes is not None:
             film.runtime_minutes = data.runtime_minutes
         if "poster_image" in data.model_fields_set:
@@ -438,6 +457,16 @@ class FilmService:
         self._repository.commit()
         return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=False)
 
+    def _add_directors(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
+        """Stage a film's director rows, credited order preserved (REQ §4.1).
+
+        Deduplicated the way the natural key is, so a payload naming the same
+        director twice stores one row — and the stored rows stay consistent with
+        the key derived from that same payload.
+        """
+        for position, name in enumerate(_deduplicated(names)):
+            self._repository.add_director(Director(film_id=film_id, name=name, position=position))
+
     def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:
         """Replace a film's tags with ``names`` (FR-TAG-03/04), orphans reaped."""
         desired = _deduplicated(names)
@@ -463,12 +492,12 @@ class FilmService:
         self._genres.delete_orphans()
 
     def check_duplicate(
-        self, primary_title: str, release_year: int, director: str
+        self, primary_title: str, release_year: int, directors: Sequence[str]
     ) -> DuplicateCheckResult:
         """The FR-LIB-05 background probe: same verdict as the create's block,
         by natural-key parts, with **no** side effects."""
         existing = self._repository.find_by_natural_key(
-            derive_natural_key(primary_title, release_year, director)
+            derive_natural_key(primary_title, release_year, directors)
         )
         if existing is None:
             return DuplicateCheckResult(duplicate=False, film=None)
@@ -482,5 +511,5 @@ class FilmService:
             id=film.id,
             primary_title=primary.value,
             release_year=film.release_year,
-            director=film.director,
+            directors=[director.name for director in self._repository.list_directors(film.id)],
         )

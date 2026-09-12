@@ -65,7 +65,7 @@ def _payload(**overrides: object) -> dict[str, object]:
             {"value": "Fuego", "is_original": True},
         ],
         "release_year": 1995,
-        "director": "Michael Mann",
+        "directors": ["Michael Mann"],
         "runtime_minutes": 170,
         "genre": ["Crime", "Thriller"],
         "tags": ["heist", "la"],
@@ -106,7 +106,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "id",
         "titles",
         "release_year",
-        "director",
+        "directors",
         "runtime_minutes",
         "genre",
         "tags",
@@ -182,7 +182,7 @@ def test_duplicate_create_is_blocked_with_duplicate_film_identifying_the_existin
         "/api/v1/films",
         json=_payload(
             titles=[{"value": "  HEAT ", "is_primary": True}],
-            director="michael mann ",
+            directors=["michael mann "],
             tags=["other"],
             genre=["Other"],
         ),
@@ -202,7 +202,11 @@ def test_duplicate_check_probe_answers_without_creating_anything(db_session: Ses
 
     hit = client.post(
         "/api/v1/films/duplicate-check",
-        json={"primary_title": " HEAT", "release_year": 1995, "director": "michael MANN "},
+        json={
+            "primary_title": " HEAT",
+            "release_year": 1995,
+            "directors": ["michael MANN "],
+        },
     )
     assert hit.status_code == 200
     hit_body = cast(dict[str, object], hit.json())
@@ -211,7 +215,11 @@ def test_duplicate_check_probe_answers_without_creating_anything(db_session: Ses
 
     miss = client.post(
         "/api/v1/films/duplicate-check",
-        json={"primary_title": "Heat", "release_year": 1996, "director": "Michael Mann"},
+        json={
+            "primary_title": "Heat",
+            "release_year": 1996,
+            "directors": ["Michael Mann"],
+        },
     )
     assert cast(dict[str, object], miss.json()) == {"duplicate": False, "film": None}
     assert _count(db_session, Film) == 1  # the probe never writes
@@ -319,7 +327,7 @@ def test_list_returns_every_film_in_primary_title_order(db_session: Session) -> 
     for title in ("Solaris", "Alien", "Heat"):
         client.post(
             "/api/v1/films",
-            json=_payload(titles=[{"value": title, "is_primary": True}], director=title),
+            json=_payload(titles=[{"value": title, "is_primary": True}], directors=[title]),
         )
 
     body = cast(list[dict[str, object]], client.get("/api/v1/films").json())
@@ -366,7 +374,7 @@ def test_edit_updates_fields_and_bumps_updated_at_never_created_at(
         f"/api/v1/films/{film_id}",
         json={
             "release_year": 1996,
-            "director": "Someone Else",
+            "directors": ["Someone Else"],
             "is_favorite": True,
             "delay_days": 7,
         },
@@ -374,7 +382,7 @@ def test_edit_updates_fields_and_bumps_updated_at_never_created_at(
     assert response.status_code == 200
     body = cast(dict[str, object], response.json())
     assert body["release_year"] == 1996
-    assert body["director"] == "Someone Else"
+    assert body["directors"] == ["Someone Else"]
     assert body["is_favorite"] is True
     assert body["delay_days"] == 7
     assert body["created_at"] == created["created_at"]
@@ -383,6 +391,46 @@ def test_edit_updates_fields_and_bumps_updated_at_never_created_at(
 
     # Persisted — the detail read agrees.
     assert client.get(f"/api/v1/films/{film_id}").json() == body
+
+
+def test_a_film_can_have_several_directors_in_credited_order(db_session: Session) -> None:
+    # REQ §4.1: co-directed and anthology films name every director.
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post(
+            "/api/v1/films",
+            json=_payload(
+                titles=[{"value": "The Matrix", "is_primary": True}],
+                release_year=1999,
+                directors=["Lana Wachowski", "Lilly Wachowski"],
+            ),
+        ).json(),
+    )
+    assert created["directors"] == ["Lana Wachowski", "Lilly Wachowski"]
+    assert client.get(f"/api/v1/films/{created['id']}").json() == created
+
+    # FR-LIB-05: the same film, its directors named in the other order.
+    probe = client.post(
+        "/api/v1/films/duplicate-check",
+        json={
+            "primary_title": "The Matrix",
+            "release_year": 1999,
+            "directors": ["lilly wachowski", "LANA WACHOWSKI"],
+        },
+    )
+    assert cast(dict[str, object], probe.json())["duplicate"] is True
+
+    # One director short is a different film, not a duplicate.
+    solo = client.post(
+        "/api/v1/films/duplicate-check",
+        json={
+            "primary_title": "The Matrix",
+            "release_year": 1999,
+            "directors": ["Lana Wachowski"],
+        },
+    )
+    assert cast(dict[str, object], solo.json())["duplicate"] is False
 
 
 def test_edit_empty_body_is_a_no_op(db_session: Session) -> None:
@@ -418,7 +466,7 @@ def test_edit_recomputes_natural_key_and_blocks_a_collision_leaving_the_film_unc
         json={
             "titles": [{"value": "  HEAT ", "is_primary": True}],
             "release_year": 1995,
-            "director": "michael mann ",
+            "directors": ["michael mann "],
         },
     )
     assert response.status_code == 409
