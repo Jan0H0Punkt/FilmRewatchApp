@@ -175,7 +175,7 @@ same film can only exist once in the library).
 | `natural_key`    | String              | Yes (system)       | Unique; derived                            | System-generated key for duplicate detection and sync deduplication; see note below                      |
 | `titles`         | List\<Title\>       | Yes                | 1–∞ titles; exactly one primary            | All titles for the film (main + alternatives); see the Title Object below                                |
 | `release_year`   | Integer             | Yes                | 1888–current year                          | Year the film was first released                                                                         |
-| `director`       | String              | Yes                | 1–255 characters; anyUnicode(any language) | Name of the director(s)                                                                                  |
+| `directors`      | List\<String\>     | Yes                | 1–∞ directors; each 1–255 characters; anyUnicode(any language) | Names of the film's directors, in credited order — a film may be co-directed                             |
 | `runtime_minutes`| Integer             | Yes                | ≥ 1                                        | The film's runtime, in minutes                                                                           |
 | `genre`          | List\<Genre\>       | Yes                | 1–∞ genres                                 | Genres assigned to the film; at least one is required. Free text, not an enum; see the Genre entity (§4.4) |
 | `poster_image`   | URL                 | No                 | Valid URL; max 2048 characters             | URL pointing to a poster image; entered by the user                                                      |
@@ -187,9 +187,10 @@ same film can only exist once in the library).
 | `created_at`     | ISO 8601 DateTime   | Yes (system)       | Immutable                                  | Timestamp when the film record was created                                                               |
 | `updated_at`     | ISO 8601 DateTime   | Yes (system)       | —                                          | Timestamp of the last modification to any field                                                          |
 
-> **Note:** The `natural_key` is composed as `lowercase(trim(primary_title))\|release_year\|lowercase(trim(director))`, where
-> `primary_title` is the `value` of the film's primary title. It is system-generated, never entered or edited by the user, and is used for
-> duplicate detection and sync deduplication.
+> **Note:** The `natural_key` is composed as `lowercase(trim(primary_title))\|release_year\|<directors>`, where
+> `primary_title` is the `value` of the film's primary title and `<directors>` is every director name lowercased, trimmed, deduplicated,
+> sorted, and comma-joined — so the key does not depend on the order the co-directors were entered in. It is system-generated, never
+> entered or edited by the user, and is used for duplicate detection and sync deduplication.
 
 #### Title Object
 
@@ -281,7 +282,7 @@ Film  1..*   ──── 1..*   Genre
 #### 5.1.1 Create Film
 
 - **FR-LIB-01:** The user shall be able to create a new film record. The following are mandatory at creation: at least one `title`,
-  `release_year`, `director`, `runtime_minutes`, at least one `genre`, and at least one `tag`. If only one title is provided it becomes the primary title
+  `release_year`, at least one `director`, `runtime_minutes`, at least one `genre`, and at least one `tag`. If only one title is provided it becomes the primary title
   automatically; if several are provided the user designates which one is primary. The user may optionally mark one title as the
   original-language title (see Section 4.1, Title Object).
 - **FR-LIB-02:** Several fields are not required input at creation time: `poster_image` is optional and may be omitted entirely;
@@ -291,23 +292,23 @@ Film  1..*   ──── 1..*   Genre
   film is created together with its first rating in one operation (the "log a watched film" flow). Every film therefore always has at least
   one rating (see also FR-RAT-07 and FR-RAT-11).
 - **FR-LIB-04:** Upon creation, `created_at` and `updated_at` shall be set automatically by the system to the current UTC timestamp, and
-  `natural_key` shall be derived automatically from the film's primary title, `release_year`, and `director` (see Section 4.1). The user
+  `natural_key` shall be derived automatically from the film's primary title, `release_year`, and `directors` (see Section 4.1). The user
   shall never enter or see the `natural_key` directly.
 - **FR-LIB-05:** The system shall not permit the creation of duplicate films. Two films are duplicates when they share the same
-  `natural_key` — the same primary title, `release_year`, and `director` (case-insensitive, whitespace-trimmed; see Section 4.1). The
+  `natural_key` — the same primary title, `release_year`, and the same set of `directors` (case-insensitive, whitespace-trimmed, order-independent; see Section 4.1). The
   duplicate check shall run in the background as the user fills in the create form. If the film being created would duplicate an existing
   film, creation shall be **blocked**: the system shall inform the user which existing film it matches and offer to open that film instead.
   The user cannot override the block to create a duplicate.
 
 #### 5.1.2 Edit Film
 
-- **FR-LIB-06:** The user shall be able to edit any user-editable field of a film record (`titles`, `release_year`, `director`,
+- **FR-LIB-06:** The user shall be able to edit any user-editable field of a film record (`titles`, `release_year`, `directors`,
   `runtime_minutes`, `genre`, `poster_image`, `tags`, `is_favorite`, `delay_days`). Editing `titles` includes adding/removing titles and changing which title is marked
   primary or original, subject to the Title rules in Section 4.1.
 - **FR-LIB-07:** `id` and `created_at` shall never be editable.
 - **FR-LIB-08:** Upon any successful edit, `updated_at` shall be updated to the current UTC timestamp. If the primary title (its `value` or
-  which title is primary), `release_year`, or `director` changed, `natural_key` shall be recomputed.
-- **FR-LIB-09:** Duplicate detection (FR-LIB-05) shall also apply when editing a film's primary title, `release_year`, or `director`. If an
+  which title is primary), `release_year`, or `directors` changed, `natural_key` shall be recomputed.
+- **FR-LIB-09:** Duplicate detection (FR-LIB-05) shall also apply when editing a film's primary title, `release_year`, or `directors`. If an
   edit would make the film duplicate another existing film, the edit shall be **blocked** and shall not be applied; the system shall inform
   the user which existing film it would collide with. The user may instead choose to merge the two films (see Section 5.1.5).
 
@@ -336,7 +337,7 @@ Film  1..*   ──── 1..*   Genre
     with duplicate entries removed.
   - **Single-value fields** whose values differ between the two films (e.g. `poster_image`) shall be resolved by an explicit user choice:
     the user selects which film's value to keep.
-  - Fields that are identical by definition of a duplicate (primary title, `release_year`, `director`) are carried over unchanged.
+  - Fields that are identical by definition of a duplicate (primary title, `release_year`, `directors`) are carried over unchanged.
 - **FR-LIB-19:** The **older** of the two records (earlier `created_at`) shall survive the merge: its `id` and `created_at` are retained.
   The other record shall be deleted. `updated_at` shall be set to the time of the merge. The `natural_key` is unchanged, as both films
   already share it.
@@ -652,7 +653,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Poster image (thumbnail) | Film.poster_image   |
 | Title                    | Film primary title  |
 | Release year             | Film.release_year   |
-| Director                 | Film.director       |
+| Directors                | Film.directors      |
 | Runtime                  | Film.runtime_minutes |
 | Genre                    | Film.genre          |
 | Average rating           | Film.average_rating |
@@ -683,7 +684,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Poster image (large)         | Full-size display rendered from the stored URL; URL set/edit/remove controls visible in edit mode (see FR-LIB-13–FR-LIB-16)                                                                                                        |
 | Titles                       | Primary title shown prominently; any alternative titles listed beneath it (original-language title indicated). Editable via edit form                                                                                              |
 | Release year                 |                                                                                                                                                                                                                                    |
-| Director                     |                                                                                                                                                                                                                                    |
+| Directors                    | Displayed as a list (a film may be co-directed)                                                                                                                                                                                    |
 | Runtime                      | `Film.runtime_minutes`, in minutes                                                                                                                                                                                                |
 | Genre                        | Displayed as a list (a film may have multiple genres)                                                                                                                                                                              |
 | Tags                         | Displayed as chips; add/remove tags directly from this view                                                                                                                                                                        |
@@ -693,7 +694,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Created / updated timestamps | **Read-only** display (system-managed); shown in a subdued style                                                                                                                                                                   |
 
 
-- An **Edit** button opens the **user-editable** metadata fields (titles, release year, director, genre, poster image, tags, `is_favorite`,
+- An **Edit** button opens the **user-editable** metadata fields (titles, release year, directors, genre, poster image, tags, `is_favorite`,
   `delay_days`) for editing in place or in a modal. Computed and system-managed fields (`average_rating`, `created_at`, `updated_at`) are
   display-only and are not part of the edit form.
 - A **Delete Film** button triggers a confirmation dialog (FR-LIB-11) before deletion. After deletion, the user is navigated back to the

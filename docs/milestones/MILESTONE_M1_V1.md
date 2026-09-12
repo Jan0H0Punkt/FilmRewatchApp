@@ -70,7 +70,7 @@ M1 is complete when **all** of the following hold (each is checked by at least o
       (models and schema in sync).
 - [x] A film can be created **only together with** its first rating, ≥1 tag, and ≥1 genre — the watched-only
       library invariant (`FR-LIB-01/03`); the whole create commits **atomically**.
-- [x] `natural_key` is derived server-side from primary title + release year + director, recomputed on relevant
+- [x] `natural_key` is derived server-side from primary title + release year + directors, recomputed on relevant
       edits, and **never appears** in any request or response (`FR-LIB-04/08`).
 - [x] Duplicate creation and colliding edits are **blocked** with a `DUPLICATE_FILM` error identifying the
       existing film; `POST /films/duplicate-check` answers the same question without side effects (`FR-LIB-05/09`).
@@ -172,7 +172,7 @@ enforced here.
 - **No** `average_rating` column — it is computed on read (§5.2, `NFR-INT-01`).
 - One Alembic revision on top of `0001_baseline` creating all seven tables (upgrade + downgrade).
 - **Retire the M0 guard**: replace `test_baseline_defines_no_tables` with its M1 successor — `Base.metadata`
-  defines exactly the seven §5.2 tables, and autogenerate stays empty after upgrade.
+  defines exactly the §5.2 tables, and autogenerate stays empty after upgrade.
 
 **Out of scope.** Any service/endpoint logic (PR3+); CHECK-constraint duplication of service-layer validation
 rules (value steps, year range — those are §5.4 schema/service concerns).
@@ -282,10 +282,11 @@ detail read.
 
 - Request/response schemas per [§5.4](../designs/DESIGN_V1.md#54-validation--error-handling) on the strict base:
   ≥1 title with **exactly one primary** and **at most one original** (`FR-LIB-01`, REQ §4.1 Title rules),
-  `release_year` 1888–current, `director` 1–255 chars, ≥1 genre, ≥1 tag, optional `poster_image`
+  `release_year` 1888–current, ≥1 `director` of 1–255 chars each, ≥1 genre, ≥1 tag, optional `poster_image`
   (well-formed URL, ≤ 2048 — `FR-LIB-13/14`), and a **mandatory** `first_rating` (`value`, `watch_date`) —
   `FR-LIB-03`. `is_favorite`/`delay_days` are **not** accepted at create; the system defaults them (`FR-LIB-02`).
-- `natural_key` derived as `lowercase(trim(primary_title))|release_year|lowercase(trim(director))` (`FR-LIB-04`);
+- `natural_key` derived as `lowercase(trim(primary_title))|release_year|<directors>`, the names lowercased,
+  trimmed, deduplicated, sorted, and comma-joined (`FR-LIB-04`);
   it appears in **no** request or response schema — the user never enters or sees it.
 - **Duplicate block**: a create colliding on `natural_key` is rejected with `DUPLICATE_FILM`, identifying the
   existing film so the client can offer to open it (`FR-LIB-05`). The user cannot override the block.
@@ -339,11 +340,11 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 **In scope**
 
 - `PATCH /films/{id}` accepting the user-editable fields: `titles` (add/remove, change primary/original — Title
-  rules revalidated), `release_year`, `director`, `genre`, `tags`, `poster_image`, `is_favorite`, `delay_days`
+  rules revalidated), `release_year`, `directors`, `genre`, `tags`, `poster_image`, `is_favorite`, `delay_days`
   (`FR-LIB-06`). `id` and `created_at` are never editable (`FR-LIB-07`; the strict base's `extra="forbid"`
   rejects them).
 - `updated_at` bumped on success; `natural_key` recomputed when the primary title (value or designation),
-  `release_year`, or `director` changed (`FR-LIB-08`).
+  `release_year`, or `directors` changed (`FR-LIB-08`).
 - **Duplicate block on edit**: a colliding edit is rejected, unapplied, with `DUPLICATE_FILM` identifying the
   other film (`FR-LIB-09`) — this identification is the hook M7's merge flow builds on; merge itself is **M7**.
 - Tag/genre reassignment via PR3's `get_or_create`; labels orphaned by removal are cleaned up (`FR-TAG-03/04`).
@@ -357,7 +358,7 @@ duplicate-blocking on edit (`FR-LIB-06..09`).
 
 **Acceptance criteria**
 
-- [x] Editing the director (or primary title / year) recomputes `natural_key`; a colliding edit leaves the film
+- [x] Editing the directors (or primary title / year) recomputes `natural_key`; a colliding edit leaves the film
       **unchanged** and returns `DUPLICATE_FILM` identifying the collision.
 - [x] Removing a film's last link to a tag/genre deletes the orphaned label; shared labels survive.
 - [x] Poster URL can be set, replaced, and removed; an invalid or over-long URL yields `VALIDATION_ERROR`.

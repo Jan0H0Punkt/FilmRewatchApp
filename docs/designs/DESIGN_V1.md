@@ -207,7 +207,7 @@ into another module's repository.
 §4 already lists every field and rule. This section only covers what is **new at the database level**: how those
 entities become Postgres tables, what the database stores versus computes, and how the harder rules are enforced.
 
-The seven tables and how they relate (keys only — full fields live in §4):
+The eight tables and how they relate (keys only — full fields live in §4):
 
 ```mermaid
 erDiagram
@@ -219,6 +219,11 @@ erDiagram
         uuid id PK
         uuid film_id FK
         bool is_primary
+    }
+    directors {
+        uuid id PK
+        uuid film_id FK
+        int position
     }
     rating_entries {
         uuid id PK
@@ -241,6 +246,7 @@ erDiagram
         uuid genre_id FK
     }
     films ||--o{ titles : "has"
+    films ||--o{ directors : "has"
     films ||--o{ rating_entries : "has"
     films ||--o{ film_tags : ""
     tags  ||--o{ film_tags : ""
@@ -248,9 +254,11 @@ erDiagram
     genres ||--o{ film_genres : ""
 ```
 
-**How the §4 entities become tables.** A film's list of titles and its rating history each become their *own*
-table (`titles`, `rating_entries`), linked back to `films` by a `film_id` foreign key — rather than being packed
-into the film row — so they can be queried and constrained independently. **Tags and genres are modelled
+**How the §4 entities become tables.** A film's titles, its directors, and its rating history each become their
+*own* table (`titles`, `directors`, `rating_entries`), linked back to `films` by a `film_id` foreign key — rather
+than being packed into the film row — so they can be queried and constrained independently. Directors are a plain
+child table rather than a shared entity like `tags`: nothing yet asks to browse the library *by* director, and a
+`position` column keeps the credited order a co-directed film's list carries. **Tags and genres are modelled
 identically**: each is a shared entity table holding every distinct label once (`tags`, `genres`), connected to
 films by a many-to-many **join table** (`film_tags`, `film_genres`). So "Drama" — like the tag "comfort-film" —
 is stored once and reused, which keeps casing consistent for exact-match genre filtering (FR-SF-07) and enables
@@ -261,7 +269,7 @@ plain `List<String>` — flagged for the requirements reconciliation (§11).
 **What the database stores vs. computes.** `average_rating` is **not a column** — it is recalculated from the
 film's ratings every time it is read (FR-RAT-09/10). Storing it could show a stale value; computing it keeps it
 always correct (NFR-INT-01). `natural_key` **is** a column (it backs the "no duplicate films" rule), but the user
-never types it: the business layer builds it from primary title + release year + director, and rebuilds it
+never types it: the business layer builds it from primary title + release year + directors, and rebuilds it
 whenever one of those changes (FR-LIB-04/08).
 
 **How the trickier rules are enforced.**
