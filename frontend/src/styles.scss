@@ -29,7 +29,9 @@ html {
         tertiary: mat.$blue-palette,
       ),
       typography: Roboto,
-      density: 0,
+      density: (
+        scale: minimum,
+      ),
     )
   );
 }
@@ -46,6 +48,16 @@ body {
   margin: 0;
   height: 100%;
 }
+
+/* Button-wrapped suffix icons (e.g., matDatepickerToggle) don't match Material's
+   direct-child .mat-icon padding rule; padding the container ensures consistent spacing.
+   Note: Material's own rule (.mat-mdc-form-field-icon-suffix { padding: 0 4px 0 0; })
+   is injected at runtime inside main-*.js and applied after the global stylesheet.
+   Equal specificity means source order wins, so we need higher specificity here. */
+.mat-mdc-form-field .mat-mdc-form-field-icon-suffix {
+  padding-right: 12px;
+}
+
 /* Visible to screen readers only — a label an icon or glyph carries visually. */
 .visually-hidden {
   clip-path: inset(50%);

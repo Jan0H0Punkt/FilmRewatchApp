@@ -45,10 +45,12 @@ Routes are driven by the **route registry** (`src/app/core/route-registry.ts`): 
 
 ### Material theming (Material Design 3)
 
-The app is themed exclusively through Angular Material's M3 system (`src/styles.scss`'s single `mat.theme(...)` include) — no M2 `mat.define-light-theme`/`mat.all-component-themes` anywhere. Two consequences for any per-component override (density, color, typography):
+The app is themed exclusively through Angular Material's M3 system (`src/styles.scss`'s single `mat.theme(...)` include) — no M2 `mat.define-light-theme`/`mat.all-component-themes` anywhere. Three consequences for any per-component override (density, color, typography):
 
 - Reach for `var(--mat-sys-*)`/`--mat-<component>-*` custom properties or a scoped `mat.<component>-overrides((...))` first (see `library.scss`'s `.film__genre`/`.film__tag` for the token-override pattern).
-- If a component's density/color/typography mixin (`mat.<component>-density()`, `mat.chips-color()`, etc.) is genuinely needed, pass it a **real M3 theme object** built with `mat.define-theme((...))` — never a bare number or an M2-style config. `inspection.get-theme-version()` can only detect M3 from an actual theme map; a bare density number silently reroutes the mixin through Material's legacy M2 code path. It can produce the same output by coincidence (verified for chips: the M2 and M3 density token tables happen to match, both floored at scale `-2` = `24px`), but that's not guaranteed for other tokens/components, so don't rely on it. Pattern: `$density-theme: mat.define-theme((density: (scale: -2))); @include mat.chips-density($density-theme);`
+- **Density is set globally to `(scale: minimum)` in `styles.scss`**, so per-component density mixins should not normally be needed. If a density/color/typography mixin (`mat.<component>-density()`, `mat.chips-color()`, etc.) is genuinely needed anyway, pass it a **real M3 theme object** built with `mat.define-theme((...))` — never a bare number or an M2-style config. `inspection.get-theme-version()` can only detect M3 from an actual theme map; a bare number silently reroutes through Material's legacy M2 code path.
+- **Appearance defaults are set globally** via `MAT_CARD_CONFIG`, `MAT_BUTTON_CONFIG`, and `MAT_FORM_FIELD_DEFAULT_OPTIONS` in `app.config.ts`: cards and buttons default to `appearance: 'outlined'`, form fields to `appearance: 'outline'`. Do not repeat these per instance; set an appearance attribute only to deliberately override (e.g., `matButton="filled"` for a primary action).
+- Those token imports pull the card, button, and form-field entry points into the initial bundle (~105 kB combined), which is why `angular.json`'s initial `maximumWarning` is set to 600 kB rather than the scaffolded 500 kB.
 
 ## Conventions
 

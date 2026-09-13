@@ -1,6 +1,9 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient, withFetch } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { MAT_BUTTON_CONFIG } from '@angular/material/button';
+import { MAT_CARD_CONFIG } from '@angular/material/card';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 
@@ -9,6 +12,13 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withFetch()),
-    provideRouter(routes),
+    // Route params bind straight to component `input()`s (film-detail's `id`)
+    // instead of every routed view poking at `ActivatedRoute` itself.
+    provideRouter(routes, withComponentInputBinding()),
+    // App-wide Material component appearance defaults: outlined for cards and
+    // buttons, outline for form fields. Views need not repeat these per instance.
+    { provide: MAT_CARD_CONFIG, useValue: { appearance: 'outlined' } },
+    { provide: MAT_BUTTON_CONFIG, useValue: { appearance: 'outlined' } },
+    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
   ],
 };
