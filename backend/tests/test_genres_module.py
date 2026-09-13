@@ -33,7 +33,7 @@ class FakeGenreRepository:
     def __init__(self) -> None:
         self.by_lower_name: dict[str, Genre] = {}
         self.deleted_orphans = 0
-        self.links: set[tuple[uuid.UUID, uuid.UUID]] = set()
+        self.links: dict[tuple[uuid.UUID, uuid.UUID], int] = {}
 
     def get_or_create(self, name: str) -> Genre:
         key = name.lower()
@@ -52,17 +52,17 @@ class FakeGenreRepository:
     def delete_orphans(self) -> int:
         return self.deleted_orphans
 
-    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        self.links.add((film_id, genre_id))
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None:
+        self.links[(film_id, genre_id)] = position
 
     def unlink_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        self.links.discard((film_id, genre_id))
+        self.links.pop((film_id, genre_id), None)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         linked = [
             genre for genre in self.by_lower_name.values() if (film_id, genre.id) in self.links
         ]
-        return sorted(linked, key=lambda genre: genre.name.lower())
+        return sorted(linked, key=lambda genre: self.links[(film_id, genre.id)])
 
 
 def test_service_trims_surrounding_whitespace_before_storing() -> None:
@@ -171,8 +171,9 @@ def test_list_by_prefix_treats_like_wildcards_literally(db_session: Session) -> 
 
 
 def test_link_film_is_idempotent_and_lists_only_that_films_genres(db_session: Session) -> None:
-    # FR-TAG-03 analogue via the film flows: assigning twice is a no-op (§5.5
-    # natural idempotency), and the per-film listing is scoped and alphabetical.
+    # FR-TAG-03 analogue via the film flows: re-linking at the same position is
+    # a no-op (§5.5 natural idempotency), and the per-film listing is scoped
+    # and ordered by position, not alphabetically.
     repository = GenreRepository(db_session)
     films = [
         Film(
@@ -190,13 +191,70 @@ def test_link_film_is_idempotent_and_lists_only_that_films_genres(db_session: Se
     western = repository.get_or_create("western")
     db_session.flush()
 
-    repository.link_film(films[0].id, drama.id)
-    repository.link_film(films[0].id, drama.id)  # repeat: no-op, no violation
-    repository.link_film(films[0].id, western.id)
-    repository.link_film(films[1].id, drama.id)
+    repository.link_film(films[0].id, drama.id, 0)
+    repository.link_film(films[0].id, drama.id, 0)  # repeat: no-op, no violation
+    repository.link_film(films[0].id, western.id, 1)
+    repository.link_film(films[1].id, drama.id, 0)
 
     assert [genre.name for genre in repository.list_for_film(films[0].id)] == ["Drama", "western"]
     assert [genre.name for genre in repository.list_for_film(films[1].id)] == ["Drama"]
+
+
+def test_link_film_lists_genres_in_the_given_order_not_alphabetically(
+    db_session: Session,
+) -> None:
+    # The owner controls the order (first = most important); DESIGN §5.2.
+    repository = GenreRepository(db_session)
+    film = Film(
+        id=uuid.uuid4(),
+        natural_key="genre order probe|2017|taika waititi",
+        release_year=2017,
+        director="Taika Waititi",
+        runtime_minutes=130,
+    )
+    db_session.add(film)
+    db_session.flush()
+    action = repository.get_or_create("Action")
+    comedy = repository.get_or_create("Comedy")
+    adventure = repository.get_or_create("Adventure")
+    db_session.flush()
+
+    repository.link_film(film.id, action.id, 0)
+    repository.link_film(film.id, comedy.id, 1)
+    repository.link_film(film.id, adventure.id, 2)
+
+    assert [genre.name for genre in repository.list_for_film(film.id)] == [
+        "Action",
+        "Comedy",
+        "Adventure",
+    ]
+
+
+def test_link_film_reorders_an_already_linked_genre(db_session: Session) -> None:
+    # This is precisely the ON CONFLICT DO UPDATE case: reordering genres that
+    # are already assigned (no adds, no removes) must persist the new order.
+    repository = GenreRepository(db_session)
+    film = Film(
+        id=uuid.uuid4(),
+        natural_key="genre reorder probe|2017|taika waititi",
+        release_year=2017,
+        director="Taika Waititi",
+        runtime_minutes=130,
+    )
+    db_session.add(film)
+    db_session.flush()
+    action = repository.get_or_create("Action")
+    comedy = repository.get_or_create("Comedy")
+    db_session.flush()
+
+    repository.link_film(film.id, action.id, 0)
+    repository.link_film(film.id, comedy.id, 1)
+    assert [genre.name for genre in repository.list_for_film(film.id)] == ["Action", "Comedy"]
+
+    # Swap the order — same two links, new positions.
+    repository.link_film(film.id, comedy.id, 0)
+    repository.link_film(film.id, action.id, 1)
+    assert [genre.name for genre in repository.list_for_film(film.id)] == ["Comedy", "Action"]
 
 
 def test_delete_orphans_spares_labels_still_linked_to_a_film(db_session: Session) -> None:
@@ -213,7 +271,7 @@ def test_delete_orphans_spares_labels_still_linked_to_a_film(db_session: Session
     )
     db_session.add(film)
     db_session.flush()
-    db_session.add(FilmGenre(film_id=film.id, genre_id=shared.id))
+    db_session.add(FilmGenre(film_id=film.id, genre_id=shared.id, position=0))
     db_session.flush()
 
     assert repository.delete_orphans() == 2

@@ -53,7 +53,7 @@ class GenreRepositoryProtocol(Protocol):
 
     def delete_orphans(self) -> int: ...
 
-    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None: ...
 
     def unlink_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
 
@@ -85,13 +85,15 @@ class GenreService:
         """Delete genres left on no films (FR-TAG-04 analogue); returns the count."""
         return self._repository.delete_orphans()
 
-    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        """Assign a genre to a film (FR-TAG-03 analogue) — idempotent.
+    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None:
+        """Assign a genre to a film at ``position`` (FR-TAG-03 analogue) — idempotent.
 
+        ``position`` is the owner's chosen order (first = most important), not
+        alphabetical; reassigning an already-linked genre updates its position.
         Called service-to-service by the film flows (M1 PR4/PR5) inside their
         atomic unit of work; there is no standalone assignment route.
         """
-        self._repository.link_film(film_id, genre_id)
+        self._repository.link_film(film_id, genre_id, position)
 
     def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
         """Remove a genre from a film (FR-TAG-04 analogue) — idempotent.
@@ -103,5 +105,5 @@ class GenreService:
         self._repository.unlink_film(film_id, genre_id)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
-        """The film's genres for the §7.3 detail projection, alphabetically."""
+        """The film's genres for the §7.3 detail projection, in the owner's order."""
         return self._repository.list_for_film(film_id)

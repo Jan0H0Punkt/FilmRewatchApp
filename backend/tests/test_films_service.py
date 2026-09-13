@@ -141,7 +141,7 @@ class FakeGenreService:
 
     def __init__(self) -> None:
         self.by_lower: dict[str, Genre] = {}
-        self.links: set[tuple[uuid.UUID, uuid.UUID]] = set()
+        self.links: dict[tuple[uuid.UUID, uuid.UUID], int] = {}
         self.orphan_sweeps = 0
 
     def get_or_create(self, name: str) -> Genre:
@@ -151,11 +151,11 @@ class FakeGenreService:
             self.by_lower[key] = Genre(id=uuid.uuid4(), name=trimmed, created_at=_now())
         return self.by_lower[key]
 
-    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        self.links.add((film_id, genre_id))
+    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None:
+        self.links[(film_id, genre_id)] = position
 
     def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        self.links.discard((film_id, genre_id))
+        self.links.pop((film_id, genre_id), None)
 
     def delete_orphans(self) -> int:
         self.orphan_sweeps += 1
@@ -167,7 +167,7 @@ class FakeGenreService:
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
         linked = [genre for genre in self.by_lower.values() if (film_id, genre.id) in self.links]
-        return sorted(linked, key=lambda genre: genre.name.lower())
+        return sorted(linked, key=lambda genre: self.links[(film_id, genre.id)])
 
 
 class FakeRatingService:
@@ -402,6 +402,25 @@ def test_create_persists_everything_in_one_commit_and_returns_the_projection() -
     assert detail.is_favorite is False and detail.delay_days == 0  # FR-LIB-02 defaults
     # FR-LIB-04: the derived key is absent from the projection.
     assert "natural_key" not in detail.model_dump()
+
+
+def test_create_keeps_genres_in_payload_order_not_alphabetical() -> None:
+    # The owner orders genres himself (most important first); REQ §4.4/DESIGN
+    # §5.2. "Comedy" sorts before "Action" alphabetically but must not here.
+    service, _, _, _ = make_service()
+    detail = service.create(payload(genre=["Action", "Comedy", "Adventure"]))
+    assert detail.genre == ["Action", "Comedy", "Adventure"]
+
+
+def test_update_reordering_already_assigned_genres_persists_the_new_order() -> None:
+    # This is the ON CONFLICT DO UPDATE case: no adds, no removes, only a
+    # reorder of genres already linked to the film.
+    service, _, _, _ = make_service()
+    created = service.create(payload(genre=["Action", "Comedy", "Adventure"]))
+
+    reordered = service.update(created.id, update_payload(genre=["Adventure", "Action", "Comedy"]))
+
+    assert reordered.genre == ["Adventure", "Action", "Comedy"]
 
 
 def test_duplicate_create_is_blocked_identifying_the_existing_film() -> None:

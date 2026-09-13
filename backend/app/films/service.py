@@ -161,7 +161,7 @@ class GenreAssignmentProtocol(Protocol):
 
     def get_or_create(self, name: str) -> Genre: ...
 
-    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
+    def assign(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None: ...
 
     def unassign(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None: ...
 
@@ -256,9 +256,9 @@ class FilmService:
         for name in _deduplicated(data.tags):
             tag = self._tags.get_or_create(name)
             self._tags.assign(film.id, tag.id)
-        for name in _deduplicated(data.genre):
+        for position, name in enumerate(_deduplicated(data.genre)):
             genre = self._genres.get_or_create(name)
-            self._genres.assign(film.id, genre.id)
+            self._genres.assign(film.id, genre.id, position)
         self._repository.commit()
         return self.get_detail(film.id)
 
@@ -455,9 +455,9 @@ class FilmService:
         for genre in self._genres.list_for_film(film_id):
             if genre.name.strip().lower() not in desired_keys:
                 self._genres.unassign(film_id, genre.id)
-        for name in desired:
+        for position, name in enumerate(desired):
             genre = self._genres.get_or_create(name)
-            self._genres.assign(film_id, genre.id)
+            self._genres.assign(film_id, genre.id, position)
         self._genres.delete_orphans()
 
     def check_duplicate(

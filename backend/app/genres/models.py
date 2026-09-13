@@ -12,7 +12,7 @@ validation; the column width only matches it.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, utc_now
@@ -39,6 +39,7 @@ class FilmGenre(Base):
     genre_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("genres.id", ondelete="CASCADE"), primary_key=True
     )
+    position: Mapped[int] = mapped_column(Integer)
 
 
 # Case-insensitive uniqueness (§5.2, FR-TAG-02 analogue). An expression index,

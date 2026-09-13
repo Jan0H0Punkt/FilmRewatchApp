@@ -94,17 +94,22 @@ class GenreRepository:
         statement = select(Genre).where(func.lower(Genre.name) == func.lower(name))
         return self._session.scalars(statement).one_or_none()
 
-    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID) -> None:
-        """Associate a genre with a film via the ``film_genres`` join row.
+    def link_film(self, film_id: uuid.UUID, genre_id: uuid.UUID, position: int) -> None:
+        """Associate a genre with a film at ``position`` in the owner's order.
 
-        ``ON CONFLICT DO NOTHING`` on the composite primary key makes assigning
-        an already-present link a no-op (§5.5 natural idempotency) instead of a
-        constraint violation.
+        ``ON CONFLICT DO UPDATE`` on the composite primary key makes assigning
+        an already-present link update its ``position`` (§5.5 natural
+        idempotency) instead of a constraint violation — this is how reordering
+        an already-assigned genre persists, since the link row itself never
+        gets deleted and recreated.
         """
         statement = (
             insert(FilmGenre)
-            .values(film_id=film_id, genre_id=genre_id)
-            .on_conflict_do_nothing(index_elements=[FilmGenre.film_id, FilmGenre.genre_id])
+            .values(film_id=film_id, genre_id=genre_id, position=position)
+            .on_conflict_do_update(
+                index_elements=[FilmGenre.film_id, FilmGenre.genre_id],
+                set_={"position": position},
+            )
         )
         self._session.execute(statement)
 
@@ -121,11 +126,11 @@ class GenreRepository:
         self._session.execute(statement)
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[Genre]:
-        """The genres assigned to one film, alphabetically (the §7.3 projection)."""
+        """The genres assigned to one film, in the owner's chosen order (§7.3)."""
         statement = (
             select(Genre)
             .join(FilmGenre, FilmGenre.genre_id == Genre.id)
             .where(FilmGenre.film_id == film_id)
-            .order_by(func.lower(Genre.name))
+            .order_by(FilmGenre.position)
         )
         return self._session.scalars(statement).all()
