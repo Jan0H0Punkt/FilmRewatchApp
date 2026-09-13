@@ -43,14 +43,23 @@
       }
       <p class="film-detail__subtitle">{{ film.subtitle }}</p>
       <p class="film-detail__rating" [attr.aria-label]="film.ratingLabel">
-        @if (film.ratingStars) {
-          @for (icon of film.ratingStars; track $index) {
-            <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
-          }
-          @if (film.averageRatingText) {
-            <span class="film-detail__rating-separator" aria-hidden="true">•</span>
-            <span class="film-detail__rating-text" aria-hidden="true">{{ film.averageRatingText }}</span>
-          }
+        @if (film.averageFillPercent !== null) {
+          <span class="film-detail__stars">
+            <!-- Outline row underneath, a full row clipped to the exact percentage on
+                 top — lets the fill land mid-glyph (e.g. 66% for 3.3), unlike the
+                 half-step rounding the Add Rating picker uses for input. -->
+            <span class="film-detail__stars-track" aria-hidden="true">
+              @for (position of starPositions; track position) {
+                <mat-icon>star_border</mat-icon>
+              }
+            </span>
+            <span class="film-detail__stars-fill" aria-hidden="true" [style.width.%]="film.averageFillPercent">
+              @for (position of starPositions; track position) {
+                <mat-icon>star</mat-icon>
+              }
+            </span>
+          </span>
+          <span class="film-detail__rating-text" aria-hidden="true">{{ film.averageRatingText }}</span>
         } @else {
           <span aria-hidden="true">&mdash;</span>
         }

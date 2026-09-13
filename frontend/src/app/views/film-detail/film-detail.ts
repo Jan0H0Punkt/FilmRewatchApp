@@ -63,7 +63,14 @@ interface FilmDetailVm {
   readonly subtitle: string;
   readonly genres: readonly string[];
   readonly tags: readonly string[];
-  readonly ratingStars: readonly string[] | null;
+  /**
+   * The filled star layer's width as a percentage of the row (`average / 5 *
+   * 100`), or `null` for unrated (FR-RAT-13) — `null` here suppresses the
+   * whole star row rather than rendering a 0% fill (see the template).
+   * Exact, unlike `ratingStars`' half-star rounding below: this is a display
+   * of a computed mean, not a half-step input, so it shows the real value.
+   */
+  readonly averageFillPercent: number | null;
   readonly ratingLabel: string;
   /** The numeric average formatted to one decimal, or `null` for unrated (FR-RAT-13). */
   readonly averageRatingText: string | null;
@@ -86,8 +93,10 @@ const STAR_POSITIONS: readonly number[] = [1, 2, 3, 4, 5];
  * Rounds to the nearest half star and maps each of the 5 positions to a
  * Material star icon. Duplicated from `library.ts`'s helper of the same name
  * (plan's deliberate cut #2) — extract to `shared/` only if a third caller
- * appears. Reused within this file for both the average rating (Section A)
- * and each history entry (Section B) — that is not a second copy.
+ * appears. Reused within this file for both the Add Rating picker and each
+ * history entry (Section B); the Section A average uses an exact fill
+ * instead (see `averageFillPercent`), since it displays a computed mean
+ * rather than a half-step input.
  */
 function ratingStars(rating: number | null): readonly string[] | null {
   if (rating === null) return null;
@@ -119,7 +128,9 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
     subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' • '),
     genres: film.genres,
     tags: film.tags,
-    ratingStars: ratingStars(film.averageRating),
+    // `* 20`, not `/ 5 * 100` — equivalent, but the division route introduces
+    // floating-point noise (3.3 → 65.999999999999996%) that this avoids.
+    averageFillPercent: film.averageRating === null ? null : film.averageRating * 20,
     ratingLabel:
       film.averageRating === null ? 'Not rated' : `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
     averageRatingText: film.averageRating === null ? null : film.averageRating.toFixed(1),

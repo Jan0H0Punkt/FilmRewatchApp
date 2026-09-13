@@ -62,23 +62,73 @@
 }
 
 .film-detail__rating {
-  color: var(--mat-sys-primary);
+  align-items: center;
   display: flex;
-  gap: 0.25rem;
+  gap: 0.5rem;
   margin: 0.5rem 0 0;
 }
 
-.film-detail__rating mat-icon {
-  font-size: 2rem;
-  height: 2rem;
-  width: 2rem;
+// Sized down from the picker's 2rem so the row stops outweighing the title above it.
+.film-detail__stars {
+  display: inline-flex;
+  position: relative;
 }
 
-.film-detail__rating-separator,
+.film-detail__stars-track,
+.film-detail__stars-fill {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.film-detail__stars-track mat-icon,
+.film-detail__stars-fill mat-icon {
+  flex-shrink: 0; // keeps glyphs full-size while the fill layer's width is clipped below
+  font-size: 1.5rem;
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.film-detail__stars-track {
+  color: var(--mat-sys-outline-variant); // recedes — this row is the empty backdrop
+}
+
+// Absolutely positioned over the track, full-size icons, clipped to the exact
+// average (e.g. 66% for 3.3/5) so the fill can land mid-glyph — unlike the
+// half-step rounding `ratingStars()` uses for the Add Rating picker below.
+.film-detail__stars-fill {
+  color: var(--mat-sys-primary);
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
 .film-detail__rating-text {
-  align-self: center;
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-large);
+  opacity: 1;
+  transition:
+    opacity 150ms ease,
+    visibility 150ms ease;
+  visibility: visible;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .film-detail__rating-text {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .film-detail__rating:hover .film-detail__rating-text,
+  .film-detail__rating:focus-within .film-detail__rating-text {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film-detail__rating-text {
+    transition: none;
+  }
 }
 
 .film-detail__genres,

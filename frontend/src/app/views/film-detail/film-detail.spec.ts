@@ -176,7 +176,9 @@ describe('FilmDetail', () => {
     const rating = element.querySelector('.film-detail__rating');
     const ratingText = rating?.querySelector('.film-detail__rating-text');
     expect(ratingText?.textContent).toBe('4.0');
-    expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);
+    // One outline row plus one fill row of five icons each — not a half-step row.
+    expect(rating?.querySelectorAll('.film-detail__stars-track mat-icon')).toHaveLength(5);
+    expect(rating?.querySelectorAll('.film-detail__stars-fill mat-icon')).toHaveLength(5);
   });
 
   it('does not render a numeric average for an unrated film, only the em-dash', async () => {
@@ -186,6 +188,16 @@ describe('FilmDetail', () => {
     const ratingText = rating?.querySelector('.film-detail__rating-text');
     expect(ratingText).toBeNull();
     expect(rating?.textContent?.trim()).toBe('—');
+  });
+
+  it('fills the average stars to the exact percentage instead of rounding to a half star', async () => {
+    // The defect this replaces: 3.3 used to round to a 3.5-star display
+    // (70% fill), contradicting the "3.3" printed right next to it.
+    const element = await render(stubFilmFacade({ ...HEAT, averageRating: 3.3 }));
+
+    const fill = element.querySelector<HTMLElement>('.film-detail__stars-fill');
+    expect(fill?.style.width).toBe('66%');
+    expect(fill?.style.width).not.toBe('70%');
   });
 
   it('selects the film through the facade using the routed id', async () => {
