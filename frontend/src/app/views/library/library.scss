@@ -1,18 +1,5 @@
 /* Library view (REQ §7.2). Colours come from Material's M3 system variables,
    which resolve per `color-scheme` — so light/dark needs no rule of its own. */
-@use '@angular/material' as mat;
-
-// A real M3 theme object (not a bare density number — see frontend/CLAUDE.md
-// "Material theming (M3)") so `mat.chips-density()` below takes the M3 branch.
-// -2 is the chip density scale's floor (`clamp-density` in the Material
-// source) — the smallest size the official density API offers.
-$chip-density-theme: mat.define-theme(
-  (
-    density: (
-      scale: -2,
-    ),
-  )
-);
 
 .library__heading {
   font: var(--mat-sys-headline-small);
@@ -29,6 +16,12 @@ $chip-density-theme: mat.define-theme(
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.film__link {
+  color: inherit;
+  display: block;
+  text-decoration: none;
 }
 
 .film {
@@ -95,11 +88,6 @@ $chip-density-theme: mat.define-theme(
   font-size: 1rem;
   height: 1rem;
   width: 1rem;
-}
-
-.film__genres,
-.film__tags {
-  @include mat.chips-density($chip-density-theme);
 }
 
 .film__genre {

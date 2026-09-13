@@ -1,6 +1,7 @@
 /** Library view: the ViewModel shaping and the three list states (REQ §7.2). */
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { FilmFacade } from '../../domain/film/facade';
 import type { Film } from '../../domain/film/model';
@@ -32,7 +33,7 @@ function stubFacade(films: readonly Film[], isLoading = false, error: unknown = 
 async function render(facade: ReturnType<typeof stubFacade>): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [Library],
-    providers: [{ provide: FilmFacade, useValue: facade }],
+    providers: [provideRouter([]), { provide: FilmFacade, useValue: facade }],
   });
   const fixture = TestBed.createComponent(Library);
   await fixture.whenStable();
@@ -52,6 +53,12 @@ describe('Library', () => {
     expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);
     expect(rating?.getAttribute('aria-label')).toBe('Average rating: 4.0 out of 5');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
+  });
+
+  it('links each row to its film detail route', async () => {
+    const element = await render(stubFacade([HEAT]));
+
+    expect(element.querySelector('.film__link')?.getAttribute('href')).toBe('/film/f1');
   });
 
   it('shows a dash instead of stars for a film the user chose not to rate', async () => {

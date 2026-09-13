@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 
 import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../../domain/film/facade';
@@ -60,7 +61,7 @@ function ratingStars(rating: number | null): readonly string[] | null {
 
 @Component({
   selector: 'app-library',
-  imports: [MatButtonModule, MatCardModule, MatChipsModule, MatIconModule],
+  imports: [MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, RouterLink],
   templateUrl: './library.html',
   styleUrl: './library.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

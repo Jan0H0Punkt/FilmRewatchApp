@@ -5,7 +5,7 @@
 } @else if (error()) {
   <div class="library__state" role="alert">
     <p>The library could not be loaded. Is the backend running?</p>
-    <button matButton="outlined" type="button" (click)="reload()">Try again</button>
+    <button matButton type="button" (click)="reload()">Try again</button>
   </div>
 } @else if (rows().length === 0) {
   <p class="library__state">
@@ -16,53 +16,55 @@
   <ul class="library__list">
     @for (row of rows(); track row.id) {
       <li>
-        <mat-card appearance="outlined">
-          <div class="film">
-            @if (row.posterImage) {
-              <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
-            } @else {
-              <div class="film__poster film__poster--empty" aria-hidden="true">
-                <mat-icon>movie</mat-icon>
-              </div>
-            }
-            <div class="film__body">
-              <h3 class="film__title">
-                {{ row.title }}
-                @if (row.isFavorite) {
-                  <mat-icon class="film__favorite" aria-label="Favourite">star</mat-icon>
-                }
-              </h3>
-              <p class="film__subtitle">{{ row.subtitle }}</p>
-              <p class="film__end-time">
-                <mat-icon aria-hidden="true" inline>schedule</mat-icon>
-                Done by {{ row.endTime }}
-              </p>
-              @if (row.genres.length > 0) {
-                <mat-chip-set class="film__genres" aria-label="Genres">
-                  @for (genre of row.genres; track genre) {
-                    <mat-chip class="film__genre" disableRipple>{{ genre }}</mat-chip>
-                  }
-                </mat-chip-set>
-              }
-              @if (row.tags.length > 0) {
-                <mat-chip-set class="film__tags" aria-label="Tags">
-                  @for (tag of row.tags; track tag) {
-                    <mat-chip class="film__tag" disableRipple>{{ tag }}</mat-chip>
-                  }
-                </mat-chip-set>
-              }
-            </div>
-            <p class="film__rating" [attr.aria-label]="row.ratingLabel">
-              @if (row.ratingStars) {
-                @for (icon of row.ratingStars; track $index) {
-                  <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
-                }
+        <a class="film__link" [routerLink]="['/film', row.id]">
+          <mat-card>
+            <div class="film">
+              @if (row.posterImage) {
+                <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
               } @else {
-                <span aria-hidden="true">&mdash;</span>
+                <div class="film__poster film__poster--empty" aria-hidden="true">
+                  <mat-icon>movie</mat-icon>
+                </div>
               }
-            </p>
-          </div>
-        </mat-card>
+              <div class="film__body">
+                <h3 class="film__title">
+                  {{ row.title }}
+                  @if (row.isFavorite) {
+                    <mat-icon class="film__favorite" aria-label="Favourite">favorite</mat-icon>
+                  }
+                </h3>
+                <p class="film__subtitle">{{ row.subtitle }}</p>
+                <p class="film__end-time">
+                  <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+                  Done by {{ row.endTime }}
+                </p>
+                @if (row.genres.length > 0) {
+                  <mat-chip-set class="film__genres" aria-label="Genres">
+                    @for (genre of row.genres; track genre) {
+                      <mat-chip class="film__genre" disableRipple>{{ genre }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                }
+                @if (row.tags.length > 0) {
+                  <mat-chip-set class="film__tags" aria-label="Tags">
+                    @for (tag of row.tags; track tag) {
+                      <mat-chip class="film__tag" disableRipple>{{ tag }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                }
+              </div>
+              <p class="film__rating" [attr.aria-label]="row.ratingLabel">
+                @if (row.ratingStars) {
+                  @for (icon of row.ratingStars; track $index) {
+                    <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                  }
+                } @else {
+                  <span aria-hidden="true">&mdash;</span>
+                }
+              </p>
+            </div>
+          </mat-card>
+        </a>
       </li>
     }
   </ul>
