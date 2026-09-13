@@ -170,6 +170,24 @@ describe('FilmDetail', () => {
     expect(rating?.getAttribute('aria-label')).toBe('Not rated');
   });
 
+  it('renders the numeric average rating next to the stars for a rated film', async () => {
+    const element = await render(stubFilmFacade(HEAT));
+
+    const rating = element.querySelector('.film-detail__rating');
+    const ratingText = rating?.querySelector('.film-detail__rating-text');
+    expect(ratingText?.textContent).toBe('4.0');
+    expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);
+  });
+
+  it('does not render a numeric average for an unrated film, only the em-dash', async () => {
+    const element = await render(stubFilmFacade({ ...HEAT, averageRating: null }));
+
+    const rating = element.querySelector('.film-detail__rating');
+    const ratingText = rating?.querySelector('.film-detail__rating-text');
+    expect(ratingText).toBeNull();
+    expect(rating?.textContent?.trim()).toBe('—');
+  });
+
   it('selects the film through the facade using the routed id', async () => {
     const facade = stubFilmFacade(HEAT);
     await render(facade);

@@ -65,6 +65,8 @@ interface FilmDetailVm {
   readonly tags: readonly string[];
   readonly ratingStars: readonly string[] | null;
   readonly ratingLabel: string;
+  /** The numeric average formatted to one decimal, or `null` for unrated (FR-RAT-13). */
+  readonly averageRatingText: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   /** Newest first — the backend already orders it that way; not re-sorted here. */
@@ -120,6 +122,7 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
     ratingStars: ratingStars(film.averageRating),
     ratingLabel:
       film.averageRating === null ? 'Not rated' : `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
+    averageRatingText: film.averageRating === null ? null : film.averageRating.toFixed(1),
     createdAt: timestampFormat.format(new Date(film.createdAt)),
     updatedAt: timestampFormat.format(new Date(film.updatedAt)),
     ratingHistory: film.ratingHistory.map(toRatingHistoryVm),

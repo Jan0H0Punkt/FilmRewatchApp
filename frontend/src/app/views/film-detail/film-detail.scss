@@ -74,6 +74,17 @@
   width: 2rem;
 }
 
+.film-detail__rating-separator {
+  align-self: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.film-detail__rating-text {
+  align-self: center;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
 .film-detail__genres,
 .film-detail__tags {
   margin-top: 0.75rem;

@@ -47,6 +47,10 @@
           @for (icon of film.ratingStars; track $index) {
             <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
           }
+          @if (film.averageRatingText) {
+            <span class="film-detail__rating-separator" aria-hidden="true">·</span>
+            <span class="film-detail__rating-text" aria-hidden="true">{{ film.averageRatingText }}</span>
+          }
         } @else {
           <span aria-hidden="true">&mdash;</span>
         }
