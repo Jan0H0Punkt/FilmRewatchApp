@@ -1,0 +1,220 @@
+<div class="film-detail__nav">
+  <!-- The view's own back control (Navigation section): the app shell has no
+       drawer/bottom bar yet, and an installed PWA has no browser back button. -->
+  <a matIconButton routerLink="/library" aria-label="Back to library">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+</div>
+
+@if (isLoading()) {
+  <p class="film-detail__state" role="status">Loading the film…</p>
+} @else if (error()) {
+  <div class="film-detail__state" role="alert">
+    <p>The film could not be loaded. Is the backend running?</p>
+    <button matButton type="button" (click)="reload()">Try again</button>
+  </div>
+} @else if (notFound()) {
+  <div class="film-detail__state">
+    <p>This film could not be found.</p>
+    <a matButton routerLink="/library">Back to the library</a>
+  </div>
+} @else if (vm(); as film) {
+  <mat-card class="film-detail">
+    @if (film.posterImage) {
+      <img class="film-detail__poster" [src]="film.posterImage" [alt]="'Poster of ' + film.title" />
+    } @else {
+      <div class="film-detail__poster film-detail__poster--empty" aria-hidden="true">
+        <mat-icon>movie</mat-icon>
+      </div>
+    }
+    <div class="film-detail__body">
+      <h2 class="film-detail__title">{{ film.title }}</h2>
+      @if (film.alternativeTitles.length > 0) {
+        <ul class="film-detail__alt-titles">
+          @for (alt of film.alternativeTitles; track alt.value) {
+            <li>
+              {{ alt.value }}
+              @if (alt.isOriginal) {
+                <span class="film-detail__original">(original)</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+      <p class="film-detail__subtitle">{{ film.subtitle }}</p>
+      <p class="film-detail__rating" [attr.aria-label]="film.ratingLabel">
+        @if (film.ratingStars) {
+          @for (icon of film.ratingStars; track $index) {
+            <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
+          }
+        } @else {
+          <span aria-hidden="true">&mdash;</span>
+        }
+      </p>
+      @if (film.genres.length > 0) {
+        <mat-chip-set class="film-detail__genres" aria-label="Genres">
+          @for (genre of film.genres; track genre) {
+            <mat-chip class="film-detail__genre" disableRipple>{{ genre }}</mat-chip>
+          }
+        </mat-chip-set>
+      }
+      @if (film.tags.length > 0) {
+        <mat-chip-set class="film-detail__tags" aria-label="Tags">
+          @for (tag of film.tags; track tag) {
+            <mat-chip class="film-detail__tag" disableRipple>{{ tag }}</mat-chip>
+          }
+        </mat-chip-set>
+      }
+      <p class="film-detail__timestamps">Added {{ film.createdAt }} · Last updated {{ film.updatedAt }}</p>
+
+      <!-- Section A controls (phase 3, FR-LIB-06/10..12). Edit is not built
+           here (phase 4, out of scope) — there is deliberately no Edit button. -->
+      <div class="film-detail__actions">
+        <button
+          matIconButton
+          type="button"
+          [attr.aria-pressed]="film.isFavorite"
+          [attr.aria-label]="film.isFavorite ? 'Remove from favourites' : 'Add to favourites'"
+          (click)="toggleFavorite()"
+        >
+          <!-- A heart, not a star: a star would collide with the rating stars above (plan's UI-components section). -->
+          <mat-icon>{{ film.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+        </button>
+
+        <mat-form-field class="film-detail__delay" subscriptSizing="dynamic">
+          <mat-label>Rewatch delay (days)</mat-label>
+          <input matInput type="number" min="0" step="1" [value]="film.delayDays" (change)="onDelayChange($event)" />
+        </mat-form-field>
+
+        <button matButton type="button" (click)="confirmDeleteFilm()">
+          <mat-icon>delete</mat-icon>
+          Delete film
+        </button>
+      </div>
+
+      @if (favoriteError()) {
+        <p class="film-detail__error" role="alert">{{ favoriteError() }}</p>
+      }
+      @if (delayError()) {
+        <p class="film-detail__error" role="alert">{{ delayError() }}</p>
+      }
+      @if (deleteFilmError()) {
+        <p class="film-detail__error" role="alert">{{ deleteFilmError() }}</p>
+      }
+    </div>
+  </mat-card>
+
+  <mat-card class="rating-history">
+    <h3 class="rating-history__heading">Rating history</h3>
+
+    @if (film.ratingHistory.length === 0) {
+      <p class="rating-history__empty">No ratings yet.</p>
+    } @else {
+      <mat-list class="rating-history__list">
+        @for (entry of film.ratingHistory; track entry.id) {
+          <mat-list-item class="rating-history__item">
+            <span matListItemTitle class="rating-history__value">
+              @if (entry.stars) {
+                @for (icon of entry.stars; track $index) {
+                  <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                }
+              } @else {
+                Not rated
+              }
+            </span>
+            <span matListItemLine>Watched {{ entry.watchDate }} · Logged {{ entry.createdAt }}</span>
+            <button
+              matIconButton
+              matListItemMeta
+              type="button"
+              aria-label="Delete this rating entry"
+              (click)="deleteRating(entry.id)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-list-item>
+        }
+      </mat-list>
+    }
+
+    @if (deleteRatingError()) {
+      <p class="rating-history__error" role="alert">{{ deleteRatingError() }}</p>
+    }
+
+    <mat-divider class="rating-form__divider" />
+
+    <!-- Plain `(submit)`, not `(ngSubmit)`: this form is not a `FormsModule`
+         template-driven form, just a submit button inside a native form. -->
+    <form class="rating-form" (submit)="onSubmitRating($event)">
+      <h4 class="rating-form__heading">Add rating</h4>
+
+      <div class="rating-form__stars" role="group" aria-label="Rating value" (mouseleave)="hoverValue.set(null)">
+        @for (position of starPositions; track position) {
+          <span
+            class="rating-form__star"
+            [class.rating-form__star--filled]="pickerStars()[position - 1] !== 'star_border'"
+          >
+            <mat-icon aria-hidden="true">{{ pickerStars()[position - 1] }}</mat-icon>
+            <!-- Left half previews `position - 0.5`, right half previews `position` — repo owner's spec for FR-RAT-02. -->
+            <button
+              type="button"
+              class="rating-form__star-half rating-form__star-half--left"
+              [attr.aria-pressed]="selectedValue() === position - 0.5"
+              [attr.aria-label]="starLabel(position - 0.5)"
+              (mouseenter)="hoverValue.set(position - 0.5)"
+              (focus)="hoverValue.set(position - 0.5)"
+              (blur)="hoverValue.set(null)"
+              (click)="selectStar(position - 0.5)"
+            ></button>
+            <button
+              type="button"
+              class="rating-form__star-half rating-form__star-half--right"
+              [attr.aria-pressed]="selectedValue() === position"
+              [attr.aria-label]="starLabel(position)"
+              (mouseenter)="hoverValue.set(position)"
+              (focus)="hoverValue.set(position)"
+              (blur)="hoverValue.set(null)"
+              (click)="selectStar(position)"
+            ></button>
+          </span>
+        }
+        <button
+          matButton
+          type="button"
+          class="rating-form__unrated"
+          [class.rating-form__unrated--active]="selectedValue() === 'unrated'"
+          [attr.aria-pressed]="selectedValue() === 'unrated'"
+          (click)="selectUnrated()"
+        >
+          Don't rate this
+        </button>
+      </div>
+
+      <mat-form-field class="rating-form__date" subscriptSizing="dynamic">
+        <mat-label>Watch date</mat-label>
+        <input
+          matInput
+          [matDatepicker]="watchDatePicker"
+          [max]="today"
+          [value]="watchDate()"
+          (dateChange)="onWatchDateChange($event.value)"
+          required
+        />
+        <mat-datepicker-toggle matIconSuffix [for]="watchDatePicker" />
+        <mat-datepicker #watchDatePicker />
+      </mat-form-field>
+
+      @if (addRatingError()) {
+        <p class="rating-form__error" role="alert">{{ addRatingError() }}</p>
+      }
+
+      <button
+        matButton="filled"
+        type="submit"
+        [disabled]="watchDate() === null || selectedValue() === null || isSubmittingRating()"
+      >
+        Add rating
+      </button>
+    </form>
+  </mat-card>
+}

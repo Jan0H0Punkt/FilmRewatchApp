@@ -1,0 +1,214 @@
+/* Film Detail view, Section A (REQ §7.3). Colours come from Material's M3
+   system variables, which resolve per `color-scheme` — so light/dark needs no
+   rule of its own (see `library.scss` for the same pattern). */
+
+.film-detail__nav {
+  margin: 0 0 0.5rem -0.5rem; // pulls the icon button's own padding back to the edge
+}
+
+.film-detail__state {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.film-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.film-detail__poster {
+  align-self: center;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--mat-sys-corner-medium);
+  object-fit: cover;
+  width: min(16rem, 100%);
+}
+
+.film-detail__poster--empty {
+  align-items: center;
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 3rem;
+    height: 3rem;
+    width: 3rem;
+  }
+}
+
+.film-detail__title {
+  font: var(--mat-sys-headline-small);
+  margin: 0;
+}
+
+.film-detail__alt-titles {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+
+.film-detail__original {
+  font-style: italic;
+}
+
+.film-detail__subtitle {
+  font: var(--mat-sys-body-large);
+  margin: 0.5rem 0 0;
+}
+
+.film-detail__rating {
+  color: var(--mat-sys-primary);
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0;
+}
+
+.film-detail__rating mat-icon {
+  font-size: 2rem;
+  height: 2rem;
+  width: 2rem;
+}
+
+.film-detail__genres,
+.film-detail__tags {
+  margin-top: 0.75rem;
+}
+
+.film-detail__genre {
+  --mat-chip-elevated-container-color: var(--mat-sys-tertiary-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-tertiary-container);
+}
+
+.film-detail__tag {
+  --mat-chip-elevated-container-color: var(--mat-sys-secondary-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-secondary-container);
+}
+
+.film-detail__timestamps {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  margin: 0.75rem 0 0;
+}
+
+// --- Section A controls (phase 3) ------------------------------------------
+
+.film-detail__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.film-detail__delay {
+  max-width: 10rem;
+}
+
+.film-detail__error {
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+  margin: 0.25rem 0 0;
+}
+
+// --- Section B: rating history (phase 2) -----------------------------------
+
+.rating-history {
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.rating-history__heading {
+  font: var(--mat-sys-title-medium);
+  margin: 0 0 0.5rem;
+}
+
+.rating-history__empty {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.rating-history__value {
+  color: var(--mat-sys-primary);
+  display: flex;
+  gap: 0.125rem;
+}
+
+.rating-history__error,
+.rating-form__error {
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+.rating-form__divider {
+  margin: 1rem 0;
+}
+
+.rating-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rating-form__heading {
+  font: var(--mat-sys-title-small);
+  margin: 0;
+}
+
+.rating-form__stars {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+}
+
+// Each position is one glyph (colour = fill state) with two transparent,
+// absolutely-positioned buttons over its left/right halves — five glyphs,
+// ten real focusable controls (repo owner's spec for FR-RAT-02).
+.rating-form__star {
+  color: var(--mat-sys-outline);
+  display: inline-flex;
+  height: 2.5rem;
+  position: relative;
+  width: 2.5rem;
+}
+
+.rating-form__star--filled {
+  color: var(--mat-sys-primary);
+}
+
+.rating-form__star mat-icon {
+  font-size: 2rem;
+  height: 2rem;
+  margin: auto;
+  pointer-events: none; // clicks fall through to the half-buttons below
+  width: 2rem;
+}
+
+.rating-form__star-half {
+  background: none;
+  border: none;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+  width: 50%;
+}
+
+.rating-form__star-half--right {
+  left: 50%;
+}
+
+.rating-form__unrated {
+  margin-left: 0.5rem;
+}
+
+.rating-form__unrated--active {
+  outline: 2px solid var(--mat-sys-primary);
+}
+
+.rating-form__date {
+  max-width: 16rem;
+}
