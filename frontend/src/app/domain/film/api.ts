@@ -54,13 +54,17 @@ export interface FilmDto {
 
 /**
  * The `PATCH /films/{id}` payload (mirrors `FilmUpdate`) — every field
- * optional, absent means unchanged (FR-LIB-06/07). Phase 3 only ever sets
- * `is_favorite` or `delay_days`; the remaining editable fields join here
- * when the phase 4 edit form needs them.
+ * optional, absent means unchanged (FR-LIB-06/07). The detail view sets
+ * `is_favorite`, `delay_days`, or `tags`; the remaining editable fields join
+ * here when the edit form needs them.
  */
 export interface FilmUpdateDto {
   readonly is_favorite?: boolean;
   readonly delay_days?: number;
+  /** The full replacement tag list (FR-TAG-03), never a delta. */
+  readonly tags?: readonly string[];
+  /** The full replacement genre list. Singular on the wire, unlike `tags`. */
+  readonly genre?: readonly string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -102,6 +106,12 @@ export class FilmApi {
   readonly detail = httpResource<FilmDto>(() => {
     const id = this.selectedId();
     if (id === null) return undefined;
+    // Whether this is a miss is only knowable once `list` has landed, and
+    // asking early does more than guess wrong: the fold-in below writes to
+    // `list.value`, and a resource write aborts that resource's in-flight
+    // request. Racing the library load would therefore cancel it and strand
+    // `list` holding just this one film.
+    if (this.list.isLoading()) return undefined;
     const inList = this.list.value().some((film) => film.id === id);
     return inList ? undefined : `${environment.apiBaseUrl}/films/${id}`;
   });

@@ -73,3 +73,65 @@ describe('FilmApi', () => {
     expect(api.list.value().map((film) => film.id)).toEqual(['f1', 'f2']);
   });
 });
+
+/**
+ * Opening the detail view directly (a reload on `/films/{id}`) starts both
+ * requests at once, with no list to look the id up in yet. The library must
+ * still end up whole — writing a resolved fallback into `list` while its own
+ * request is in flight would abort that request and strand the library at
+ * the single folded-in film.
+ */
+describe('FilmApi with the detail view opened before the library lands', () => {
+  let api: FilmApi;
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(FilmApi);
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('still ends up with the whole library', async () => {
+    TestBed.tick();
+    const listRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/films`);
+
+    // The detail route's id, selected while `GET /films` is still in flight.
+    api.selectedId.set('f2');
+    TestBed.tick();
+
+    // No fallback yet: it would race the library load and cancel it.
+    httpTesting.expectNone(`${environment.apiBaseUrl}/films/f2`);
+
+    listRequest.flush([filmDto({ id: 'f1' }), filmDto({ id: 'f2' }), filmDto({ id: 'f3' })]);
+    await Promise.resolve();
+    await Promise.resolve();
+    TestBed.tick();
+
+    expect(api.list.value().map((film) => film.id)).toEqual(['f1', 'f2', 'f3']);
+    // The library carried the selected film all along, so it never fires.
+    httpTesting.expectNone(`${environment.apiBaseUrl}/films/f2`);
+  });
+
+  it('falls back once the library has landed without the selected film', async () => {
+    TestBed.tick();
+    const listRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/films`);
+
+    api.selectedId.set('f9');
+    TestBed.tick();
+    listRequest.flush([filmDto({ id: 'f1' })]);
+    await Promise.resolve();
+    await Promise.resolve();
+    TestBed.tick();
+
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films/f9`).flush(filmDto({ id: 'f9' }));
+    await Promise.resolve();
+    await Promise.resolve();
+    TestBed.tick();
+
+    expect(api.list.value().map((film) => film.id)).toEqual(['f1', 'f9']);
+  });
+});
