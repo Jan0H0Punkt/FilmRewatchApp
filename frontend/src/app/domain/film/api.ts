@@ -5,18 +5,37 @@
  * data layer sees the camelCase domain model. Views never inject this — they
  * go through `FilmFacade`.
  */
-import { httpResource } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { Injectable, effect, inject, signal } from '@angular/core';
+import type { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
-/** One title in the wire projection (REQ §4.1 Title object). */
+/**
+ * One title in the §7.3 projection (mirrors `TitleRead` — includes `is_original`).
+ * Part of the complete film projection returned by both `GET /films` and `GET /films/{id}`.
+ */
 export interface TitleDto {
   readonly value: string;
   readonly is_primary: boolean;
+  readonly is_original: boolean;
 }
 
-/** The §7.3 film projection, as `GET /films` and `GET /films/{id}` return it. */
+/** One rating event embedded in the projection (mirrors `RatingEntryRead`). */
+export interface RatingEntryDto {
+  readonly id: string;
+  /** `null` for a watch the user chose not to rate (FR-RAT-12). */
+  readonly value: number | null;
+  readonly watch_date: string;
+  readonly created_at: string;
+}
+
+/**
+ * The §7.3 film projection returned by both `GET /films` and `GET /films/{id}`
+ * (mirrors `FilmDetailRead`). The library list view deliberately maps only a subset
+ * of these fields via `toFilm`; the detail view renders the full projection via
+ * `toFilmDetail`.
+ */
 export interface FilmDto {
   readonly id: string;
   readonly titles: readonly TitleDto[];
@@ -26,13 +45,28 @@ export interface FilmDto {
   readonly genre: readonly string[];
   readonly tags: readonly string[];
   readonly poster_image: string | null;
-  /** `null` when no watch of this film was rated (FR-RAT-11/12). */
-  readonly average_rating: number | null;
   readonly is_favorite: boolean;
+  readonly delay_days: number;
+  readonly rating_history: readonly RatingEntryDto[];
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+/**
+ * The `PATCH /films/{id}` payload (mirrors `FilmUpdate`) — every field
+ * optional, absent means unchanged (FR-LIB-06/07). Phase 3 only ever sets
+ * `is_favorite` or `delay_days`; the remaining editable fields join here
+ * when the phase 4 edit form needs them.
+ */
+export interface FilmUpdateDto {
+  readonly is_favorite?: boolean;
+  readonly delay_days?: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class FilmApi {
+  private readonly http = inject(HttpClient);
+
   /**
    * `GET /films` — the whole library, primary-title ordered (§5.3).
    *
@@ -43,4 +77,53 @@ export class FilmApi {
   readonly list = httpResource<readonly FilmDto[]>(() => `${environment.apiBaseUrl}/films`, {
     defaultValue: [],
   });
+
+  /**
+   * The film currently shown by the detail view; `null` before one is
+   * selected. `GET /films` already returns the same §7.3 projection
+   * `GET /films/{id}` would, so selecting an id already present in `list`
+   * makes no request at all — `detail` below only fires for the rare miss.
+   */
+  readonly selectedId = signal<string | null>(null);
+
+  /**
+   * `GET /films/{id}` — a fallback for a `selectedId` that `list` doesn't
+   * (yet) hold: a stale bookmark, a hand-typed id, or a film deleted by
+   * someone else. The URL factory returns `undefined` — `httpResource`'s
+   * documented way to skip the request — whenever the id is already in
+   * `list`, which is the common case.
+   *
+   * `FilmFacade` only reads `isLoading`/`error` off this resource, never
+   * `value`: the constructor below folds a resolved fetch into `list`, so
+   * `list` stays the single source of truth `FilmFacade.detail` looks up
+   * (a genuine miss surfaces as this request's 404, which `FilmFacade`
+   * maps to its not-found state).
+   */
+  readonly detail = httpResource<FilmDto>(() => {
+    const id = this.selectedId();
+    if (id === null) return undefined;
+    const inList = this.list.value().some((film) => film.id === id);
+    return inList ? undefined : `${environment.apiBaseUrl}/films/${id}`;
+  });
+
+  constructor() {
+    effect(() => {
+      const dto = this.detail.value();
+      if (dto === undefined) return;
+      this.list.value.update((films) => (films.some((film) => film.id === dto.id) ? films : [...films, dto]));
+    });
+  }
+
+  /**
+   * `PATCH /films/{id}` — a plain `HttpClient` call, not `httpResource`
+   * (writes only). Returns the full §7.3 projection, same shape as `GET`.
+   */
+  update(id: string, dto: FilmUpdateDto): Observable<FilmDto> {
+    return this.http.patch<FilmDto>(`${environment.apiBaseUrl}/films/${id}`, dto);
+  }
+
+  /** `DELETE /films/{id}` (FR-LIB-10..12) — 204 No Content on success. */
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/films/${id}`);
+  }
 }
