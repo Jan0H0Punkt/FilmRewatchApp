@@ -90,15 +90,23 @@ class TitleCreate(StrictSchema):
 
 
 class FirstRatingCreate(StrictSchema):
-    """The mandatory first rating in the create payload (FR-LIB-03, REQ §4.2)."""
+    """The mandatory first watch in the create payload (FR-LIB-03, REQ §4.2).
 
-    value: JsonDecimal
+    Mandatory as an *event*: the library holds only films the user has watched,
+    so a create always carries a ``watch_date``. Scoring that watch is optional
+    — ``value`` is required-but-nullable, so "I do not want to rate this"
+    (FR-RAT-12) has to be stated, never inferred from a missing key.
+    """
+
+    value: JsonDecimal | None
     watch_date: JsonDate
 
     @field_validator("value")
     @classmethod
-    def _value_in_half_steps(cls, value: JsonDecimal) -> JsonDecimal:
-        # FR-RAT-02 / §5.4: 0.5-5.0 in increments of 0.5.
+    def _value_in_half_steps(cls, value: JsonDecimal | None) -> JsonDecimal | None:
+        # FR-RAT-02 / §5.4: 0.5-5.0 in increments of 0.5, when scored at all.
+        if value is None:
+            return value
         if not Decimal("0.5") <= value <= Decimal("5.0") or value % Decimal("0.5") != 0:
             raise ValueError("rating value must be between 0.5 and 5.0 in steps of 0.5")
         return value
@@ -253,7 +261,8 @@ class FilmDetailRead(StrictSchema):
     """The full §7.3 projection served by ``GET /films/{id}`` and the create.
 
     ``average_rating`` is computed from the history on every read — arithmetic
-    mean of the entry values, one decimal (FR-RAT-09/10, NFR-INT-01) — and
+    mean of the *rated* entries' values, one decimal (FR-RAT-09/10,
+    NFR-INT-01), and ``null`` when no watch was rated (FR-RAT-11) — and
     ``rating_history`` is ordered most recent first (FR-RAT-05/06).
     ``natural_key`` is deliberately absent (FR-LIB-04).
     """
@@ -269,6 +278,6 @@ class FilmDetailRead(StrictSchema):
     is_favorite: bool
     delay_days: int
     rating_history: list[RatingEntryRead]
-    average_rating: float
+    average_rating: float | None
     created_at: datetime
     updated_at: datetime

@@ -172,7 +172,9 @@ class GenreAssignmentProtocol(Protocol):
 class RatingHistoryProtocol(Protocol):
     """What the film flow needs of the rating service (service-to-service)."""
 
-    def add_entry(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntry: ...
+    def add_entry(
+        self, film_id: uuid.UUID, value: Decimal | None, watch_date: date
+    ) -> RatingEntry: ...
 
     def get_or_raise(self, rating_id: uuid.UUID) -> RatingEntry: ...
 
@@ -197,11 +199,18 @@ def _deduplicated(names: Sequence[str]) -> list[str]:
     return unique
 
 
-def _average_of(values: Sequence[Decimal]) -> float:
+def _average_of(values: Sequence[Decimal | None]) -> float | None:
     """Arithmetic mean to one decimal, half-up (FR-RAT-09) — computed on read,
-    never stored (NFR-INT-01). The history is never empty (FR-LIB-03)."""
-    assert values, "a film always has at least one rating (FR-LIB-03)"
-    mean = sum(values, Decimal(0)) / len(values)
+    never stored (NFR-INT-01).
+
+    Only the *rated* watches count: an unrated one (FR-RAT-12) is history, not
+    a zero. A film whose every watch is unrated has no average at all, which is
+    the ``None`` (FR-RAT-11). The history itself is never empty (FR-LIB-03).
+    """
+    scored = [value for value in values if value is not None]
+    if not scored:
+        return None
+    mean = sum(scored, Decimal(0)) / len(scored)
     return float(mean.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
@@ -401,10 +410,13 @@ class FilmService:
         self._genres.delete_orphans()
         self._repository.commit()
 
-    def add_rating(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntryRead:
+    def add_rating(
+        self, film_id: uuid.UUID, value: Decimal | None, watch_date: date
+    ) -> RatingEntryRead:
         """Record a new rating event for an existing film (FR-RAT-01..04).
 
-        Unknown film id → :class:`FilmNotFoundError`. A future ``watch_date``
+        A ``value`` of ``None`` logs the watch without scoring it
+        (FR-RAT-12). Unknown film id → :class:`FilmNotFoundError`. A future ``watch_date``
         raises :class:`~app.ratings.service.FutureWatchDateError` from
         :meth:`RatingHistoryProtocol.add_entry` (its own stable code, not
         ``VALIDATION_ERROR``). The average the next detail read computes

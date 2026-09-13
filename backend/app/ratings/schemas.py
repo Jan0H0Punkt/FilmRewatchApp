@@ -24,7 +24,8 @@ class RatingEntryRead(StrictSchema):
 
     ``value`` is a JSON number on the wire, so the field is a lax ``float``
     (the ORM hands the schema a ``Decimal``, which strict ``float`` would
-    reject); values are halves, exactly float-representable.
+    reject); values are halves, exactly float-representable. It is ``null``
+    for a watch the user chose not to rate (FR-RAT-12).
     """
 
     # Merged into the strict base config: allows building the schema straight
@@ -32,7 +33,7 @@ class RatingEntryRead(StrictSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    value: Annotated[float, Field(strict=False)]
+    value: Annotated[float, Field(strict=False)] | None
     watch_date: date
     created_at: datetime
 
@@ -48,13 +49,18 @@ class RatingCreate(StrictSchema):
     rule, so an off-step value yields plain ``VALIDATION_ERROR``.
     """
 
-    value: JsonDecimal
+    # Required, yet nullable: an explicit ``null`` is "watched, not rated"
+    # (FR-RAT-12), while *omitting* the key is a 422. Giving the field a
+    # default would let a client turn a forgotten score into an unrated film.
+    value: JsonDecimal | None
     watch_date: JsonDate
 
     @field_validator("value")
     @classmethod
-    def _value_in_half_steps(cls, value: JsonDecimal) -> JsonDecimal:
-        # FR-RAT-02: 0.5-5.0 in increments of 0.5.
+    def _value_in_half_steps(cls, value: JsonDecimal | None) -> JsonDecimal | None:
+        # FR-RAT-02: 0.5-5.0 in increments of 0.5, when a score is given at all.
+        if value is None:
+            return value
         if not Decimal("0.5") <= value <= Decimal("5.0") or value % Decimal("0.5") != 0:
             raise ValueError("rating value must be between 0.5 and 5.0 in steps of 0.5")
         return value

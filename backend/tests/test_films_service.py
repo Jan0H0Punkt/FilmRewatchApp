@@ -176,7 +176,7 @@ class FakeRatingService:
         self.by_film: dict[uuid.UUID, list[RatingEntry]] = {}
         self.by_id: dict[uuid.UUID, RatingEntry] = {}
 
-    def add_entry(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntry:
+    def add_entry(self, film_id: uuid.UUID, value: Decimal | None, watch_date: date) -> RatingEntry:
         if watch_date > _now().date():
             raise FutureWatchDateError()
         entry = RatingEntry(
@@ -336,6 +336,21 @@ def test_watch_date_must_not_be_in_the_future() -> None:
         payload(first_rating={"value": 4.5, "watch_date": "2999-01-01"})
 
 
+def test_a_watch_may_be_logged_without_a_rating_value() -> None:
+    # FR-LIB-03/FR-RAT-12: the watch is mandatory, scoring it is not.
+    created = payload(first_rating={"value": None, "watch_date": "1995-12-15"})
+    assert created.first_rating.value is None
+    assert created.first_rating.watch_date == date(1995, 12, 15)
+
+
+def test_an_absent_rating_value_is_rejected_rather_than_read_as_unrated() -> None:
+    # FR-RAT-12: "unrated" is a deliberate choice, so the key is required —
+    # a payload that forgets it must not silently produce an unrated film.
+    with pytest.raises(ValidationError) as caught:
+        payload(first_rating={"watch_date": "1995-12-15"})
+    assert caught.value.errors()[0]["type"] == "missing"
+
+
 def test_lossy_coercion_is_rejected() -> None:
     # §5.7 strict base: "1995" is not an int.
     with pytest.raises(ValidationError):
@@ -444,6 +459,26 @@ def test_average_is_computed_from_the_full_history_and_rounds_half_up() -> None:
     ]
     # … and (4.5 + 4.0) / 2 = 4.25 rounds half-up to one decimal (FR-RAT-09).
     assert detail.average_rating == 4.3
+
+
+def test_average_is_none_when_no_watch_was_rated() -> None:
+    # FR-RAT-11: a film watched but never scored has no average to show.
+    service, _, _, _ = make_service()
+    created = service.create(payload(first_rating={"value": None, "watch_date": "1995-12-15"}))
+
+    assert created.average_rating is None
+    assert [entry.value for entry in created.rating_history] == [None]
+
+
+def test_average_is_taken_over_the_rated_watches_only() -> None:
+    # FR-RAT-09: an unrated rewatch is history, not a zero dragging the mean down.
+    service, _, _, ratings = make_service()
+    created = service.create(payload())  # 4.5 on 1995-12-15
+    ratings.add_entry(created.id, None, date(1996, 3, 1))
+
+    detail = service.get_detail(created.id)
+    assert len(detail.rating_history) == 2
+    assert detail.average_rating == 4.5
 
 
 def test_get_detail_for_an_unknown_id_maps_to_the_not_found_envelope() -> None:

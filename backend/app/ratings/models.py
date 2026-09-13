@@ -34,7 +34,10 @@ class RatingEntry(Base):
         ForeignKey("films.id", ondelete="CASCADE"), index=True
     )
     # 0.5-5.0 in 0.5 steps — one digit before and after the point (§5.4).
-    value: Mapped[Decimal] = mapped_column(Numeric(2, 1))
+    # NULL is the "watched but deliberately not rated" case (FR-RAT-12): the
+    # watch itself is the record, the score is optional. Kept as NULL rather
+    # than a sentinel value so every aggregate skips it by default.
+    value: Mapped[Decimal | None] = mapped_column(Numeric(2, 1))
     # When the film was watched — distinct from when the rating was recorded
     # (``created_at``); both are stored (REQ §4.2 note).
     watch_date: Mapped[date] = mapped_column(Date)

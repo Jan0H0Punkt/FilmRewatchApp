@@ -140,6 +140,35 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
     assert client.get(f"/api/v1/films/{film_id}").json() == body
 
 
+def test_a_film_can_be_logged_without_rating_the_watch(db_session: Session) -> None:
+    # FR-RAT-12: the watch is recorded, the score deliberately left empty.
+    client = _client_over(db_session)
+
+    response = client.post(
+        "/api/v1/films",
+        json=_payload(first_rating={"value": None, "watch_date": "1995-12-15"}),
+    )
+
+    assert response.status_code == 201
+    body = cast(dict[str, object], response.json())
+    assert body["average_rating"] is None
+    history = cast(list[dict[str, object]], body["rating_history"])
+    assert [entry["value"] for entry in history] == [None]
+    assert history[0]["watch_date"] == "1995-12-15"
+
+    # Rating it later is an ordinary add: the average appears, over the scored
+    # watch alone (FR-RAT-09).
+    film_id = cast(str, body["id"])
+    added = client.post(
+        f"/api/v1/films/{film_id}/ratings",
+        json={"value": 4.0, "watch_date": "1996-03-01"},
+    )
+    assert added.status_code == 201
+    detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
+    assert detail["average_rating"] == 4.0
+    assert len(cast(list[object], detail["rating_history"])) == 2
+
+
 def test_each_validation_failure_yields_the_validation_error_envelope(
     db_session: Session,
 ) -> None:
@@ -158,6 +187,9 @@ def test_each_validation_failure_yields_the_validation_error_envelope(
         ),  # two primaries
         _payload(first_rating={"value": 4.5, "watch_date": "2999-01-01"}),  # future date
         _payload(first_rating={"value": 4.3, "watch_date": "1995-12-15"}),  # off-step value
+        # FR-RAT-12: "unrated" must be stated as an explicit null — a payload
+        # that simply forgets the key is a 422, never a silently unrated film.
+        _payload(first_rating={"watch_date": "1995-12-15"}),
         _payload(release_year="1995"),  # lossy-typed field (§5.7)
         _payload(runtime_minutes=0),  # must be ≥ 1
         _payload(natural_key="heat|1995|michael mann"),  # unknown/system field

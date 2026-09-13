@@ -70,10 +70,11 @@ class RatingService:
     def __init__(self, repository: RatingRepositoryProtocol) -> None:
         self._repository = repository
 
-    def add_entry(self, film_id: uuid.UUID, value: Decimal, watch_date: date) -> RatingEntry:
+    def add_entry(self, film_id: uuid.UUID, value: Decimal | None, watch_date: date) -> RatingEntry:
         """Record one rating event for a film (REQ §4.2).
 
-        Same-day repeats are allowed (FR-RAT-04). The entry joins the caller's
+        A ``value`` of ``None`` records the watch without scoring it
+        (FR-RAT-12). Same-day repeats are allowed (FR-RAT-04). The entry joins the caller's
         unit of work — the film create flow commits it atomically with the film
         (FR-LIB-03); the standalone add-rating flow (PR7) commits it via
         :class:`~app.films.service.FilmService.add_rating`.

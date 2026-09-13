@@ -140,6 +140,19 @@ def test_rating_create_enforces_the_half_step_range() -> None:
     assert RatingCreate.model_validate({"value": 4.5, "watch_date": "2026-01-01"}).value == 4.5
 
 
+def test_rating_create_accepts_an_explicitly_empty_value() -> None:
+    # FR-RAT-12: logging a watch without scoring it.
+    created = RatingCreate.model_validate({"value": None, "watch_date": "2026-01-01"})
+    assert created.value is None
+
+
+def test_rating_create_requires_the_value_key_even_to_leave_it_empty() -> None:
+    # FR-RAT-12: no default — omitting the key cannot pass for "unrated".
+    with pytest.raises(ValidationError) as caught:
+        RatingCreate.model_validate({"watch_date": "2026-01-01"})
+    assert caught.value.errors()[0]["type"] == "missing"
+
+
 def test_rating_create_does_not_reject_a_future_watch_date() -> None:
     # Deliberately schema-permissive: FUTURE_WATCH_DATE is a service-layer
     # domain check (contrast with FirstRatingCreate, which checks it in the
