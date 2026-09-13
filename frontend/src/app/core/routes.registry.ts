@@ -10,8 +10,12 @@ import type { RouteRegistryEntry } from './route-registry';
 const library = (): Promise<typeof import('../views/library/library').Library> =>
   import('../views/library/library').then((module) => module.Library);
 
+const filmDetail = (): Promise<typeof import('../views/film-detail/film-detail').FilmDetail> =>
+  import('../views/film-detail/film-detail').then((module) => module.FilmDetail);
+
 export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   // The Library is also the landing route until the Rewatch view exists.
   { path: '', title: 'Library', loadComponent: library },
   { path: 'library', title: 'Library', loadComponent: library },
+  { path: 'film/:id', title: 'Film', loadComponent: filmDetail },
 ];
