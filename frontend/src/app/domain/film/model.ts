@@ -24,6 +24,12 @@ export interface Film {
    */
   readonly averageRating: number | null;
   readonly isFavorite: boolean;
+  /**
+   * Every title the film has, primary first. The list prints `primaryTitle`
+   * alone, but the Library's title search matches against all of them
+   * (FR-SF-01), so the list model has to carry them.
+   */
+  readonly titles: readonly FilmTitle[];
 }
 
 /** One title of a film (REQ §4.1 Title object) — the detail view lists all of them. */
@@ -44,11 +50,10 @@ export interface RatingHistoryEntry {
 
 /**
  * The full §7.3 detail projection (`GET /films/{id}`) — everything the
- * library list omits: every title, the rewatch delay, the rating history,
- * and the record timestamps.
+ * library list omits: the rewatch delay, the rating history, and the record
+ * timestamps.
  */
 export interface FilmDetail extends Film {
-  readonly titles: readonly FilmTitle[];
   readonly delayDays: number;
   /** Newest first (FR-RAT-05/06), as the backend orders it. */
   readonly ratingHistory: readonly RatingHistoryEntry[];

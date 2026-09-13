@@ -33,18 +33,18 @@ export function toFilm(dto: FilmDto): Film {
     posterImage: dto.poster_image,
     averageRating: averageRatingOf(dto.rating_history),
     isFavorite: dto.is_favorite,
-  };
-}
-
-/** Map the §7.3 projection to the domain detail model — adds all titles, delay, history, and timestamps. */
-export function toFilmDetail(dto: FilmDto): FilmDetail {
-  return {
-    ...toFilm(dto),
     titles: dto.titles.map((title) => ({
       value: title.value,
       isPrimary: title.is_primary,
       isOriginal: title.is_original,
     })),
+  };
+}
+
+/** Map the §7.3 projection to the domain detail model — adds the delay, the history, and the timestamps. */
+export function toFilmDetail(dto: FilmDto): FilmDetail {
+  return {
+    ...toFilm(dto),
     delayDays: dto.delay_days,
     ratingHistory: dto.rating_history.map((entry) => ({
       id: entry.id,
