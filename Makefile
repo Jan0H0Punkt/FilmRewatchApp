@@ -10,8 +10,14 @@
 # Start the whole app: backend + PostgreSQL in Docker (detached, waits until
 # healthy), then the Angular dev server in the foreground at localhost:4200.
 # Ctrl+C stops the dev server; the containers keep running — `make down`.
+#
+# `--build` rebuilds the backend image first: without it the container runs
+# whatever code was baked in at the last build, and a migration added since
+# then makes startup fail outright (alembic can't locate the revision the
+# database is already stamped at). Costs a few seconds on an unchanged tree,
+# since Docker's layer cache makes the rebuild a no-op.
 dev:
-	docker compose up --wait
+	docker compose up --wait --build
 	npm --prefix frontend start
 
 # Run the backend stack (backend + PostgreSQL) via Docker Compose (PR6, §8.1).
