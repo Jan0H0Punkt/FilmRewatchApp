@@ -259,7 +259,7 @@ and it is created if new or reused if it already exists (mirroring FR-TAG-01). T
 plain `List<String>` — flagged for the requirements reconciliation (§11).
 
 **What the database stores vs. computes.** `average_rating` is **not a column** — it is recalculated from the
-film's ratings every time it is read (FR-RAT-09/10). Storing it could show a stale value; computing it keeps it
+film's *rated* entries every time it is read (FR-RAT-09/10), and is `null` when none of them is rated. Storing it could show a stale value; computing it keeps it
 always correct (NFR-INT-01). `natural_key` **is** a column (it backs the "no duplicate films" rule), but the user
 never types it: the business layer builds it from primary title + release year + director, and rebuilds it
 whenever one of those changes (FR-LIB-04/08).
@@ -280,13 +280,13 @@ All endpoints are namespaced under `/api/v1` (§3.2, FR-EXT-11) and documented a
 | Method & Path                 | Purpose                                                                    | Requirements                   |
 | ----------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
 | `GET /films`                  | List/search/filter/sort films (query params)                               | FR-SF-01..11                   |
-| `POST /films`                 | Create film (+ **required** first rating)                                  | FR-LIB-01..04, FR-LIB-03       |
+| `POST /films`                 | Create film (+ **required** first watch, rating optional)                  | FR-LIB-01..04, FR-LIB-03, FR-RAT-12 |
 | `POST /films/duplicate-check` | Background duplicate probe by natural-key parts                            | FR-LIB-05                      |
 | `GET /films/{id}`             | Fetch one film (with titles, tags, genres, rating history)                 | §7.3                           |
 | `PATCH /films/{id}`           | Edit user-editable fields                                                  | FR-LIB-06..09                  |
 | `DELETE /films/{id}`          | Delete film (cascade ratings; orphan tag/genre cleanup)                    | FR-LIB-10..12                  |
 | `POST /films/{id}/merge`      | Merge a duplicate into this film                                           | FR-LIB-17..21                  |
-| `POST /films/{id}/ratings`    | Add a rating entry                                                         | FR-RAT-01..04                  |
+| `POST /films/{id}/ratings`    | Add a rating entry (`value` may be an explicit `null`)                     | FR-RAT-01..04, FR-RAT-12       |
 | `DELETE /ratings/{id}`        | Delete a rating entry; deleting the **last** one deletes the film          | FR-RAT-07                      |
 | `GET /tags`                   | List tags (supports `?prefix=` for autocomplete)                           | FR-TAG-06                      |
 | `GET /genres`                 | List genres (supports `?prefix=` for autocomplete)                         | FR-SF-07 (filter/autocomplete) |
@@ -301,14 +301,22 @@ that the three-view plan (§7) doesn't include (§11).
 `GET /rewatch-suggestions` serves the **stored result of the daily job** (§5.8) — it does not run the algorithm
 on request; the client caches this list for offline rendering.
 
-**Invariant — every film has at least one rating.** The library only holds films the user has actually watched,
-so `POST /films` *requires* a first rating (the create payload's `first_rating` is mandatory, not optional), and
-`DELETE /ratings/{id}` on a film's **last** remaining rating deletes the **whole film** (cascading to its tag and
+**Invariant — every film has at least one watch.** The library only holds films the user has actually watched,
+so `POST /films` *requires* a first entry (the create payload's `first_rating` is mandatory, not optional), and
+`DELETE /ratings/{id}` on a film's **last** remaining entry deletes the **whole film** (cascading to its tag and
 genre links per FR-LIB-12) behind an explicit confirmation that names the film, not just the rating. This makes
-`rating_history` never empty, so `average_rating` is never null and the "Not yet rated" / empty-history states
-(FR-RAT-11, §7.3 Section B) cannot occur, and the rewatch inputs (FR-RW-02) never see a null/zero watch count. One
+`rating_history` never empty, and the rewatch inputs (FR-RW-02) never see a null/zero watch count. One
 consequence for FR-RAT-08 (ratings are corrected by delete-then-recreate): to fix a film's *only* rating, the new
 one must be added first, then the wrong one deleted — deleting first would remove the film.
+
+The invariant is about the **watch**, not the score. `rating_entries.value` is nullable: the user can log a watch
+without rating it (FR-RAT-12), so `average_rating` *can* be null — the mean is taken over the rated entries only,
+and a film with none has no average (FR-RAT-11), rendered as the FR-RAT-13 placeholder rather than zero stars.
+Two deliberate consequences. First, `null` rather than a sentinel number: a magic 0 or -1 would live inside the
+column's own 0.5–5.0 domain, and every consumer — the computed average, rating sort/filter (FR-SF), the FR-RW-02
+payload — would have to remember to exclude it, where `NULL` is skipped by aggregates by default. Second, the
+wire form is **required-but-nullable**: `value` must be present in the request and may be `null`, so "not rated"
+is always a choice the user made, never a key someone forgot to send.
 
 For required search (initial version), `GET /films` accepts `title` and `director` query params (substring,
 case-insensitive, AND-combined; FR-SF-01..03). The handler reads from a **filter registry** so optional

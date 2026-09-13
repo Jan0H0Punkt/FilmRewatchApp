@@ -222,12 +222,16 @@ A RatingEntry represents a single rating event — one instance of the user cons
 | ------------ | ----------------- | ------------ | -------------------------- | ------------------------------------------------------------ |
 | `id`         | UUID              | Yes (system) | Unique, immutable          | System-generated identifier                                  |
 | `film_id`    | UUID              | Yes          | Foreign key → Film         | The film this rating belongs to                              |
-| `value`      | Decimal           | Yes          | 0.5–5.0; increments of 0.5 | The rating value given                                       |
+| `value`      | Decimal \| null   | Yes (nullable) | 0.5–5.0; increments of 0.5, or `null` | The rating value given; `null` = watched but deliberately not rated (FR-RAT-12) |
 | `watch_date` | ISO 8601 Date     | Yes          | Not in the future          | The date on which the film was watched for this rating event |
 | `created_at` | ISO 8601 DateTime | Yes (system) | Immutable                  | Timestamp when this rating entry was recorded                |
 
 > **Note:** `watch_date` represents *when the film was watched*, which may differ from *when the rating was entered* into the system. Both
 > are stored separately.
+
+> **Note:** A RatingEntry is a *watch* event first and a *rating* second. `value` is nullable so a watch can be recorded without scoring it
+> (FR-RAT-12); `watch_date` is not. A `null` value is stored as SQL `NULL`, never as a sentinel number — a magic value inside the 0.5–5.0
+> domain would silently enter the average.
 
 ### 4.3 Tag
 
@@ -266,7 +270,8 @@ Film  1..*   ──── 1..*   Genre
 ```
 
 - A Film has **one or more** RatingEntries — never zero (the library holds only watched films; see FR-LIB-03). A RatingEntry belongs to
-  exactly one Film.
+  exactly one Film. Some of those entries may be unrated (`value` is `null`, FR-RAT-12); a film whose entries are *all* unrated is still a
+  valid film, it simply has no `average_rating`.
 - A Film must have **at least one** Tag, and a Tag must be assigned to **at least one** Film (many-to-many); orphan (unused) tags are not
   permitted. **Genres follow the same many-to-many rule**, with the same orphan-deletion behaviour.
 - Deleting a Film cascades to delete all its associated RatingEntries. Tag and genre associations are also removed; any Tag or Genre left
@@ -288,8 +293,9 @@ Film  1..*   ──── 1..*   Genre
   `is_favorite` and `delay_days` are not asked for in the create form and are defaulted by the system to `false` and `0` respectively. All
   three can be set or changed later through edit.
 - **FR-LIB-03:** The library holds **only films the user has actually watched**, so the first `RatingEntry` is **mandatory** at creation: a
-  film is created together with its first rating in one operation (the "log a watched film" flow). Every film therefore always has at least
-  one rating (see also FR-RAT-07 and FR-RAT-11).
+  film is created together with its first watch in one operation (the "log a watched film" flow). Every film therefore always has at least
+  one entry (see also FR-RAT-07 and FR-RAT-11). Mandatory as an *event*, not as a score: the entry's `watch_date` is required, its `value`
+  may be `null` (FR-RAT-12).
 - **FR-LIB-04:** Upon creation, `created_at` and `updated_at` shall be set automatically by the system to the current UTC timestamp, and
   `natural_key` shall be derived automatically from the film's primary title, `release_year`, and `director` (see Section 4.1). The user
   shall never enter or see the `natural_key` directly.
@@ -371,11 +377,19 @@ Film  1..*   ──── 1..*   Genre
 
 #### 5.2.3 Average Rating
 
-- **FR-RAT-09:** The system shall compute `average_rating` as the arithmetic mean of all `RatingEntry.value` values for that film, rounded
-  to one decimal place.
+- **FR-RAT-09:** The system shall compute `average_rating` as the arithmetic mean of the **rated** `RatingEntry.value` values for that film
+  (entries with a `null` value are excluded, not counted as zero), rounded to one decimal place.
 - **FR-RAT-10:** The `average_rating` shall be recomputed automatically whenever a `RatingEntry` is added or deleted.
-- **FR-RAT-11:** Every film has at least one rating (FR-LIB-03), so `average_rating` is always a real value — there is no "not yet rated" or
-  empty-history state, and it shall never be displayed as zero.
+- **FR-RAT-11:** A film whose watches are **all** unrated has no `average_rating`: the value is `null`. It shall never be displayed as zero
+  or as an empty star row — see FR-RAT-13. Every film still has at least one `RatingEntry` (FR-LIB-03), so the rating *history* is never
+  empty.
+- **FR-RAT-12:** The user shall be able to record a watch **without rating it** — for films they do not wish to score (documentaries, very
+  old films). Such an entry stores `value` as `null` and keeps its `watch_date`. Choosing not to rate is an **explicit** action: wherever a
+  rating is submitted, the API requires the `value` key to be present and set to `null`; a payload that merely omits it is rejected, so a
+  forgotten score can never become an unrated film by accident. The UI shall mirror this — the create and add-rating forms require the user
+  to either pick a rating or actively choose "Don't rate this"; leaving the picker untouched is not a valid submission.
+- **FR-RAT-13:** Wherever a film's rating is displayed, an absent `average_rating` (FR-RAT-11) shall render as a neutral placeholder — an em
+  dash, labelled "Not rated" for assistive technology — never as zero stars, which reads as a rating of zero.
 
 ---
 
@@ -446,7 +460,7 @@ application must honour when integrating it.
 | Input Field         | Source                                          | Description                                                                                            |
 | ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `film_id`           | Film.id                                         | Unique identifier                                                                                      |
-| `average_rating`    | Computed                                        | Arithmetic mean of all rating entries (always present — every film has ≥ 1 rating)                     |
+| `average_rating`    | Computed                                        | Arithmetic mean of the rated entries; **`null`** when no watch was rated (FR-RAT-11/12) — the algorithm needs a defined behaviour for this case, see OPEN_WORK.md |
 | `watch_count`       | Computed (length of `rating_history`)           | Number of times the film has been watched (number of `RatingEntry` records); always ≥ 1               |
 | `last_watched_date` | Computed (max `watch_date` in `rating_history`) | Date of the most recent watch (always present)                                                        |
 | `is_favorite`       | Film.is_favorite                                | Whether the user has marked this film as a favourite                                                   |
@@ -689,7 +703,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Tags                         | Displayed as chips; add/remove tags directly from this view                                                                                                                                                                        |
 | Favourite                    | Toggle reflecting `Film.is_favorite`; user can switch it directly from this view or via the Edit form                                                                                                                              |
 | Rewatch delay                | Reflects `Film.delay_days` (days the next rewatch suggestion is deferred; `0` means none). Editable inline or via the Edit form                                                                                                    |
-| Average rating               | **Read-only** display. Computed from `rating_history` (see FR-RAT-09 / FR-RAT-10); cannot be edited directly — to change it, add or delete rating entries in Section B. Visually distinguished (e.g. large star rating component). |
+| Average rating               | **Read-only** display. Computed from `rating_history` (see FR-RAT-09 / FR-RAT-10); cannot be edited directly — to change it, add or delete rating entries in Section B. Visually distinguished (e.g. large star rating component). Shows the FR-RAT-13 placeholder when there is no average. |
 | Created / updated timestamps | **Read-only** display (system-managed); shown in a subdued style                                                                                                                                                                   |
 
 
@@ -702,10 +716,10 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 #### Section B: Rating History
 
 - Displayed as a **chronological list**, most recent entry first.
-- Each entry shows: `value` (as stars or numeric), `watch_date`, `created_at`.
+- Each entry shows: `value` (as stars or numeric, or the "Not rated" placeholder of FR-RAT-13), `watch_date`, `created_at`.
 - Each entry has a **Delete** action with confirmation (FR-RAT-07).
-- An **"Add Rating"** action (button) opens an inline form or modal with: `value` (star picker, 0.5–5.0 in 0.5 increments) and `watch_date`
-  (date picker, no future dates).
+- An **"Add Rating"** action (button) opens an inline form or modal with: `value` (star picker, 0.5–5.0 in 0.5 increments, plus an explicit
+  **"Don't rate this"** choice — FR-RAT-12) and `watch_date` (date picker, no future dates).
 - The rating history is never empty — a film always has at least one rating (FR-LIB-03) — so no empty-history state is needed. Deleting the
   last remaining rating deletes the film (FR-RAT-07).
 
@@ -812,6 +826,7 @@ normal use.
 | Version | Date       | Summary                                                                                                                                  |
 | ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0     | 2026-05-15 | Initial requirements (Draft).                                                                                                           |
+| 1.2     | 2026-09-13 | Unrated watches. `RatingEntry.value` is now nullable: the user can log a watch without scoring it, for films they do not wish to rate (FR-RAT-12). `average_rating` is the mean of the *rated* entries and is `null` when none are rated (FR-RAT-09/11), displayed as an em-dash placeholder rather than zero stars (FR-RAT-13). Choosing not to rate is explicit at both the API (the `value` key is required, its value may be `null`) and the UI (§7.3 Section B). Unchanged: every film still has ≥ 1 RatingEntry, the first is still mandatory at create, and deleting the last one still deletes the film (FR-LIB-03, FR-RAT-07). Reverses part of the 1.1 "no not-yet-rated state" decision — see FR-RW-02, whose `average_rating` input can now be null. |
 | 1.1     | 2026-06-05 | Reconciled with DESIGN_V1 and approved. Genre is now a first-class entity (§4.4, modelled like Tag). Watched-only library: every film must have ≥ 1 rating — first rating mandatory at create, deleting the last rating deletes the film, no "not yet rated" state (FR-LIB-03, FR-RAT-07/11, §4.1, §4.5, §7.3). Rewatch engine is a once-daily backend job returning only due/overdue films, most-overdue first; no manual refresh (FR-RW-02/03/04/05, §7.1). Navigation is a desktop drawer + mobile bottom bar (§7, §7.4). Deployment narrowed to a single local-laptop target; multi-topology / deployment-agnostic dropped (§1.3, §3.6, FR-EXT-13, NFR-OFF-06). Global tag/genre delete deferred (FR-TAG-05). |
 
 ---
