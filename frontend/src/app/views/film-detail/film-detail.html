@@ -64,19 +64,32 @@
           <span aria-hidden="true">&mdash;</span>
         }
       </p>
-      @if (film.genres.length > 0) {
-        <mat-chip-set class="film-detail__genres" aria-label="Genres">
-          @for (genre of film.genres; track genre) {
-            <mat-chip class="film-detail__genre" disableRipple>{{ genre }}</mat-chip>
-          }
-        </mat-chip-set>
+      <!-- Genres and tags (FR-TAG-03/06, REQ §4.4). Both rows are the shared
+           editable chip row: read-only chips until its edit button swaps in
+           Material's chip grid + autocomplete. Each change emits the full
+           list, which goes straight out as a PATCH — no Save step. -->
+      <app-editable-chips
+        class="film-detail__genres"
+        label="Genres"
+        itemNoun="genre"
+        [values]="film.genres"
+        [suggestions]="genreNames()"
+        [orderable]="true"
+        (changed)="saveGenres($event)"
+      />
+      @if (genresError()) {
+        <p class="film-detail__error" role="alert">{{ genresError() }}</p>
       }
-      @if (film.tags.length > 0) {
-        <mat-chip-set class="film-detail__tags" aria-label="Tags">
-          @for (tag of film.tags; track tag) {
-            <mat-chip class="film-detail__tag" disableRipple>{{ tag }}</mat-chip>
-          }
-        </mat-chip-set>
+      <app-editable-chips
+        class="film-detail__tags"
+        label="Tags"
+        itemNoun="tag"
+        [values]="film.tags"
+        [suggestions]="tagNames()"
+        (changed)="saveTags($event)"
+      />
+      @if (tagsError()) {
+        <p class="film-detail__error" role="alert">{{ tagsError() }}</p>
       }
       <p class="film-detail__timestamps">Added {{ film.createdAt }} • Last updated {{ film.updatedAt }}</p>
 

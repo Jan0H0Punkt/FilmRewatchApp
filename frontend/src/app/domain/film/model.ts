@@ -58,10 +58,19 @@ export interface FilmDetail extends Film {
 
 /**
  * The `PATCH /films/{id}` payload, write direction (FR-LIB-06). Every field
- * optional; the caller sets exactly one at a time (phase 3: `isFavorite` or
- * `delayDays`) so the DTO mapper sends only what changed.
+ * optional; the caller sets exactly one at a time so the DTO mapper sends
+ * only what changed.
  */
 export interface FilmPatch {
   readonly isFavorite?: boolean;
   readonly delayDays?: number;
+  /**
+   * The film's complete tag list, not a delta (FR-TAG-03): the backend
+   * replaces what it stores with exactly these names, creating the new ones
+   * and deleting any left on no film (FR-TAG-01/04). Must hold at least one
+   * name — the API rejects an empty list.
+   */
+  readonly tags?: readonly string[];
+  /** The film's complete genre list — same full-replacement rule as `tags` (REQ §4.4). */
+  readonly genres?: readonly string[];
 }

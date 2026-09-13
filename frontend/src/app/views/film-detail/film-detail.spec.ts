@@ -2,6 +2,7 @@
  * Film Detail view: loading/error/loaded states, the ViewModel shaping
  * (REQ §7.3 Section A), and the rating-history actions (phase 2, Section B).
  */
+import { ENTER } from '@angular/cdk/keycodes';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -12,7 +13,9 @@ import { of, throwError } from 'rxjs';
 
 import { FilmFacade } from '../../domain/film/facade';
 import type { FilmDetail as FilmDetailModel } from '../../domain/film/model';
+import { GenreFacade } from '../../domain/genre/facade';
 import { RatingFacade } from '../../domain/rating/facade';
+import { TagFacade } from '../../domain/tag/facade';
 import type { ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { FilmDetail } from './film-detail';
 
@@ -67,6 +70,11 @@ function stubRatingFacade() {
   };
 }
 
+/** Stands in for `TagFacade`/`GenreFacade` so the autocompletes have a vocabulary without HTTP. */
+function stubLabelFacade(names: readonly string[]) {
+  return { names: signal(names), reload: vi.fn() };
+}
+
 /** Stands in for `MatDialog` — resolves `afterClosed()` with `confirmed` without rendering a real overlay. */
 function stubMatDialog(confirmed: boolean) {
   return { open: vi.fn().mockReturnValue({ afterClosed: () => of(confirmed) }) };
@@ -87,6 +95,8 @@ async function render(
       provideNativeDateAdapter(),
       { provide: FilmFacade, useValue: filmFacade },
       { provide: RatingFacade, useValue: ratingFacade },
+      { provide: TagFacade, useValue: stubLabelFacade(['heist', 'neo-noir']) },
+      { provide: GenreFacade, useValue: stubLabelFacade(['Crime', 'Drama']) },
       ...(dialog ? [{ provide: MatDialog, useValue: dialog }] : []),
     ],
   });
@@ -99,6 +109,20 @@ async function render(
 /** Awaits the pending change-detection round after an interaction outside `render()`. */
 async function settle(): Promise<void> {
   await currentFixture.whenStable();
+}
+
+/** Enter on the tag input — Material's chip input reads `keyCode`, which jsdom leaves at 0. */
+function pressEnter(input: HTMLInputElement): void {
+  const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+  Object.defineProperty(event, 'keyCode', { get: () => ENTER });
+  input.dispatchEvent(event);
+}
+
+/** Puts one of the two chip rows into edit mode and returns its text input. */
+async function startEditing(element: HTMLElement, row: 'tags' | 'genres'): Promise<HTMLInputElement> {
+  element.querySelector<HTMLButtonElement>(`.film-detail__${row} .editable-chips__toggle`)!.click();
+  await settle();
+  return element.querySelector<HTMLInputElement>(`.film-detail__${row} .editable-chips__field input`)!;
 }
 
 /** The five picker glyphs in position order — 'star' / 'star_half' / 'star_border'. */
@@ -148,8 +172,10 @@ describe('FilmDetail', () => {
 
     expect(element.querySelector('.film-detail__title')?.textContent).toContain('Heat');
     expect(element.querySelector('.film-detail__subtitle')?.textContent).toBe('1995 • Michael Mann • 170 min');
-    const genres = [...element.querySelectorAll('.film-detail__genre')].map((el) => el.textContent);
+    const genres = [...element.querySelectorAll('.film-detail__genres mat-chip')].map((el) => el.textContent?.trim());
     expect(genres).toEqual(['Crime', 'Thriller']);
+    const tags = [...element.querySelectorAll('.film-detail__tags mat-chip')].map((el) => el.textContent?.trim());
+    expect(tags).toEqual(['heist']);
   });
 
   it('lists alternative titles beneath the primary one, marking the original', async () => {
@@ -491,6 +517,88 @@ describe('FilmDetail', () => {
       expect(data.message).toContain('Heat');
       expect(data.message).toContain('rating history');
       expect(data.message).toContain('cannot be undone');
+    });
+  });
+
+  describe('tags and genres (FR-TAG-03/06, REQ §4.4)', () => {
+    const TAGGED: FilmDetailModel = { ...HEAT, tags: ['heist', 'neo-noir'] };
+
+    it('shows read-only chips until the edit button is clicked', async () => {
+      const element = await render(stubFilmFacade(HEAT));
+      expect(element.querySelector('mat-chip-grid')).toBeNull();
+
+      await startEditing(element, 'tags');
+
+      expect(element.querySelector('mat-chip-grid')).not.toBeNull();
+    });
+
+    it('sends the whole tag list when one is added', async () => {
+      const filmFacade = stubFilmFacade(TAGGED);
+      const element = await render(filmFacade);
+      const input = await startEditing(element, 'tags');
+
+      input.value = 'crime';
+      pressEnter(input);
+      await settle();
+
+      expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { tags: ['heist', 'neo-noir', 'crime'] });
+    });
+
+    it('ignores a tag the film already carries, whatever its casing', async () => {
+      const filmFacade = stubFilmFacade(TAGGED);
+      const element = await render(filmFacade);
+      const input = await startEditing(element, 'tags');
+
+      input.value = 'Heist';
+      pressEnter(input);
+      await settle();
+
+      expect(filmFacade.update).not.toHaveBeenCalled();
+    });
+
+    it('sends the remaining tags when one is removed', async () => {
+      const filmFacade = stubFilmFacade(TAGGED);
+      const element = await render(filmFacade);
+      await startEditing(element, 'tags');
+
+      element.querySelector<HTMLButtonElement>('button[aria-label="Remove tag heist"]')!.click();
+      await settle();
+
+      expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { tags: ['neo-noir'] });
+    });
+
+    it('offers no remove control for the only tag', async () => {
+      const element = await render(stubFilmFacade(HEAT));
+      await startEditing(element, 'tags');
+
+      expect(element.querySelector('button[aria-label="Remove tag heist"]')).toBeNull();
+    });
+
+    it("sends `genres` from the genre row, which the mapper renames to the wire's `genre`", async () => {
+      const filmFacade = stubFilmFacade(HEAT);
+      const element = await render(filmFacade);
+      const input = await startEditing(element, 'genres');
+
+      input.value = 'Drama';
+      pressEnter(input);
+      await settle();
+
+      expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { genres: ['Crime', 'Thriller', 'Drama'] });
+    });
+
+    it('reports a failed tag write', async () => {
+      const filmFacade = stubFilmFacade(TAGGED);
+      filmFacade.update.mockReturnValue(throwError(() => new Error('offline')));
+      const element = await render(filmFacade);
+      const input = await startEditing(element, 'tags');
+
+      input.value = 'crime';
+      pressEnter(input);
+      await settle();
+
+      expect(element.querySelector('.film-detail__error[role="alert"]')?.textContent).toContain(
+        'The tags could not be updated.',
+      );
     });
   });
 });

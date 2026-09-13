@@ -1,8 +1,8 @@
 # Film Detail view
 
-Status: **phases 1–3 implemented** (2026-09-13), phase 4 deferred. Target
-milestone: M3 (§7.3). The repo is in M1 — this is deliberately ahead of the
-milestone sequence.
+Status: **phases 1–3 implemented** (2026-09-13), phase 4 deferred; tag editing
+(cut #1, reversed) landed with them. Target milestone: M3 (§7.3). The repo is
+in M1 — this is deliberately ahead of the milestone sequence.
 
 Phase 4 (Edit) waits for `add-film-via-search.md`, which builds the
 `views/film-form/` it reuses — writing an edit-only form first would duplicate
@@ -193,9 +193,15 @@ first.
 
 ## Deliberate cuts
 
-1. **No tag add/remove directly on the detail view.** §7.3 offers it; the Edit
-   form covers the same ground with one input surface instead of two. Revisit
-   if tagging turns out to be the frequent operation.
+1. ~~**No tag add/remove directly on the detail view.**~~ **Reversed**
+   (2026-09-13), for genres too: tagging is the frequent operation, and the
+   Edit form it was deferred to is still blocked on `add-film-via-search.md`.
+   Both label rows now carry an edit button that swaps their chips for
+   Material's chip grid + autocomplete; each add/remove is a `PATCH` with the
+   full list (FR-TAG-03). The row itself is `shared/editable-chips/`, and
+   `domain/tag/` + `domain/genre/` gained the `GET /tags` / `GET /genres`
+   lookups behind the autocomplete (FR-TAG-06) — all three are what the
+   add-film form will reuse for the same two fields.
 2. **`ratingStars()` stays duplicated** between library and detail until a
    third caller appears. Two copies of eight lines are cheaper than a shared
    component with a props contract.

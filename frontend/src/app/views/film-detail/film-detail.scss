@@ -131,19 +131,21 @@
   }
 }
 
+// The two editable chip rows; the shared component reads these colours as
+// custom properties (they inherit through its view encapsulation).
 .film-detail__genres,
 .film-detail__tags {
   margin-top: 0.75rem;
 }
 
-.film-detail__genre {
-  --mat-chip-elevated-container-color: var(--mat-sys-tertiary-container);
-  --mat-chip-label-text-color: var(--mat-sys-on-tertiary-container);
+.film-detail__genres {
+  --chips-container-color: var(--mat-sys-tertiary-container);
+  --chips-label-color: var(--mat-sys-on-tertiary-container);
 }
 
-.film-detail__tag {
-  --mat-chip-elevated-container-color: var(--mat-sys-secondary-container);
-  --mat-chip-label-text-color: var(--mat-sys-on-secondary-container);
+.film-detail__tags {
+  --chips-container-color: var(--mat-sys-secondary-container);
+  --chips-label-color: var(--mat-sys-on-secondary-container);
 }
 
 .film-detail__timestamps {

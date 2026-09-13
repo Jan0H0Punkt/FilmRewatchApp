@@ -100,14 +100,16 @@ export class FilmFacade {
    */
   update(id: string, patch: FilmPatch): Observable<void> {
     const film = this.findFilm(id);
-    const previous: Pick<FilmDto, 'is_favorite' | 'delay_days'> | undefined = film
-      ? { is_favorite: film.is_favorite, delay_days: film.delay_days }
+    const previous: Pick<FilmDto, 'is_favorite' | 'delay_days' | 'tags' | 'genre'> | undefined = film
+      ? { is_favorite: film.is_favorite, delay_days: film.delay_days, tags: film.tags, genre: film.genre }
       : undefined;
 
     this.updateFilm(id, (current) => ({
       ...current,
       ...(patch.isFavorite !== undefined ? { is_favorite: patch.isFavorite } : {}),
       ...(patch.delayDays !== undefined ? { delay_days: patch.delayDays } : {}),
+      ...(patch.tags !== undefined ? { tags: patch.tags } : {}),
+      ...(patch.genres !== undefined ? { genre: patch.genres } : {}),
     }));
 
     return this.api.update(id, toFilmUpdateDto(patch)).pipe(

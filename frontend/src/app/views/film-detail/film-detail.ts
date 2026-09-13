@@ -1,8 +1,9 @@
 /**
  * The Film Detail view (REQ §7.3) — phase 1 of
  * `open work/library-view/film-detail-view.md` (Section A, read-only
- * metadata), phase 2 (Section B, rating history actions), and phase 3
- * (Section A's favourite toggle, rewatch delay, and Delete Film).
+ * metadata), phase 2 (Section B, rating history actions), phase 3
+ * (Section A's favourite toggle, rewatch delay, and Delete Film), and the
+ * inline tag and genre editing that reversed that plan's deliberate cut #1.
  *
  * The Edit form (phase 4, `films/:id/edit`) is a separate plan item and is
  * not built here — there is deliberately no Edit control on this view yet.
@@ -21,7 +22,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
@@ -34,10 +34,13 @@ import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 
 import { FilmFacade } from '../../domain/film/facade';
+import { GenreFacade } from '../../domain/genre/facade';
 import type { FilmDetail as FilmDetailModel, FilmPatch, RatingHistoryEntry } from '../../domain/film/model';
 import { RatingFacade } from '../../domain/rating/facade';
 import type { RatingDraft } from '../../domain/rating/model';
+import { TagFacade } from '../../domain/tag/facade';
 import { ConfirmDialog, type ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
+import { EditableChips } from '../../shared/editable-chips/editable-chips';
 
 /** One alternative title beneath the primary one (REQ §4.1 Title object). */
 interface AlternativeTitleVm {
@@ -162,9 +165,9 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 @Component({
   selector: 'app-film-detail',
   imports: [
+    EditableChips,
     MatButtonModule,
     MatCardModule,
-    MatChipsModule,
     MatDatepickerModule,
     MatDividerModule,
     MatFormFieldModule,
@@ -184,6 +187,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 export class FilmDetail {
   private readonly films = inject(FilmFacade);
   private readonly ratings = inject(RatingFacade);
+  private readonly tags = inject(TagFacade);
+  private readonly genres = inject(GenreFacade);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
 
@@ -396,5 +401,43 @@ export class FilmDetail {
           },
         });
       });
+  }
+
+  // --- Tags and genres (FR-TAG-03/06, REQ §4.4) ----------------------------
+
+  protected readonly tagNames = this.tags.names;
+  protected readonly genreNames = this.genres.names;
+  protected readonly tagsError = signal<string | null>(null);
+  protected readonly genresError = signal<string | null>(null);
+
+  protected saveTags(tags: readonly string[]): void {
+    this.saveLabels({ tags }, this.tagsError, 'The tags could not be updated.', this.tags);
+  }
+
+  protected saveGenres(genres: readonly string[]): void {
+    this.saveLabels({ genres }, this.genresError, 'The genres could not be updated.', this.genres);
+  }
+
+  /**
+   * `PATCH /films/{id}` with a complete label list (FR-TAG-03), then a
+   * refresh of that vocabulary: the edit may have created a label
+   * (FR-TAG-01) or left one on no film at all (FR-TAG-04), either of which
+   * makes the autocomplete's copy stale. The facade applies the change
+   * locally first and rolls it back on failure, like the other Section A
+   * writes.
+   */
+  private saveLabels(
+    patch: FilmPatch,
+    errorSignal: WritableSignal<string | null>,
+    fallback: string,
+    vocabulary: { reload(): void },
+  ): void {
+    this.films.update(this.id(), patch).subscribe({
+      next: () => {
+        errorSignal.set(null);
+        vocabulary.reload();
+      },
+      error: (error: unknown) => errorSignal.set(extractErrorMessage(error, fallback)),
+    });
   }
 }

@@ -64,5 +64,10 @@ export function toFilmDetail(dto: FilmDto): FilmDetail {
  * treats an absent field as unchanged (FR-LIB-06/07).
  */
 export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
-  return { is_favorite: patch.isFavorite, delay_days: patch.delayDays };
+  return {
+    is_favorite: patch.isFavorite,
+    delay_days: patch.delayDays,
+    tags: patch.tags,
+    genre: patch.genres,
+  };
 }
