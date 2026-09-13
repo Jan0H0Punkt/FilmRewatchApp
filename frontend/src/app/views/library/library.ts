@@ -24,8 +24,13 @@ interface FilmRowVm {
   readonly subtitle: string;
   readonly genres: readonly string[];
   readonly tags: readonly string[];
-  /** Five Material star icon names ('star' | 'star_half' | 'star_border'), rounded to the nearest half star. */
-  readonly ratingStars: readonly string[];
+  /**
+   * Five Material star icon names ('star' | 'star_half' | 'star_border'), rounded
+   * to the nearest half star — `null` for a film with no average (FR-RAT-11), which
+   * the row prints as a dash instead (FR-RAT-13). Five empty stars would read as
+   * "rated zero", which is the opposite of "deliberately not rated".
+   */
+  readonly ratingStars: readonly string[] | null;
   readonly ratingLabel: string;
   readonly isFavorite: boolean;
   /** Rough clock time the film would end if watching started now, rounded up to the next quarter hour. */
@@ -42,7 +47,8 @@ function endTimeFrom(now: number, runtimeMinutes: number): string {
 }
 
 /** Rounds to the nearest half star and maps each of the 5 positions to a Material star icon. */
-function ratingStars(rating: number): readonly string[] {
+function ratingStars(rating: number | null): readonly string[] | null {
+  if (rating === null) return null;
   const rounded = Math.round(rating * 2) / 2;
   return Array.from({ length: 5 }, (_, index) => {
     const position = index + 1;
@@ -76,7 +82,8 @@ export class Library {
       genres: film.genres,
       tags: film.tags,
       ratingStars: ratingStars(film.averageRating),
-      ratingLabel: `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
+      ratingLabel:
+        film.averageRating === null ? 'Not rated' : `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
       isFavorite: film.isFavorite,
       endTime: endTimeFrom(now, film.runtimeMinutes),
     }));

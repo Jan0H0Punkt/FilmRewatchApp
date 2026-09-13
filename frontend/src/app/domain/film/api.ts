@@ -26,7 +26,8 @@ export interface FilmDto {
   readonly genre: readonly string[];
   readonly tags: readonly string[];
   readonly poster_image: string | null;
-  readonly average_rating: number;
+  /** `null` when no watch of this film was rated (FR-RAT-11/12). */
+  readonly average_rating: number | null;
   readonly is_favorite: boolean;
 }
 

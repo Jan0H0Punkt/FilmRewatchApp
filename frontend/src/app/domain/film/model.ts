@@ -15,7 +15,12 @@ export interface Film {
   readonly genres: readonly string[];
   readonly tags: readonly string[];
   readonly posterImage: string | null;
-  /** Computed server-side on every read, never stored (FR-RAT-09/10). */
-  readonly averageRating: number;
+  /**
+   * Computed server-side on every read, never stored (FR-RAT-09/10).
+   * `null` when every watch of the film was left unrated (FR-RAT-11/12) —
+   * distinct from a rating of zero, which cannot exist. Rendered as the
+   * FR-RAT-13 placeholder, never as an empty star row.
+   */
+  readonly averageRating: number | null;
   readonly isFavorite: boolean;
 }

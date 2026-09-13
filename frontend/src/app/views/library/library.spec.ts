@@ -42,14 +42,26 @@ async function render(facade: ReturnType<typeof stubFacade>): Promise<HTMLElemen
 describe('Library', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('renders a film as one row with a joined subtitle and a one-decimal rating', async () => {
+  it('renders a film as one row with a joined subtitle and five rating stars', async () => {
     const element = await render(stubFacade([HEAT]));
 
     expect(element.querySelector('.film__title')?.textContent).toContain('Heat');
     expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 · Michael Mann · 170 min');
-    // A whole-number average still prints its decimal, so the column aligns.
-    expect(element.querySelector('.film__rating')?.textContent).toContain('4.0');
+    // The stars are decorative; the one-decimal average is what a screen reader reads.
+    const rating = element.querySelector('.film__rating');
+    expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);
+    expect(rating?.getAttribute('aria-label')).toBe('Average rating: 4.0 out of 5');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
+  });
+
+  it('shows a dash instead of stars for a film the user chose not to rate', async () => {
+    // FR-RAT-13: unrated is not zero stars — it has to read as "no rating given".
+    const element = await render(stubFacade([{ ...HEAT, averageRating: null }]));
+
+    const rating = element.querySelector('.film__rating');
+    expect(rating?.querySelectorAll('mat-icon')).toHaveLength(0);
+    expect(rating?.textContent?.trim()).toBe('—');
+    expect(rating?.getAttribute('aria-label')).toBe('Not rated');
   });
 
   it('renders each genre as its own chip', async () => {

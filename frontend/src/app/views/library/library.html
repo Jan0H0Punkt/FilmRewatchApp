@@ -53,8 +53,12 @@
               }
             </div>
             <p class="film__rating" [attr.aria-label]="row.ratingLabel">
-              @for (icon of row.ratingStars; track $index) {
-                <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+              @if (row.ratingStars) {
+                @for (icon of row.ratingStars; track $index) {
+                  <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                }
+              } @else {
+                <span aria-hidden="true">&mdash;</span>
               }
             </p>
           </div>
