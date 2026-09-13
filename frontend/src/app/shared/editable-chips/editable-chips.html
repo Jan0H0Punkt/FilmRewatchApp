@@ -1,0 +1,83 @@
+@if (isEditing()) {
+  <mat-form-field class="editable-chips__field" subscriptSizing="dynamic">
+    <mat-label>{{ label() }}</mat-label>
+    <mat-chip-grid
+      #grid
+      [attr.aria-label]="label()"
+      cdkDropList
+      cdkDropListOrientation="mixed"
+      [cdkDropListDisabled]="!orderable()"
+      (cdkDropListDropped)="onDrop($event)"
+    >
+      @for (value of values(); track value; let i = $index) {
+        <mat-chip-row
+          class="editable-chips__chip"
+          [removable]="values().length > 1"
+          [aria-label]="orderable() ? value + ', ' + (i + 1) + ' of ' + values().length : null"
+          (removed)="remove(value)"
+          cdkDrag
+          [cdkDragDisabled]="!orderable()"
+          (keydown)="onChipKeydown($event, i)"
+        >
+          {{ value }}
+          <!-- No remove control on a lone chip: the API rejects an empty list. -->
+          @if (values().length > 1) {
+            <button matChipRemove type="button" [attr.aria-label]="'Remove ' + itemNoun() + ' ' + value">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          }
+        </mat-chip-row>
+      }
+    </mat-chip-grid>
+    <input
+      #input
+      [placeholder]="'Add a ' + itemNoun()"
+      [attr.aria-label]="'Add a ' + itemNoun()"
+      [matChipInputFor]="grid"
+      [matAutocomplete]="autocomplete"
+      [matChipInputSeparatorKeyCodes]="separators"
+      (input)="query.set(input.value)"
+      (matChipInputTokenEnd)="addTyped($event)"
+    />
+    <!-- Deliberately no `matChipInputAddOnBlur`: picking a suggestion blurs
+         the input, which would add the half-typed text alongside it. -->
+    <mat-autocomplete #autocomplete (optionSelected)="addSuggested($event, input)">
+      @for (option of options(); track option) {
+        <mat-option [value]="option">{{ option }}</mat-option>
+      }
+    </mat-autocomplete>
+  </mat-form-field>
+} @else {
+  <mat-chip-set
+    class="editable-chips__set"
+    [attr.aria-label]="label()"
+    cdkDropList
+    cdkDropListOrientation="mixed"
+    [cdkDropListDisabled]="!orderable()"
+    (cdkDropListDropped)="onDrop($event)"
+  >
+    @for (value of values(); track value; let i = $index) {
+      <mat-chip
+        class="editable-chips__chip"
+        disableRipple
+        cdkDrag
+        [cdkDragDisabled]="!orderable()"
+        [attr.tabindex]="orderable() ? 0 : null"
+        [attr.aria-label]="orderable() ? value + ', ' + (i + 1) + ' of ' + values().length : null"
+        (keydown)="onChipKeydown($event, i)"
+      >
+        {{ value }}
+      </mat-chip>
+    }
+  </mat-chip-set>
+}
+<button
+  matIconButton
+  type="button"
+  class="editable-chips__toggle"
+  [attr.aria-pressed]="isEditing()"
+  [attr.aria-label]="(isEditing() ? 'Finish editing ' : 'Edit ') + label().toLowerCase()"
+  (click)="toggleEditing()"
+>
+  <mat-icon>{{ isEditing() ? 'done' : 'edit' }}</mat-icon>
+</button>

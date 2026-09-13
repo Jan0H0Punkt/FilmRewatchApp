@@ -1,0 +1,38 @@
+// The chips and the edit button share one line; the chips take the slack.
+:host {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editable-chips__set,
+.editable-chips__field {
+  flex: 1;
+  min-width: 0;
+}
+
+// Chip colours are the caller's business (tags and genres differ), set from
+// outside as custom properties — they inherit straight through the shadow
+// boundary, unlike a parent's class selectors.
+.editable-chips__chip {
+  --mat-chip-elevated-container-color: var(--chips-container-color, var(--mat-sys-secondary-container));
+  --mat-chip-label-text-color: var(--chips-label-color, var(--mat-sys-on-secondary-container));
+
+  // Only orderable rows (genres) attach cdkDrag with dragging enabled; a
+  // disabled chip (tags) keeps the default cursor.
+  &.cdk-drag:not(.cdk-drag-disabled) {
+    cursor: grab;
+  }
+}
+
+// The dragged chip's floating copy — drop the elevation cdkDrag adds by
+// default so it reads as the same chip in flight, not a new element.
+.cdk-drag-preview {
+  box-shadow: var(--mat-sys-level2);
+  border-radius: var(--mat-sys-corner-small);
+}
+
+// The gap left behind at the drag's origin while it's in flight.
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
