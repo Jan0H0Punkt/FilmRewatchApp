@@ -3,8 +3,9 @@
 The "log a watched film" flow (FR-LIB-01..05): create a film **together with**
 its mandatory first rating, tags, and genres in one atomic unit of work
 (FR-LIB-03), duplicate detection over the derived ``natural_key``
-(FR-LIB-04/05), and the full §7.3 detail projection with the average computed
-on every read (FR-RAT-09/10, NFR-INT-01). PR5 adds the edit flow
+(FR-LIB-04/05), and the full §7.3 detail projection carrying the full
+``rating_history`` the client derives its average from (FR-RAT-09/10,
+NFR-INT-01). PR5 adds the edit flow
 (FR-LIB-06..09): every user-editable field, natural-key recomputation, and the
 same duplicate block applied to edits. PR6 adds the delete flow
 (FR-LIB-10..12): the film and everything cascading from it, plus the
@@ -34,7 +35,7 @@ surfaces as an ``INTERNAL_ERROR`` rather than a partial write).
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Protocol
 
 from fastapi import status
@@ -199,21 +200,6 @@ def _deduplicated(names: Sequence[str]) -> list[str]:
     return unique
 
 
-def _average_of(values: Sequence[Decimal | None]) -> float | None:
-    """Arithmetic mean to one decimal, half-up (FR-RAT-09) — computed on read,
-    never stored (NFR-INT-01).
-
-    Only the *rated* watches count: an unrated one (FR-RAT-12) is history, not
-    a zero. A film whose every watch is unrated has no average at all, which is
-    the ``None`` (FR-RAT-11). The history itself is never empty (FR-LIB-03).
-    """
-    scored = [value for value in values if value is not None]
-    if not scored:
-        return None
-    mean = sum(scored, Decimal(0)) / len(scored)
-    return float(mean.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
-
-
 class FilmService:
     """Film business rules over the injected repository + peer services."""
 
@@ -280,8 +266,9 @@ class FilmService:
         """The whole library, primary title alphabetical (the §7.2 result list).
 
         Each entry is the same §7.3 projection a detail read returns: the list
-        needs poster, title, year, director, genre, tags, and the average, and
-        reusing one shape keeps the client on a single film type.
+        needs poster, title, year, director, genre, tags, and the rating
+        history the client derives its average from, and reusing one shape
+        keeps the client on a single film type.
         """
         # ponytail: one detail projection per film (a handful of queries each)
         # — a single-user library stays small. Fold the per-film lookups into
@@ -290,7 +277,7 @@ class FilmService:
 
     def get_detail(self, film_id: uuid.UUID) -> FilmDetailRead:
         """The full §7.3 projection — history most recent first (FR-RAT-05/06),
-        average computed from it on this read (FR-RAT-09/10, NFR-INT-01)."""
+        from which the client derives the average (FR-RAT-09/10, NFR-INT-01)."""
         film = self._repository.find_by_id(film_id)
         if film is None:
             raise FilmNotFoundError(film_id)
@@ -309,7 +296,6 @@ class FilmService:
             is_favorite=film.is_favorite,
             delay_days=film.delay_days,
             rating_history=[RatingEntryRead.model_validate(entry) for entry in history],
-            average_rating=_average_of([entry.value for entry in history]),
             created_at=film.created_at,
             updated_at=film.updated_at,
         )
@@ -419,9 +405,9 @@ class FilmService:
         (FR-RAT-12). Unknown film id → :class:`FilmNotFoundError`. A future ``watch_date``
         raises :class:`~app.ratings.service.FutureWatchDateError` from
         :meth:`RatingHistoryProtocol.add_entry` (its own stable code, not
-        ``VALIDATION_ERROR``). The average the next detail read computes
-        reflects the new entry automatically — it is never stored
-        (FR-RAT-10, NFR-INT-01).
+        ``VALIDATION_ERROR``). The next detail read's ``rating_history``
+        reflects the new entry automatically, so the client's derived
+        average does too (FR-RAT-10, NFR-INT-01).
         """
         film = self._repository.find_by_id(film_id)
         if film is None:

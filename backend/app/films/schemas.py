@@ -172,9 +172,8 @@ class FilmUpdate(StrictSchema):
 
     ``titles`` is a full replacement list, revalidated against the REQ §4.1
     Title rules; per-field validation matches the create where they overlap
-    (§5.4). ``id``, ``created_at``, ``natural_key``, and ``average_rating``
-    are not user-editable (FR-LIB-07) — the strict base rejects them as
-    unknown fields.
+    (§5.4). ``id``, ``created_at``, and ``natural_key`` are not user-editable
+    (FR-LIB-07) — the strict base rejects them as unknown fields.
     """
 
     titles: list[TitleCreate] | None = Field(default=None, min_length=1)
@@ -260,11 +259,11 @@ class TitleRead(StrictSchema):
 class FilmDetailRead(StrictSchema):
     """The full §7.3 projection served by ``GET /films/{id}`` and the create.
 
-    ``average_rating`` is computed from the history on every read — arithmetic
-    mean of the *rated* entries' values, one decimal (FR-RAT-09/10,
-    NFR-INT-01), and ``null`` when no watch was rated (FR-RAT-11) — and
-    ``rating_history`` is ordered most recent first (FR-RAT-05/06).
-    ``natural_key`` is deliberately absent (FR-LIB-04).
+    ``rating_history`` is ordered most recent first (FR-RAT-05/06); the client
+    derives ``average_rating`` from it — the arithmetic mean of the *rated*
+    entries' values, one decimal, ``null`` when no watch was rated
+    (FR-RAT-09/10/11, NFR-INT-01) — rather than the API projecting the value
+    itself. ``natural_key`` is deliberately absent (FR-LIB-04).
     """
 
     id: JsonUUID
@@ -278,6 +277,5 @@ class FilmDetailRead(StrictSchema):
     is_favorite: bool
     delay_days: int
     rating_history: list[RatingEntryRead]
-    average_rating: float | None
     created_at: datetime
     updated_at: datetime

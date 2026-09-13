@@ -5,8 +5,9 @@ independently.
 
 - ``natural_key`` is derived by the service layer from primary title + release
   year + director, and appears in no request or response schema (FR-LIB-04/05).
-- ``average_rating`` is not stored: it is computed from ``rating_entries`` on
-  every read (FR-RAT-09/10, NFR-INT-01).
+- ``average_rating`` is not a column here: the client derives it from
+  ``rating_entries`` (via the API's ``rating_history``) on every read
+  (FR-RAT-09/10, NFR-INT-01).
 - The "at least one title, one of them primary" rules cannot be expressed as row
   constraints; the service layer enforces them. Value ranges (year, lengths
   beyond column width) are §5.4 schema concerns, not CHECK constraints.

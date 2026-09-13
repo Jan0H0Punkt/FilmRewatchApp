@@ -3,10 +3,11 @@
 The full stack — router → service → repositories → Postgres — through
 ``TestClient`` over the PR2 harness session: the atomic create (FR-LIB-01..03),
 the duplicate block and probe (FR-LIB-05), the §7.3 detail read with its
-computed average (FR-RAT-05/06/09), the edit (FR-LIB-06..09), the cascading
-delete (FR-LIB-10..12), the standalone rating lifecycle and the
-last-rating-deletes-the-film rule (FR-RAT-01..08), and the envelope contract
-of every error path (NFR-MAINT-03).
+rating history — from which the client derives the average (FR-RAT-05/06/09)
+— the edit (FR-LIB-06..09), the cascading delete (FR-LIB-10..12), the
+standalone rating lifecycle and the last-rating-deletes-the-film rule
+(FR-RAT-01..08), and the envelope contract of every error path
+(NFR-MAINT-03).
 
 The overridden session dependency rolls back after each request, mirroring
 production's ``get_session`` close semantics: a request that failed leaves
@@ -114,13 +115,11 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "is_favorite",
         "delay_days",
         "rating_history",
-        "average_rating",
         "created_at",
         "updated_at",
     }
     assert body["genre"] == ["Crime", "Thriller"]
     assert body["tags"] == ["heist", "la"]
-    assert body["average_rating"] == 4.5
     assert body["is_favorite"] is False and body["delay_days"] == 0  # FR-LIB-02
     assert body["created_at"] is not None and body["updated_at"] is not None
 
@@ -151,13 +150,12 @@ def test_a_film_can_be_logged_without_rating_the_watch(db_session: Session) -> N
 
     assert response.status_code == 201
     body = cast(dict[str, object], response.json())
-    assert body["average_rating"] is None
     history = cast(list[dict[str, object]], body["rating_history"])
     assert [entry["value"] for entry in history] == [None]
     assert history[0]["watch_date"] == "1995-12-15"
 
-    # Rating it later is an ordinary add: the average appears, over the scored
-    # watch alone (FR-RAT-09).
+    # Rating it later is an ordinary add: the new entry joins the history the
+    # client derives its average from, over the scored watch alone (FR-RAT-09).
     film_id = cast(str, body["id"])
     added = client.post(
         f"/api/v1/films/{film_id}/ratings",
@@ -165,8 +163,9 @@ def test_a_film_can_be_logged_without_rating_the_watch(db_session: Session) -> N
     )
     assert added.status_code == 201
     detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
-    assert detail["average_rating"] == 4.0
-    assert len(cast(list[object], detail["rating_history"])) == 2
+    detail_history = cast(list[dict[str, object]], detail["rating_history"])
+    assert len(detail_history) == 2
+    assert [entry["value"] for entry in detail_history] == [4.0, None]
 
 
 def test_each_validation_failure_yields_the_validation_error_envelope(
@@ -321,7 +320,7 @@ def test_an_over_long_genre_name_also_yields_validation_error_and_rolls_back(
 # --------------------------------------------------------------------------- #
 
 
-def test_detail_orders_history_desc_and_computes_the_rounded_average(
+def test_detail_orders_history_most_recent_first(
     db_session: Session,
 ) -> None:
     client = _client_over(db_session)
@@ -336,12 +335,12 @@ def test_detail_orders_history_desc_and_computes_the_rounded_average(
 
     body = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
     history = cast(list[dict[str, object]], body["rating_history"])
+    # FR-RAT-05/06: most recent watch first — the ordering the client's
+    # derived average (FR-RAT-09) reads from, fresh on every request
+    # (NFR-INT-01).
     assert [entry["watch_date"] for entry in history] == ["1995-12-15", "1995-12-10"]
     assert [entry["value"] for entry in history] == [4.5, 4.0]
     assert set(history[0]) == {"id", "value", "watch_date", "created_at"}
-    # (4.5 + 4.0) / 2 = 4.25 → half-up to one decimal (FR-RAT-09), fresh on
-    # this read — never stored (NFR-INT-01).
-    assert body["average_rating"] == 4.3
 
 
 def test_list_returns_every_film_in_primary_title_order(db_session: Session) -> None:
@@ -530,7 +529,6 @@ def test_edit_rejects_immutable_and_unknown_fields(db_session: Session) -> None:
         {"id": str(uuid.uuid4())},
         {"created_at": "2020-01-01T00:00:00Z"},
         {"natural_key": "heat|1995|michael mann"},
-        {"average_rating": 1.0},
     ):
         response = client.patch(f"/api/v1/films/{film_id}", json=override)
         assert response.status_code == 422, override
@@ -715,7 +713,7 @@ def test_deleting_an_unknown_or_already_deleted_film_yields_not_found(
 # --------------------------------------------------------------------------- #
 
 
-def test_add_rating_returns_201_and_the_detail_read_reflects_the_updated_average(
+def test_add_rating_returns_201_and_the_detail_read_reflects_the_new_entry(
     db_session: Session,
 ) -> None:
     client = _client_over(db_session)
@@ -734,10 +732,11 @@ def test_add_rating_returns_201_and_the_detail_read_reflects_the_updated_average
     detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
     history = cast(list[dict[str, object]], detail["rating_history"])
     # Most recent watch_date first (FR-RAT-05/06); the original 4.5@12-15 vs
-    # the new 3.5@12-20 — the later watch_date leads.
+    # the new 3.5@12-20 — the later watch_date leads. The client derives its
+    # average from this same history (FR-RAT-09/10), fresh on every read
+    # (NFR-INT-01).
     assert [entry["watch_date"] for entry in history] == ["1995-12-20", "1995-12-15"]
-    # (4.5 + 3.5) / 2 = 4.0 (FR-RAT-09/10), fresh on this read (NFR-INT-01).
-    assert detail["average_rating"] == 4.0
+    assert [entry["value"] for entry in history] == [3.5, 4.5]
     assert _count(db_session, RatingEntry) == 2
 
 
@@ -904,7 +903,7 @@ def test_fixing_a_films_only_rating_requires_add_then_delete_not_delete_then_add
     detail = cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())
     remaining = cast(list[dict[str, object]], detail["rating_history"])
     assert [entry["id"] for entry in remaining] == [corrected["id"]]
-    assert detail["average_rating"] == 4.5
+    assert remaining[0]["value"] == 4.5
 
 
 def test_deleting_a_films_sole_rating_first_is_destructive(db_session: Session) -> None:

@@ -258,9 +258,11 @@ genre autocomplete the same way tags get it. Genres stay free text, not an enum 
 and it is created if new or reused if it already exists (mirroring FR-TAG-01). This enriches genre beyond §4's
 plain `List<String>` — flagged for the requirements reconciliation (§11).
 
-**What the database stores vs. computes.** `average_rating` is **not a column** — it is recalculated from the
-film's *rated* entries every time it is read (FR-RAT-09/10), and is `null` when none of them is rated. Storing it could show a stale value; computing it keeps it
-always correct (NFR-INT-01). `natural_key` **is** a column (it backs the "no duplicate films" rule), but the user
+**What the database stores vs. computes.** `average_rating` is **not a column** — it is not stored anywhere, and
+the API's §7.3 projection no longer carries it either; the client derives it from the `rating_history` the
+projection *does* carry, over the film's *rated* entries, and it is `null` when none of them is rated
+(FR-RAT-09/10). One implementation over the one history keeps it always correct (NFR-INT-01) without a second copy
+of the rule server-side. `natural_key` **is** a column (it backs the "no duplicate films" rule), but the user
 never types it: the business layer builds it from primary title + release year + director, and rebuilds it
 whenever one of those changes (FR-LIB-04/08).
 
@@ -310,11 +312,12 @@ consequence for FR-RAT-08 (ratings are corrected by delete-then-recreate): to fi
 one must be added first, then the wrong one deleted — deleting first would remove the film.
 
 The invariant is about the **watch**, not the score. `rating_entries.value` is nullable: the user can log a watch
-without rating it (FR-RAT-12), so `average_rating` *can* be null — the mean is taken over the rated entries only,
-and a film with none has no average (FR-RAT-11), rendered as the FR-RAT-13 placeholder rather than zero stars.
-Two deliberate consequences. First, `null` rather than a sentinel number: a magic 0 or -1 would live inside the
-column's own 0.5–5.0 domain, and every consumer — the computed average, rating sort/filter (FR-SF), the FR-RW-02
-payload — would have to remember to exclude it, where `NULL` is skipped by aggregates by default. Second, the
+without rating it (FR-RAT-12), so the client's derived `average_rating` *can* be null — the mean is taken over the
+rated entries only, and a film with none has no average (FR-RAT-11), rendered as the FR-RAT-13 placeholder rather
+than zero stars. Two deliberate consequences. First, `null` rather than a sentinel number: a magic 0 or -1 would
+live inside the column's own 0.5–5.0 domain, and every consumer — the client's derived average, rating sort/filter
+(FR-SF), the FR-RW-02 payload — would have to remember to exclude it, where `NULL` is skipped by aggregates by
+default. Second, the
 wire form is **required-but-nullable**: `value` must be present in the request and may be `null`, so "not rated"
 is always a choice the user made, never a key someone forgot to send.
 

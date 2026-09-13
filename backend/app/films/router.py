@@ -90,9 +90,9 @@ def check_duplicate(
     "/{film_id}",
     summary="Fetch one film",
     description=(
-        "The full §7.3 projection: titles, genres, tags, rating history (most "
-        "recent first) and the `average_rating` computed from that history on "
-        "every read — never stored, never stale (FR-RAT-05/06/09, NFR-INT-01)."
+        "The full §7.3 projection: titles, genres, tags, and the rating history "
+        "(most recent first), from which the client derives `average_rating` — "
+        "never stored server-side, never stale (FR-RAT-05/06/09, NFR-INT-01)."
     ),
     responses=error_responses({422: ["VALIDATION_ERROR"], 404: ["NOT_FOUND"]}),
 )
@@ -110,7 +110,7 @@ def get_film(
         "Edits the user-editable fields of a film — titles, release year, "
         "director, runtime, genres, tags, poster, favourite flag, rewatch delay "
         "(FR-LIB-06). Every field is optional (absent = unchanged); `id`, "
-        "`created_at`, `natural_key`, and `average_rating` are never editable "
+        "`created_at`, and `natural_key` are never editable "
         "(FR-LIB-07). Editing the primary title, release year, or director "
         "recomputes `natural_key` (FR-LIB-08); an edit that would collide "
         "with another film is rejected, unapplied, with `DUPLICATE_FILM` "
@@ -156,8 +156,8 @@ def delete_film(
         "film again any time (FR-RAT-01..04); same-day repeat ratings are "
         "allowed. A future `watch_date` is rejected with the `FUTURE_WATCH_DATE` "
         "error; an unknown film id yields `NOT_FOUND`. The film's "
-        "`average_rating` reflects the new entry on the next detail read "
-        "(computed on read, never stored — FR-RAT-09/10)."
+        "`rating_history` reflects the new entry on the next detail read, so "
+        "the client's derived `average_rating` does too (FR-RAT-09/10)."
     ),
     responses=error_responses({422: ["VALIDATION_ERROR", "FUTURE_WATCH_DATE"], 404: ["NOT_FOUND"]}),
 )

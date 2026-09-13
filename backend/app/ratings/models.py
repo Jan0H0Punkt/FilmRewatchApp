@@ -1,9 +1,9 @@
 """Ratings module tables (DESIGN §5.2, REQ §4.2).
 
 One row per rating *event*. The history lives in its own table rather than packed
-into the film row so it can be queried and constrained independently, and a film's
-``average_rating`` is computed from these rows on every read, never stored
-(FR-RAT-09/10, NFR-INT-01).
+into the film row so it can be queried and constrained independently; the API
+exposes the full history and the client derives a film's ``average_rating``
+from these rows on every read, never stored (FR-RAT-09/10, NFR-INT-01).
 
 Deleting a film deletes its whole history (§4.5, NFR-INT-02). The inverse is not
 symmetric: a film must always keep ≥ 1 rating, so deleting the *last* entry deletes

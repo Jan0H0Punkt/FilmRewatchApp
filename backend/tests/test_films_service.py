@@ -4,7 +4,8 @@ The service and schema rules, no database: the create schema's §5.4 shape
 (title rules, bounds, strictness), natural-key derivation (FR-LIB-04), and the
 :class:`FilmService` flows against in-memory fakes satisfying the §5.1
 protocols — duplicate block (FR-LIB-05), client-minted ids (§5.5 note),
-label dedupe, and the computed average (FR-RAT-09). PR5 adds the edit schema
+label dedupe, and the rating history the client derives its average from
+(FR-RAT-09). PR5 adds the edit schema
 and flow (FR-LIB-06..09): immutable fields, poster set/replace/remove,
 natural-key recomputation, and the duplicate block applied to edits. PR6 adds
 the delete flow (FR-LIB-10..12): NOT_FOUND on an unknown id, and that both
@@ -398,7 +399,6 @@ def test_create_persists_everything_in_one_commit_and_returns_the_projection() -
     assert detail.titles[0].value == "Heat"
     assert detail.tags == ["heist", "la"]
     assert detail.genre == ["Crime", "Thriller"]
-    assert detail.average_rating == 4.5
     assert detail.is_favorite is False and detail.delay_days == 0  # FR-LIB-02 defaults
     # FR-LIB-04: the derived key is absent from the projection.
     assert "natural_key" not in detail.model_dump()
@@ -446,39 +446,37 @@ def test_client_minted_id_is_honoured_and_a_collision_rejected() -> None:
     assert caught.value.status_code == 422
 
 
-def test_average_is_computed_from_the_full_history_and_rounds_half_up() -> None:
+def test_rating_history_orders_most_recent_watch_first() -> None:
+    # FR-RAT-05/06: the client derives its average from this ordering's values.
     service, _, _, ratings = make_service()
     created = service.create(payload())  # 4.5 on 1995-12-15
     ratings.add_entry(created.id, Decimal("4.0"), date(1995, 12, 10))
 
     detail = service.get_detail(created.id)
-    # Most recent watch first (FR-RAT-05/06) …
     assert [entry.watch_date for entry in detail.rating_history] == [
         date(1995, 12, 15),
         date(1995, 12, 10),
     ]
-    # … and (4.5 + 4.0) / 2 = 4.25 rounds half-up to one decimal (FR-RAT-09).
-    assert detail.average_rating == 4.3
 
 
-def test_average_is_none_when_no_watch_was_rated() -> None:
-    # FR-RAT-11: a film watched but never scored has no average to show.
+def test_unrated_first_rating_is_recorded_with_a_null_value() -> None:
+    # FR-RAT-11/12: a deliberately unrated watch is history, not a missing entry.
     service, _, _, _ = make_service()
     created = service.create(payload(first_rating={"value": None, "watch_date": "1995-12-15"}))
 
-    assert created.average_rating is None
     assert [entry.value for entry in created.rating_history] == [None]
 
 
-def test_average_is_taken_over_the_rated_watches_only() -> None:
-    # FR-RAT-09: an unrated rewatch is history, not a zero dragging the mean down.
+def test_unrated_rewatch_appears_in_history_alongside_a_rated_one() -> None:
+    # FR-RAT-09: an unrated rewatch is history, not a zero — the client's
+    # derived average must be able to see and skip it.
     service, _, _, ratings = make_service()
     created = service.create(payload())  # 4.5 on 1995-12-15
     ratings.add_entry(created.id, None, date(1996, 3, 1))
 
     detail = service.get_detail(created.id)
     assert len(detail.rating_history) == 2
-    assert detail.average_rating == 4.5
+    assert [entry.value for entry in detail.rating_history] == [None, Decimal("4.5")]
 
 
 def test_get_detail_for_an_unknown_id_maps_to_the_not_found_envelope() -> None:
@@ -499,13 +497,12 @@ def test_update_payload_with_no_fields_is_a_valid_no_op() -> None:
 
 
 def test_update_payload_rejects_immutable_and_unknown_fields() -> None:
-    # FR-LIB-07: id, created_at, natural_key, average_rating are never
-    # editable — the strict base rejects them as unknown fields.
+    # FR-LIB-07: id, created_at, natural_key are never editable — the strict
+    # base rejects them as unknown fields.
     for override in (
         {"id": str(uuid.uuid4())},
         {"created_at": "2020-01-01T00:00:00Z"},
         {"natural_key": "heat|1995|michael mann"},
-        {"average_rating": 4.5},
     ):
         with pytest.raises(ValidationError):
             update_payload(**override)
