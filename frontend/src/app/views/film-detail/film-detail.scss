@@ -74,14 +74,11 @@
   width: 2rem;
 }
 
-.film-detail__rating-separator {
-  align-self: center;
-  color: var(--mat-sys-on-surface);
-}
-
+.film-detail__rating-separator,
 .film-detail__rating-text {
   align-self: center;
   color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-large);
 }
 
 .film-detail__genres,
