@@ -1,6 +1,7 @@
 # Add Film via the Library search
 
-Status: **planned**, not started. Target milestone: M3 (Library view). The repo
+Status: **partly built** — the search half of work item 1 is done (see below);
+the add half is not started. Target milestone: M3 (Library view). The repo
 is in M1 — this is deliberately ahead of the milestone sequence.
 
 Requirements covered: FR-LIB-01..05, FR-TAG-06, FR-SF-01, FR-SF-03, FR-SF-05.
@@ -13,8 +14,16 @@ input:
 
 1. **Search** — filters the result list live by title and director (AND logic,
    FR-SF-01/02/03) and shows the match count (FR-SF-05).
-2. **Add** — its autocomplete panel lists the films whose titles match what was
-   typed, and offers **"+ Add new film"** as the first option.
+2. **Add** — offers **"+ Add new film"** once the user has typed, below the
+   films that already match.
+
+   Originally this was an autocomplete panel listing the matches plus the add
+   option. The panel was built and then removed: the filter applies on every
+   keystroke, so the panel only repeated the titles already visible in the
+   result list below it. The result list *is* the match list — so the add
+   option belongs at its end (and is the only thing left when nothing
+   matches). **Not yet built; this is the open design question of the add
+   half.**
 
 Adding a film therefore always happens *after* the user has seen every film
 already in the library that matches the title. Duplicates are avoided by
@@ -29,27 +38,39 @@ you type is undiscoverable.
 
 ```
 Library view
-  └─ search field (focused by the Add Film button)
-       ├─ autocomplete panel
-       │    ├─ "+ Add new film"        → /films/new?title=<typed text>
-       │    └─ matching existing films → (Film Detail view — not built yet)
-       └─ result list below, filtered live + match count
+  └─ search field (focused on arrival, and by the Add Film button)
+       └─ result list, filtered live + match count
+            ├─ matching existing films → Film Detail view
+            └─ "+ Add new film"        → /films/new?title=<typed text>
 ```
 
 ## Work items
 
-### 1. Library view — search (`views/library/`)
+### 1. Library view — search (`views/library/`) — **partly done**
 
-- Search input at the top of the view.
-- Live filtering of the in-memory library (the whole list is already loaded via
-  `FilmFacade.films`): case-insensitive substring match across **all** of a
-  film's titles and against the director (FR-SF-01/02), combined with AND
-  logic (FR-SF-03).
-- Match count always visible (FR-SF-05).
-- Clear-all action (FR-SF-04).
-- `mat-autocomplete` panel: "+ Add new film" as the first option, visually
-  separated from the film matches below it; keyboard reachable.
-- "Add Film" button / FAB focuses the search input.
+Built:
+
+- [x] Search input at the top of the view.
+- [x] Live filtering of the in-memory library (the whole list is already loaded
+  via `FilmFacade.films`): case-insensitive substring match across **all** of a
+  film's titles (FR-SF-01), AND-combined (FR-SF-03). The criteria live in
+  `views/library/filters.ts` — a `LibraryCriteria` field plus one `PREDICATES`
+  entry per dimension, which is the FR-EXT-05 seam.
+- [x] Match count always visible (FR-SF-05).
+- [x] Clear-all action (FR-SF-04).
+- [x] The search field takes focus when the view is entered.
+- [x] ~~`mat-autocomplete` panel listing the matching films' primary titles.~~
+  Built, then removed — with live filtering the panel only echoed the result
+  list beneath it.
+
+Still open:
+
+- [ ] Director as a second criterion (FR-SF-02) — one `PREDICATES` entry,
+  no view change.
+- [ ] "+ Add new film" at the end of the filtered result list, visually
+  separated from the film rows; keyboard reachable. Deferred until
+  `films/new` exists, since it would otherwise route nowhere.
+- [ ] "Add Film" button / FAB focuses the search input.
 
 ### 2. Film form (`views/film-form/`, new)
 
@@ -89,11 +110,11 @@ create (FR-LIB-05). Creation can never be overridden into a duplicate.
 - `mapper.ts` — `toCreateDto`, the camelCase → snake_case direction.
 - `facade.ts` — `create(input)`: maps, POSTs, reloads the library list.
 
-### 4. Lookup data layer (`domain/lookup/`, new)
+### 4. Lookup data layer — **done**, as two modules
 
-`GET /tags` and `GET /genres` in one module — the two endpoints have identical
-shape, so they do not get a module each. Fetched once and filtered client-side;
-the `?prefix=` query parameter is not used (no round-trip per keystroke).
+Landed as `domain/tag/` and `domain/genre/` rather than one `domain/lookup/`
+module, behind the film-detail chip autocompletes. Both fetch once and filter
+client-side; the `?prefix=` query parameter is unused, as planned.
 
 ## Backend
 
@@ -109,10 +130,11 @@ endpoint; it is the natural fit if a live in-form probe is ever wanted.
 1. **Two title slots, not n.** Primary title + one optional original title,
    instead of a general title list with primary radios. FR-LIB-01 permits
    several titles; the general list can arrive with the Edit view.
-2. **Film matches in the panel are display-only.** FR-LIB-05's "offer to open
-   that film instead" needs the Film Detail view (§7.3), which does not exist
-   yet. Mark with a `ponytail:` comment and wire up the navigation when the
-   detail view lands.
+2. ~~**Film matches in the panel are display-only.**~~ Obsolete — the Film
+   Detail view (§7.3) now exists. The panel's matches narrow the result list
+   instead of navigating (the repo owner's call): the list rows are already
+   the link into the detail view, so a second navigation path would be
+   redundant.
 3. **No offline write queue.** The create is a plain online POST. The DESIGN §7
    write queue belongs to its own milestone.
 
