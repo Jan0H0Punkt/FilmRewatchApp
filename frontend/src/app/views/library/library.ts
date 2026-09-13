@@ -1,20 +1,31 @@
 /**
- * The Library view (REQ §7.2) — the whole film library as a result list.
- *
- * Search, filtering, and the Add Film action are the rest of §7.2 and are not
- * built yet; this is the unfiltered list the backend's `GET /films` serves.
- * Per §6.1 the view calls the facade only and holds no rules — the ViewModel
- * shaping (the parts of a film this list actually prints) lives here.
+ * The Library view (REQ §7.2) — the whole film library as a result list,
+ * narrowable by a title search (FR-SF-01). The Add Film action is the rest
+ * of §7.2 and is not built yet. Per §6.1 the view calls the facade only and
+ * holds no rules — the ViewModel shaping (the parts of a film this list
+ * actually prints) and the filtering (`filters.ts`) both live here.
  */
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+  type ElementRef,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
 
 import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../../domain/film/facade';
+import { filterFilms, hasActiveCriteria, NO_CRITERIA, type LibraryCriteria } from './filters';
 
 /** One row of the result list (§7.2 "Film Result Item"). */
 interface FilmRowVm {
@@ -61,7 +72,15 @@ function ratingStars(rating: number | null): readonly string[] | null {
 
 @Component({
   selector: 'app-library',
-  imports: [MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, RouterLink],
+  imports: [
+    MatButtonModule,
+    MatCardModule,
+    MatChipsModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    RouterLink,
+  ],
   templateUrl: './library.html',
   styleUrl: './library.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,9 +92,45 @@ export class Library {
   protected readonly isLoading = this.films.isLoading;
   protected readonly error = this.films.error;
 
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
+  private hasFocusedSearch = false;
+
+  constructor() {
+    // The search field is the view's entry point, so it takes focus on arrival.
+    // It is only in the DOM once the library has loaded and turned out non-empty,
+    // which is why this waits for the query to fill rather than firing on first
+    // render — and why it fires exactly once, not on every later re-render.
+    effect(() => {
+      const input = this.searchInput();
+      if (input === undefined || this.hasFocusedSearch) return;
+      this.hasFocusedSearch = true;
+      input.nativeElement.focus();
+    });
+  }
+
+  protected readonly criteria = signal<LibraryCriteria>(NO_CRITERIA);
+  private readonly matches = computed(() => filterFilms(this.films.films(), this.criteria()));
+  protected readonly isFiltered = computed(() => hasActiveCriteria(this.criteria()));
+  protected readonly totalCount = computed(() => this.films.films().length);
+  /** FR-SF-05: the result count stays on screen at all times, in one of two shapes. */
+  protected readonly countLabel = computed<string>(() => {
+    const total = this.totalCount();
+    const noun = `film${total === 1 ? '' : 's'}`;
+    return this.isFiltered() ? `${this.matches().length} of ${total} ${noun}` : `${total} ${noun}`;
+  });
+  protected setTitle(title: string): void {
+    this.criteria.update((criteria) => ({ ...criteria, title }));
+  }
+
+  /** Resets the search and returns focus to the input, so clearing does not cost the user their place. */
+  protected clear(input: HTMLInputElement): void {
+    this.criteria.set(NO_CRITERIA);
+    input.focus();
+  }
+
   protected readonly rows = computed<readonly FilmRowVm[]>(() => {
     const now = this.clock.now();
-    return this.films.films().map((film) => ({
+    return this.matches().map((film) => ({
       id: film.id,
       title: film.primaryTitle,
       posterImage: film.posterImage,

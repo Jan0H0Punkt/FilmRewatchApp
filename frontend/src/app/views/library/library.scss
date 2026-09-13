@@ -10,6 +10,28 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+/* The count sits beside the field, not under it: `subscriptSizing="dynamic"`
+   leaves no subscript gap, so underneath it would read as a validation hint. */
+.library__toolbar {
+  align-items: center;
+  column-gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  row-gap: 0.25rem;
+}
+
+.library__search {
+  flex: 1 1 18rem;
+}
+
+.library__count {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  white-space: nowrap;
+}
+
 .library__list {
   display: grid;
   gap: 0.75rem;
