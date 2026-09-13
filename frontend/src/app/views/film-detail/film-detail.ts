@@ -116,7 +116,7 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
       .filter((title) => !title.isPrimary)
       .map((title) => ({ value: title.value, isOriginal: title.isOriginal })),
     posterImage: film.posterImage,
-    subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' · '),
+    subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' • '),
     genres: film.genres,
     tags: film.tags,
     ratingStars: ratingStars(film.averageRating),

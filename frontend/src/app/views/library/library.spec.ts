@@ -47,7 +47,7 @@ describe('Library', () => {
     const element = await render(stubFacade([HEAT]));
 
     expect(element.querySelector('.film__title')?.textContent).toContain('Heat');
-    expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 · Michael Mann · 170 min');
+    expect(element.querySelector('.film__subtitle')?.textContent).toBe('1995 • Michael Mann • 170 min');
     // The stars are decorative; the one-decimal average is what a screen reader reads.
     const rating = element.querySelector('.film__rating');
     expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);

@@ -147,7 +147,7 @@ describe('FilmDetail', () => {
     const element = await render(stubFilmFacade(HEAT));
 
     expect(element.querySelector('.film-detail__title')?.textContent).toContain('Heat');
-    expect(element.querySelector('.film-detail__subtitle')?.textContent).toBe('1995 · Michael Mann · 170 min');
+    expect(element.querySelector('.film-detail__subtitle')?.textContent).toBe('1995 • Michael Mann • 170 min');
     const genres = [...element.querySelectorAll('.film-detail__genre')].map((el) => el.textContent);
     expect(genres).toEqual(['Crime', 'Thriller']);
   });
