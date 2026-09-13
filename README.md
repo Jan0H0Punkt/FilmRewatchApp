@@ -124,24 +124,31 @@ git config core.hooksPath .githooks
 
 ## Make targets
 
-All targets run from the repo root; the backend ones also run from `backend/` (the root
-`Makefile` delegates to it; backend targets run through `uv run`, no activation needed):
+All targets run from the repo root. The six backend ones (`typecheck`, `lint`, `format-check`,
+`test`, `test-offline`, `migrate`) are thin delegations — the root `Makefile` forwards each to
+`backend/Makefile`, so they behave identically run from `backend/`, or as `make -C backend <target>`
+from anywhere. They go through `uv run`, which resolves the tools from `backend/.venv`; no manual
+activation needed. `make format` is the one target with **no root equivalent** — it exists only in
+`backend/Makefile`.
 
 | Command             | What it does                                                                          |
 | ------------------- | ------------------------------------------------------------------------------------- |
-| `make dev`          | Start the whole app: Docker stack (detached, waits healthy) + Angular dev server      |
+| `make dev`          | Start the whole app: rebuild the backend image, Docker stack (detached, waits healthy), then the Angular dev server |
 | `make up`           | Start the backend stack (backend + PostgreSQL) via Docker Compose, in the foreground  |
-| `make down`         | Stop the Docker Compose stack (data survives — named volume)                          |
+| `make down`         | Stop everything: the Angular dev server (found by its port, 4200) and the Docker Compose stack (data survives — named volume) |
 | `make check`        | The full local gate: backend typecheck + lint + format + tests, frontend build + tests + lint |
 | `make typecheck`    | pyright in strict mode over the whole backend — must be zero errors                   |
 | `make lint`         | Ruff lint over the whole backend — must be clean                                      |
-| `make format-check` | Ruff format check (`make -C backend format` rewrites)                                 |
+| `make format-check` | Ruff format check over the backend — verifies only, rewrites nothing                   |
+| `make format`       | Ruff formatter over the backend — **rewrites** files. Backend-only: `make -C backend format` |
 | `make test`         | Backend tests incl. DB-bound (frontend tests: `npm test` from `frontend/`)            |
 | `make test-offline` | Backend offline tests only — skips the `db`-marked repository tests (§9)              |
 | `make migrate`      | Apply Alembic migrations to the DB in `DATABASE_URL`                                  |
 
-`make dev` leaves the containers running when you Ctrl+C the dev server — stop them with
-`make down`. `make check` is the everything-bar before merging: it needs both toolchains
+`make dev` rebuilds the backend image before starting (`--build`): without it the container keeps
+running the code baked in at the last build, and a migration added since then fails startup
+outright. On an unchanged tree Docker's layer cache makes this a no-op. It leaves the containers
+running when you Ctrl+C the dev server — stop them with `make down`. `make check` is the everything-bar before merging: it needs both toolchains
 (`uv` installed + `frontend/node_modules` installed) and stops at the first failure.
 
 ## Repository layout
