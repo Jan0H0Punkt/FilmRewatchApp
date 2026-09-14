@@ -2,7 +2,10 @@
 
 Guidance for the Angular client under `frontend/`. See the repo-root `CLAUDE.md` for cross-cutting orientation, the design-doc-driven / milestone-sequenced workflow, and the `docs/` map.
 
-**The repo is in M0 ("Scaffolding").** The workspace is a **buildable, empty shell** (M0 PR7): the §4 folder skeleton exists as README placeholders, the route registry is empty, and the root component is a placeholder. Real views, the adaptive navigation (drawer/bottom bar), shared components, and the data/cache layer all arrive in **M3+**. Do not add them to a milestone that doesn't own them (see the out-of-scope table in `docs/milestones/MILESTONE_M0_V1.md`).
+**The Rewatch, Library and Film Detail views are built**, as is the §6.5
+adaptive navigation (bottom bar below 900px, permanent sidebar above). Still
+ahead: the Add Film flow, search filters beyond the title search, and the
+cache/sync + PWA layer (M5).
 
 ## Commands
 
@@ -37,7 +40,7 @@ Calls flow **downward only** — views → domain facades → data access; data 
 
 ### Routing (§6.5)
 
-Routes are driven by the **route registry** (`src/app/core/route-registry.ts`): a new view is added by appending a `RouteRegistryEntry` — never by editing `app.routes.ts`, which only projects the registry into Angular `Routes` (FR-EXT-02).
+Routes are driven by the **route registry** (`src/app/core/route-registry.ts`): a new view is added by appending a `RouteRegistryEntry` — never by editing `app.routes.ts`, which only projects the registry into Angular `Routes` (FR-EXT-02). An entry becomes a primary navigation destination by also carrying `navIcon` and `navLabel`; the app shell reads these via `navDestinations()`, which filters the registry down to the entries carrying both.
 
 ### Configuration (§8)
 

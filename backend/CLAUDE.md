@@ -2,7 +2,12 @@
 
 Guidance for the FastAPI backend under `backend/`. See the repo-root `CLAUDE.md` for cross-cutting orientation, the design-doc-driven / milestone-sequenced workflow, and the `docs/` map.
 
-**The repo is in M1 ("Core domain").** The seven §5.2 tables and their migration exist; `rewatch/` is still an empty stub (M4). Do not add domain logic to a milestone that doesn't own it (see the out-of-scope table in `docs/milestones/MILESTONE_M1_V1.md`).
+**M1 ("Core domain") and M4's rewatch engine are built.** The seven §5.2 tables
+plus the `rewatch_suggestions` projection exist with their migrations;
+`rewatch/` holds the pure algorithm, the daily in-process scheduler, and
+`GET /rewatch-suggestions`. The scoring logic itself is a documented
+placeholder — see `OPEN_DECISIONS_V1.md`. Do not add domain logic to a
+milestone that doesn't own it.
 
 ## Commands
 
@@ -52,7 +57,7 @@ Within a module, calls flow `router → service → repository` (injected via Fa
 - `core/config.py` — `Settings` via `pydantic-settings`; everything environment-specific is read from env / `.env` (nothing hardcoded, NFR-MAINT-04). Access it through the cached `get_settings()`. Variable names map 1:1 to `.env.example`.
 - `core/schemas.py` — `StrictSchema`, the base every request/response schema must inherit. It is `strict=True` (no lossy coercion — `"1"` is not accepted for an `int`) and `extra="forbid"`. **Gotcha:** because FastAPI validates request bodies on Pydantic's *Python* path, a bare `date`/`datetime`/`time`/`UUID` field rejects ISO-8601 strings under strict mode. For those fields use the provided aliases `JsonDate`, `JsonDateTime`, `JsonTime`, `JsonUUID` instead of the bare types.
 - `core/errors.py` — the single error envelope `{ "error": { "code", "message" } }` (NFR-MAINT-03). `register_exception_handlers()` overrides FastAPI's defaults so **no route can emit another error shape**. Raise `AppError` (or, in M1+, a domain subclass overriding `code`/`status_code`/`message`) for controlled errors.
-- `core/db.py` — SQLAlchemy 2.x plumbing: lazily-cached engine/session factory (importing this module never touches the DB), the request-scoped `get_session()` generator dependency, and the typed declarative `Base`. The seven domain models register on `Base.metadata`; the guard test `test_metadata_defines_exactly_the_seven_domain_tables` keeps a stray model from silently widening the schema.
+- `core/db.py` — SQLAlchemy 2.x plumbing: lazily-cached engine/session factory (importing this module never touches the DB), the request-scoped `get_session()` generator dependency, `session_scope()` for use outside a request (e.g. the scheduler), and the typed declarative `Base`. The seven domain models plus the `rewatch_suggestions` projection register on `Base.metadata` — eight tables in all; the guard test `test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection` keeps a stray model from silently widening the schema further.
 
 ### Migrations
 

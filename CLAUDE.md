@@ -19,7 +19,7 @@ Development is **design-doc-driven and milestone-sequenced**. Before writing fea
 - `docs/milestones/MILESTONE_M1_V1.md` — the current milestone (M1, "Core domain"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
 - `docs/requirements/REQUIREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
 
-**The repo is currently in M1**, which builds the core domain (films, ratings, tags, genres) on M0's scaffolding. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the milestone doc). This discipline applies to **both tiers**.
+**The core domain (M1) and the rewatch engine (M4) are built.** The current open item is the real rewatch scoring algorithm — see `docs/requirements/OPEN_DECISIONS_V1.md`. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the relevant milestone doc). This discipline applies to **both tiers**.
 
 ## Workflow
 
