@@ -1,4 +1,4 @@
-# `domain/film/` — M0 stub (PR7)
+# `domain/film/`
 
-The film entity module (`model.ts`, `validators.ts`, `mapper.ts`, `api.ts`,
-`facade.ts` — see `../README.md`, DESIGN §4/§6.1). Content arrives in **M3**.
+The film entity module (`model.ts`, `mapper.ts`, `api.ts`, `facade.ts` — see
+`../README.md`, DESIGN §4/§6.1), backing the Library and Film Detail views.

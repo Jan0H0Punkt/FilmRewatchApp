@@ -1,8 +1,9 @@
 # `domain/` — per-entity business logic + data access (DESIGN §4, §6.1)
 
-Intentional **M0 stub** (PR7). Business logic and data access are organised
-**per entity**, mirroring the backend's feature modules: `film/`, `rating/`,
-`tag/`, `genre/`. Each module takes the same shape when it lands in **M3**:
+Business logic and data access are organised **per entity**, mirroring the
+backend's feature modules: `film/`, `rating/`, `tag/`, `genre/`, `rewatch/`.
+Each module takes the same shape (a read-only lookup like `tag/`/`genre/` may
+skip `model.ts`/`mapper.ts` — see those folders' own READMEs):
 
 - `model.ts` — the canonical domain model (§6.1 "three models")
 - `validators.ts` — app-wide entity rules, the client mirror of the backend's Pydantic schemas (§5.4)

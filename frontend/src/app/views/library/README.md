@@ -1,5 +1,8 @@
-# `views/library/` — M0 stub (PR7)
+# `views/library/`
 
-The Library view: Search & Filter + Add Film (an action inside this view, not
-a nav destination — DESIGN §6.5). A primary navigation destination. Arrives in
-**M3**.
+The Library view: the whole film library as a result list, narrowable by a
+title search (FR-SF-01, REQ §7.2). A primary navigation destination.
+
+Add Film (the rest of §7.2, an action inside this view rather than a nav
+destination — DESIGN §6.5) is not built yet, nor are filters beyond title
+search.

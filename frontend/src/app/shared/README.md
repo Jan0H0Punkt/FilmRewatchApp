@@ -7,7 +7,8 @@ and persistence stay with the calling view and its facades (§6.1).
 - `confirm-dialog/` — the confirmation step before a destructive action (FR-LIB-11, FR-RAT-07).
 - `editable-chips/` — a chip row with in-place editing and autocomplete; the
   film detail view's tags and genres (FR-TAG-03/06, REQ §4.4).
+- `rating-stars.ts` — the app's one star-rendering rule (FR-RAT-09/11/13),
+  shared by the Library and Rewatch views.
 
-The rest of the M0 stub's list (film card, rating-stars pipe,
-poster-with-placeholder) is still unbuilt — views hold those inline until a
-second caller appears.
+A film card and poster-with-placeholder are still unbuilt — views hold those
+inline until a second caller appears.
