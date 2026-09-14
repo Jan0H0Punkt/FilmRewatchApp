@@ -31,4 +31,14 @@ export class RewatchApi {
   readonly list = httpResource<readonly RewatchSuggestionDto[]>(() => `${environment.apiBaseUrl}/rewatch-suggestions`, {
     defaultValue: [],
   });
+
+  /**
+   * Drop one film from the cached due-list — the data-layer half of the §6.3
+   * optimistic removal. Local only: `httpResource`'s `value` is writable, so
+   * this edits what was already fetched rather than calling the API. The DTO's
+   * wire shape stays inside this file; the facade asks in domain terms.
+   */
+  removeFilm(filmId: string): void {
+    this.list.value.update((suggestions) => suggestions.filter((s) => s.film_id !== filmId));
+  }
 }

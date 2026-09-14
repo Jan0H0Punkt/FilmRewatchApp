@@ -48,7 +48,7 @@ export class RewatchFacade {
    * is still due, which makes this self-correcting rather than a guess.
    */
   removeFilm(filmId: string): void {
-    this.api.list.value.update((suggestions) => suggestions.filter((suggestion) => suggestion.film_id !== filmId));
+    this.api.removeFilm(filmId);
   }
 
   /** Re-fetch the due-list (from an error state). */

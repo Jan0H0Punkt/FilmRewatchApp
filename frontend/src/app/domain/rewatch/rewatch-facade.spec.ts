@@ -33,6 +33,8 @@ function configure(films: readonly Film[], suggestions: readonly RewatchSuggesti
       error: signal(undefined),
       reload: (): void => undefined,
     },
+    removeFilm: (filmId: string): void =>
+      value.update((suggestions) => suggestions.filter((s) => s.film_id !== filmId)),
   };
   TestBed.configureTestingModule({
     providers: [
