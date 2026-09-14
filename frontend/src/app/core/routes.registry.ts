@@ -20,7 +20,7 @@ export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   // Rewatch is the landing route: it is the primary discovery view (§6.5).
   // A redirect rather than a second mount, so `/` resolves to the same URL the
   // navigation links to and the active marker has one path to match.
-  { path: '', title: 'Rewatch', redirectTo: 'rewatch' },
+  { path: '', redirectTo: 'rewatch' },
   { path: 'rewatch', title: 'Rewatch', loadComponent: rewatch, navIcon: 'replay', navLabel: 'Rewatch' },
   { path: 'library', title: 'Library', loadComponent: library, navIcon: 'video_library', navLabel: 'Library' },
   // Reached by selecting a film, never from the navigation (§6.5).

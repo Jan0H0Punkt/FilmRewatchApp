@@ -11,8 +11,8 @@ import type { Routes } from '@angular/router';
 export interface RouteRegistryEntry {
   /** URL path, e.g. `rewatch` or `film/:id`. */
   readonly path: string;
-  /** Page title shown for the view. */
-  readonly title: string;
+  /** Page title shown for the view. Not read for a `redirectTo` entry — the browser navigates on to the target route's own title. */
+  readonly title?: string;
   /** Lazy loader for the routed standalone component. */
   readonly loadComponent?: () => Promise<Type<unknown>>;
   /**
