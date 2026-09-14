@@ -7,7 +7,7 @@
       [routerLink]="['/', destination.path]"
       [attr.aria-current]="active.isActive ? 'page' : null"
     >
-      <mat-icon aria-hidden="true" [attr.data-icon]="destination.icon"></mat-icon>
+      <mat-icon aria-hidden="true">{{ destination.icon }}</mat-icon>
       <span class="app-nav__label">{{ destination.label }}</span>
     </a>
   }

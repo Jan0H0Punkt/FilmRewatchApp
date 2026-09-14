@@ -47,14 +47,6 @@
   color: var(--mat-sys-primary);
 }
 
-/* Renders the ligature via generated content instead of light-DOM text, so
-   the decorative glyph never joins the link's accessible/plain-text name
-   (the label span already supplies that) — `aria-hidden` alone does not
-   remove text from `Element.textContent`. */
-.app-nav__link mat-icon::before {
-  content: attr(data-icon);
-}
-
 .app-main {
   margin: 0 auto;
   max-width: 60rem;

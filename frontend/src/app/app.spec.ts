@@ -20,9 +20,16 @@ describe('App', () => {
   });
 
   it('renders both primary destinations in the navigation', async () => {
-    const links = (await render()).querySelectorAll('nav a');
+    const labels = (await render()).querySelectorAll('nav a .app-nav__label');
 
-    expect([...links].map((link) => link.textContent?.trim())).toEqual(['Rewatch', 'Library']);
+    expect([...labels].map((label) => label.textContent?.trim())).toEqual(['Rewatch', 'Library']);
+  });
+
+  it('renders each destination icon as a hidden ligature', async () => {
+    const icons = (await render()).querySelectorAll('nav a mat-icon');
+
+    expect([...icons].map((icon) => icon.textContent?.trim())).toEqual(['replay', 'video_library']);
+    expect([...icons].every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 
   it('points each destination at its own route', async () => {
