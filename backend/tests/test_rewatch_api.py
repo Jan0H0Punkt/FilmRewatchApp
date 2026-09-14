@@ -52,10 +52,12 @@ def test_the_response_carries_only_the_two_contract_fields() -> None:
 
 
 def test_the_stored_order_reaches_the_wire_unchanged() -> None:
-    # FR-RW-04: the API re-sorts nothing; it serves what the run stored.
-    rows = [_row(-40, 0), _row(-1, 1), _row(0, 2)]
+    # FR-RW-04: the API re-sorts nothing; it serves what the run stored. The
+    # stored order here is deliberately not ascending, so a route that sorted
+    # by `days_until_next_rewatch` would produce [-40, -1, 0] and fail.
+    rows = [_row(-1, 0), _row(-40, 1), _row(0, 2)]
 
     payload = _client(rows).get("/api/v1/rewatch-suggestions").json()
 
-    assert [item["days_until_next_rewatch"] for item in payload] == [-40, -1, 0]
+    assert [item["days_until_next_rewatch"] for item in payload] == [-1, -40, 0]
     assert [item["film_id"] for item in payload] == [str(row.film_id) for row in rows]
