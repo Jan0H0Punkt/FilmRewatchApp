@@ -15,7 +15,8 @@ module never requires the database to be configured or reachable; the connection
 is opened on first use.
 """
 
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from functools import lru_cache
 
@@ -56,15 +57,26 @@ def _session_factory() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), expire_on_commit=False)
 
 
-def get_session() -> Iterator[Session]:
-    """FastAPI request-scoped session dependency (DESIGN §5.1 data-access).
+@contextmanager
+def session_scope() -> Generator[Session]:
+    """A session outside the request cycle (the rewatch scheduler, §5.8).
 
-    Yields a session for the lifetime of one request and always closes it.
-    Routers never use this directly — the repositories (M1) depend on it, keeping
-    business logic free of session lifecycle concerns.
+    Same lifecycle as :func:`get_session`, usable with ``with``. Committing is
+    the caller's business, as everywhere else.
     """
     session = _session_factory()()
     try:
         yield session
     finally:
         session.close()
+
+
+def get_session() -> Iterator[Session]:
+    """FastAPI request-scoped session dependency (DESIGN §5.1 data-access).
+
+    Yields a session for the lifetime of one request and always closes it.
+    Routers never use this directly — the repositories depend on it, keeping
+    business logic free of session lifecycle concerns.
+    """
+    with session_scope() as session:
+        yield session

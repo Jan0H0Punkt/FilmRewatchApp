@@ -21,6 +21,7 @@ from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
 from app.rewatch.router import router as rewatch_router
+from app.rewatch.scheduler import lifespan
 from app.tags.router import router as tags_router
 
 API_V1_PREFIX = "/api/v1"
@@ -57,6 +58,9 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title="Film Rewatch API",
+        # The once-daily rewatch recompute runs as a task owned by this
+        # lifespan (§5.8) — it starts with the app and is cancelled with it.
+        lifespan=lifespan,
         # App version (SemVer 2.0.0, policy in the root README). The /api/vN
         # contract is SemVer's "public API": breaking it bumps MAJOR and the
         # URL version together. M4 adds the rewatch-suggestions route without

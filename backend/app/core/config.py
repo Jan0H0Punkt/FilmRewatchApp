@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # How often the rewatch due-list is recomputed (DESIGN §5.8). The contract
+    # is "once daily", so this is a day; it exists as a setting because tests
+    # and a manual check need a shorter cycle.
+    rewatch_recompute_interval_seconds: int = 86_400
+
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
