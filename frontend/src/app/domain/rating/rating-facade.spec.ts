@@ -1,10 +1,11 @@
 /** `RatingFacade` (DESIGN §6.1): the write DTOs it sends and the local state update it applies on success — no refetch. */
 import { HttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import type { RatingEntryDto } from '../film/api';
 import { FilmFacade } from '../film/facade';
+import { RewatchFacade } from '../rewatch/facade';
 import { RatingFacade } from './facade';
 
 /** Stands in for `HttpClient` so the facade is tested without a real backend. */
@@ -16,11 +17,20 @@ function stubFilmFacade() {
   return { applyRatingAdded: vi.fn(), applyRatingRemoved: vi.fn() };
 }
 
-function setUp(http: ReturnType<typeof stubHttp>, films: ReturnType<typeof stubFilmFacade>): RatingFacade {
+function stubRewatchFacade() {
+  return { removeFilm: vi.fn() };
+}
+
+function setUp(
+  http: ReturnType<typeof stubHttp>,
+  films: ReturnType<typeof stubFilmFacade>,
+  rewatch: ReturnType<typeof stubRewatchFacade> = stubRewatchFacade(),
+): RatingFacade {
   TestBed.configureTestingModule({
     providers: [
       { provide: HttpClient, useValue: http },
       { provide: FilmFacade, useValue: films },
+      { provide: RewatchFacade, useValue: rewatch },
     ],
   });
   return TestBed.inject(RatingFacade);
@@ -74,6 +84,33 @@ describe('RatingFacade', () => {
     });
 
     expect(films.applyRatingAdded).toHaveBeenCalledWith('f1', entry);
+  });
+
+  it('removes the film from the due-list once its watch is logged', async () => {
+    // §6.3: a freshly watched film leaves the rewatch grid at once, from
+    // wherever the watch was logged, without waiting for tomorrow's run.
+    const http = stubHttp();
+    const rewatch = stubRewatchFacade();
+    const facade = setUp(http, stubFilmFacade(), rewatch);
+
+    await new Promise<void>((resolve) => {
+      facade.add('f1', { value: 4.5, watchDate: '2024-01-01' }).subscribe(() => resolve());
+    });
+
+    expect(rewatch.removeFilm).toHaveBeenCalledWith('f1');
+  });
+
+  it('does not touch the due-list when the watch fails to save', async () => {
+    const http = stubHttp();
+    http.post.mockReturnValue(throwError(() => new Error('network error')));
+    const rewatch = stubRewatchFacade();
+    const facade = setUp(http, stubFilmFacade(), rewatch);
+
+    await new Promise<void>((resolve) => {
+      facade.add('f1', { value: 4.5, watchDate: '2024-01-01' }).subscribe({ error: () => resolve() });
+    });
+
+    expect(rewatch.removeFilm).not.toHaveBeenCalled();
   });
 
   it('applies the removal locally when a delete leaves the film in place', async () => {
