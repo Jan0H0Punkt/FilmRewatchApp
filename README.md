@@ -6,12 +6,15 @@ Python/FastAPI backend with PostgreSQL — communicating exclusively over a vers
 HTTP/JSON API. It is designed to run entirely on your own machine via Docker Compose, with the PWA
 installable on a phone over the LAN.
 
-> **Status: Milestone M1 — Core Domain (backend).** The backend now has a working core domain:
-> log a watched film — atomically, with its mandatory first rating, tags, and genres — read it
-> back in full, edit it, rate it again, and delete it, with every data-model rule
-> ([REQUIREMENTS §4](docs/requirements/REQUIREMENTS_V1.md#4-data-model)) enforced server-side. M1
-> is backend-only; listing/search (`GET /films`), the frontend, and rewatch suggestions are later
-> milestones — see [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md).
+> **Status: the core domain (M1) and the rewatch engine (M4) are built.** The backend has a
+> working core domain — log a watched film atomically with its mandatory first rating, tags, and
+> genres, read it back in full, edit it, rate it again, and delete it, with every data-model rule
+> ([REQUIREMENTS §4](docs/requirements/REQUIREMENTS_V1.md#4-data-model)) enforced server-side —
+> plus the daily rewatch-suggestions computation and its `GET /rewatch-suggestions` route, and an
+> Angular client covering both. The open item is the real rewatch scoring algorithm — see
+> [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md);
+> [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md) is the most recent
+> milestone document.
 
 ## Quick start (Docker)
 
@@ -176,7 +179,7 @@ The app follows [Semantic Versioning 2.0.0](https://semver.org) (`MAJOR.MINOR.PA
   it (M1 → `0.2.0`, M2 → `0.3.0`, …).
 - **PATCH** — backwards-compatible bug fixes.
 
-The current version is **0.2.0** (M1 core domain). Per SemVer, `0.x` is the development phase —
+The current version is **0.3.0** (M1 core domain + M4 rewatch engine). Per SemVer, `0.x` is the development phase —
 anything may change at any time. **`1.0.0`** declares the public API stable and is reserved for
 when [REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) is fully implemented (Future Work
 excluded).
