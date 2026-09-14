@@ -33,7 +33,12 @@ from app.core.db import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # ``disable_existing_loggers=False``: the default silently disables every
+    # logger already created in this process that alembic.ini doesn't name —
+    # including any app logger a test imported before triggering a migration
+    # (e.g. the rewatch scheduler's), which would otherwise swallow its own
+    # log records for the rest of the run.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Passed directly to ``create_engine`` rather than stashed via
 # ``config.set_main_option`` — Alembic's ConfigParser treats ``%`` as
