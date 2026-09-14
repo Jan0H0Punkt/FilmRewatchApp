@@ -32,6 +32,12 @@ export class Rewatch {
   protected readonly isLoading = this.rewatch.isLoading;
   protected readonly error = this.rewatch.error;
 
+  constructor() {
+    // See `RewatchFacade.onViewOpened` — this is what makes the docstring
+    // above true rather than aspirational.
+    this.rewatch.onViewOpened();
+  }
+
   protected reload(): void {
     this.rewatch.reload();
   }

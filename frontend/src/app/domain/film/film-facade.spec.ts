@@ -44,7 +44,13 @@ function valueSignal<T>(initial: T) {
 /** Stands in for `FilmApi` so the facade is tested without a real backend. `detailError` stubs the fallback `GET /films/{id}`'s outcome. */
 function stubApi(list: readonly FilmDto[] = [], selectedId: string | null = null, detailError: unknown = undefined) {
   return {
-    list: { value: valueSignal(list), isLoading: () => false, error: () => undefined, reload: vi.fn() },
+    list: {
+      value: valueSignal(list),
+      status: () => 'resolved' as const,
+      isLoading: () => false,
+      error: () => undefined,
+      reload: vi.fn(),
+    },
     detail: { isLoading: () => false, error: () => detailError, reload: vi.fn() },
     selectedId: valueSignal(selectedId),
     update: vi.fn(),

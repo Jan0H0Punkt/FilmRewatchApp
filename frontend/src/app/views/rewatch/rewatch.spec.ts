@@ -37,6 +37,7 @@ async function render(
           isLoading: signal(isLoading),
           error: signal(error),
           reload: (): void => undefined,
+          onViewOpened: (): void => undefined,
         },
       },
     ],

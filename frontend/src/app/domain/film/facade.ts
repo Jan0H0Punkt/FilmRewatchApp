@@ -17,7 +17,7 @@
  * local write is `.set()`/`.update()`, no parallel state store needed.
  */
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal, type ResourceStatus } from '@angular/core';
 import { type Observable, catchError, map, tap, throwError } from 'rxjs';
 
 import type { FilmDto, RatingEntryDto } from './api';
@@ -29,8 +29,25 @@ import type { Film, FilmDetail, FilmPatch } from './model';
 export class FilmFacade {
   private readonly api = inject(FilmApi);
 
+  /**
+   * `api.list.value()`, guarded against the error state.
+   *
+   * In Angular 22, `httpResource.value()` does not fall back to
+   * `defaultValue` once the resource has errored — it THROWS
+   * `ResourceValueError`. A `linkedSignal` lets us keep the last
+   * successfully fetched list and hand that back instead, so every read
+   * below (and every caller of `films`) sees a plain array, never a throw.
+   * Reading `api.list.value()` here (not just `api.list.status()`) keeps
+   * this reactive to local writes too (`updateFilm` etc. write through
+   * `api.list.value`), which a status-only dependency would miss.
+   */
+  private readonly listSafe = linkedSignal<ResourceStatus, readonly FilmDto[]>({
+    source: () => this.api.list.status(),
+    computation: (status, previous) => (status === 'error' ? (previous?.value ?? []) : this.api.list.value()),
+  });
+
   /** The whole library, primary-title ordered; empty while loading. */
-  readonly films = computed<readonly Film[]>(() => this.api.list.value().map(toFilm));
+  readonly films = computed<readonly Film[]>(() => this.listSafe().map(toFilm));
   readonly isLoading = this.api.list.isLoading;
   readonly error = this.api.list.error;
 
