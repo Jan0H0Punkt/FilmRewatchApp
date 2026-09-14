@@ -37,7 +37,7 @@
             <mat-card>
               <div class="film">
                 @if (row.posterImage) {
-                  <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" />
+                  <img class="film__poster" [src]="row.posterImage" [alt]="'Poster of ' + row.title" loading="lazy" />
                 } @else {
                   <div class="film__poster film__poster--empty" aria-hidden="true">
                     <mat-icon>movie</mat-icon>

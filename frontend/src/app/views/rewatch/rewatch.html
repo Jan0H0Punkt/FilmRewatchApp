@@ -21,7 +21,7 @@
         <a class="rewatch__link" [routerLink]="['/film', card.id]">
           <mat-card class="rewatch__card">
             @if (card.posterImage) {
-              <img class="rewatch__poster" [src]="card.posterImage" [alt]="'Poster of ' + card.title" />
+              <img class="rewatch__poster" [src]="card.posterImage" [alt]="'Poster of ' + card.title" loading="lazy" />
             } @else {
               <div class="rewatch__poster rewatch__poster--empty" aria-hidden="true">
                 <mat-icon>movie</mat-icon>
