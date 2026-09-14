@@ -13,8 +13,81 @@
   margin: 0;
 }
 
+/* §6.5 navigation. Mobile-first: a fixed bottom bar, becoming a permanent left
+   sidebar at the 900px breakpoint. One element, two layouts — the markup does
+   not branch, only the CSS does. */
+.app-nav {
+  background: var(--mat-sys-surface-container);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  left: 0;
+  position: fixed;
+  right: 0;
+  z-index: 2;
+}
+
+.app-nav__link {
+  align-items: center;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  flex-direction: column;
+  font: var(--mat-sys-label-medium);
+  gap: 0.125rem;
+  justify-content: center;
+  /* The M7 a11y pass sets the definitive figure; 48px is the floor (NFR-A11Y). */
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+}
+
+.app-nav__link--active {
+  color: var(--mat-sys-primary);
+}
+
+/* Renders the ligature via generated content instead of light-DOM text, so
+   the decorative glyph never joins the link's accessible/plain-text name
+   (the label span already supplies that) — `aria-hidden` alone does not
+   remove text from `Element.textContent`. */
+.app-nav__link mat-icon::before {
+  content: attr(data-icon);
+}
+
 .app-main {
   margin: 0 auto;
   max-width: 60rem;
-  padding: 1.5rem 1rem;
+  /* Clear the fixed bottom bar so the last row is never hidden behind it. */
+  padding: 1.5rem 1rem 5rem;
+}
+
+@media (min-width: 900px) {
+  .app-nav {
+    border-right: 1px solid var(--mat-sys-outline-variant);
+    border-top: none;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 1rem;
+    right: auto;
+    top: 0;
+    width: 14rem;
+  }
+
+  .app-nav__link {
+    align-items: center;
+    flex-direction: row;
+    gap: 0.75rem;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  /* The sidebar is fixed, so the content is inset rather than pushed. */
+  .app-shell {
+    padding-left: 14rem;
+  }
+
+  .app-main {
+    padding-bottom: 1.5rem;
+  }
 }

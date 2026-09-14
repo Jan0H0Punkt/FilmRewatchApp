@@ -1,18 +1,35 @@
-<header class="app-bar">
-  <h1 class="app-bar__title">{{ title() }}</h1>
-  <mat-button-toggle-group
-    class="app-bar__theme"
-    aria-label="Colour theme"
-    hideSingleSelectionIndicator
-    [value]="theme()"
-    (valueChange)="theme.set($event)"
-  >
-    <mat-button-toggle value="light">Light</mat-button-toggle>
-    <mat-button-toggle value="dark">Dark</mat-button-toggle>
-    <mat-button-toggle value="auto">Auto</mat-button-toggle>
-  </mat-button-toggle-group>
-</header>
+<nav class="app-nav" aria-label="Primary">
+  @for (destination of destinations; track destination.path) {
+    <a
+      class="app-nav__link"
+      routerLinkActive="app-nav__link--active"
+      #active="routerLinkActive"
+      [routerLink]="['/', destination.path]"
+      [attr.aria-current]="active.isActive ? 'page' : null"
+    >
+      <mat-icon aria-hidden="true" [attr.data-icon]="destination.icon"></mat-icon>
+      <span class="app-nav__label">{{ destination.label }}</span>
+    </a>
+  }
+</nav>
 
-<main class="app-main">
-  <router-outlet />
-</main>
+<div class="app-shell">
+  <header class="app-bar">
+    <h1 class="app-bar__title">{{ title() }}</h1>
+    <mat-button-toggle-group
+      class="app-bar__theme"
+      aria-label="Colour theme"
+      hideSingleSelectionIndicator
+      [value]="theme()"
+      (valueChange)="theme.set($event)"
+    >
+      <mat-button-toggle value="light">Light</mat-button-toggle>
+      <mat-button-toggle value="dark">Dark</mat-button-toggle>
+      <mat-button-toggle value="auto">Auto</mat-button-toggle>
+    </mat-button-toggle-group>
+  </header>
+
+  <main class="app-main">
+    <router-outlet />
+  </main>
+</div>
