@@ -47,6 +47,7 @@ class RewatchRepository:
                 func.max(RatingEntry.watch_date).label("last_watched_date"),
                 Film.is_favorite,
                 Film.delay_days,
+                Film.runtime_minutes,
             )
             .join(RatingEntry, RatingEntry.film_id == Film.id)
             .group_by(Film.id)
@@ -59,6 +60,7 @@ class RewatchRepository:
                 last_watched_date=row.last_watched_date,
                 is_favorite=row.is_favorite,
                 delay_days=row.delay_days,
+                runtime_minutes=row.runtime_minutes,
             )
             for row in self._session.execute(statement)
         ]

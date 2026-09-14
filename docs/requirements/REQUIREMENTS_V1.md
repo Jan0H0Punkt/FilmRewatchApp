@@ -465,6 +465,7 @@ application must honour when integrating it.
 | `last_watched_date` | Computed (max `watch_date` in `rating_history`) | Date of the most recent watch (always present)                                                        |
 | `is_favorite`       | Film.is_favorite                                | Whether the user has marked this film as a favourite                                                   |
 | `delay_days`        | Film.delay_days                                 | User-set delay before the next rewatch suggestion                                                      |
+| `runtime_minutes`   | Film.runtime_minutes                            | Length of the film; a longer film is a larger commitment and is suggested less often                   |
 
 - **FR-RW-03:** The algorithm shall return an **ordered list of currently-due films only**. Each object in the list must contain at minimum:
 
