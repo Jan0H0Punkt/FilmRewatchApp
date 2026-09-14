@@ -1,0 +1,59 @@
+<h2 class="rewatch__heading">Rewatch</h2>
+
+@if (isLoading()) {
+  <p class="rewatch__state" role="status">Looking for films that are due…</p>
+  <mat-progress-bar mode="indeterminate" aria-hidden="true" />
+}
+
+<!-- FR-RW-07: the error sits above the grid rather than replacing it, so a
+     failed refresh never takes the last successful run off the screen. -->
+@if (error()) {
+  <div class="rewatch__state rewatch__state--error" role="alert">
+    <p>The suggestions could not be loaded. Is the backend running?</p>
+    <button matButton type="button" (click)="reload()">Try again</button>
+  </div>
+}
+
+@if (cards().length > 0) {
+  <ul class="rewatch__grid">
+    @for (card of cards(); track card.id) {
+      <li>
+        <a class="rewatch__link" [routerLink]="['/film', card.id]">
+          <mat-card class="rewatch__card">
+            @if (card.posterImage) {
+              <img class="rewatch__poster" [src]="card.posterImage" [alt]="'Poster of ' + card.title" />
+            } @else {
+              <div class="rewatch__poster rewatch__poster--empty" aria-hidden="true">
+                <mat-icon>movie</mat-icon>
+              </div>
+            }
+            <div class="rewatch__body">
+              <h3 class="rewatch__title">
+                {{ card.title }}
+                @if (card.isFavorite) {
+                  <mat-icon class="rewatch__favorite" aria-label="Favourite">favorite</mat-icon>
+                }
+              </h3>
+              <p class="rewatch__year">{{ card.year }}</p>
+              <p class="rewatch__rating" [attr.aria-label]="card.ratingLabel">
+                @if (card.ratingStars) {
+                  @for (icon of card.ratingStars; track $index) {
+                    <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                  }
+                } @else {
+                  <span aria-hidden="true">&mdash;</span>
+                }
+              </p>
+              <p class="rewatch__due">
+                <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+                {{ card.dueLabel }}
+              </p>
+            </div>
+          </mat-card>
+        </a>
+      </li>
+    }
+  </ul>
+} @else if (!isLoading() && !error()) {
+  <p class="rewatch__state">Nothing due right now. Enjoy the backlog.</p>
+}

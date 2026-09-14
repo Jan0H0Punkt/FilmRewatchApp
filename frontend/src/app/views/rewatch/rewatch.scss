@@ -1,0 +1,86 @@
+/* Rewatch view (REQ §7.1). Colours come from Material's M3 system variables,
+   which resolve per `color-scheme` — so light/dark needs no rule of its own. */
+
+.rewatch__heading {
+  font: var(--mat-sys-headline-small);
+  margin: 0 0 1rem;
+}
+
+.rewatch__state {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.rewatch__state--error {
+  color: var(--mat-sys-error);
+}
+
+/* The §7.1 responsive card grid: as many columns as fit, one on a phone. */
+.rewatch__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rewatch__link {
+  color: inherit;
+  display: block;
+  text-decoration: none;
+}
+
+.rewatch__card {
+  height: 100%;
+  overflow: hidden;
+  padding: 0;
+}
+
+.rewatch__poster {
+  aspect-ratio: 2 / 3;
+  display: block;
+  max-width: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.rewatch__poster--empty {
+  align-items: center;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  justify-content: center;
+}
+
+.rewatch__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+}
+
+/* §7.1: the title is truncated with an ellipsis rather than wrapping, so every
+   card in a row keeps the same height. */
+.rewatch__title {
+  align-items: center;
+  display: flex;
+  font: var(--mat-sys-title-small);
+  gap: 0.25rem;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rewatch__favorite {
+  color: var(--mat-sys-primary);
+  flex: none;
+}
+
+.rewatch__year,
+.rewatch__rating,
+.rewatch__due {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  margin: 0;
+}
