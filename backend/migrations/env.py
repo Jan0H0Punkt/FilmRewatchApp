@@ -25,6 +25,7 @@ from sqlalchemy.pool import NullPool
 import app.films.models
 import app.genres.models
 import app.ratings.models
+import app.rewatch.models
 import app.tags.models  # noqa: F401  (imported for the side effect, not the name)
 from app.core.config import get_settings
 from app.core.db import Base

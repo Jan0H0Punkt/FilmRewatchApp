@@ -7,13 +7,14 @@ from app.core.db import Base, get_session
 from app.films.models import Film, Title
 from app.genres.models import FilmGenre, Genre
 from app.ratings.models import RatingEntry
+from app.rewatch.models import RewatchSuggestion
 from app.tags.models import FilmTag, Tag
 
 
-def test_metadata_defines_exactly_the_seven_domain_tables() -> None:
-    # One table per entity/join (REQ §4.1-4.5) and nothing else: a stray model
-    # would silently widen the schema. Importing the classes is what registers
-    # them on ``Base.metadata``.
+def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection() -> None:
+    # One table per entity/join (REQ §4.1-4.5), plus the M4 rewatch projection
+    # (§5.8) — and nothing else: a stray model would silently widen the schema.
+    # Importing the classes is what registers them on ``Base.metadata``.
     domain_models = (Film, Title, RatingEntry, Tag, FilmTag, Genre, FilmGenre)
     assert {model.__tablename__ for model in domain_models} == {
         "films",
@@ -24,7 +25,9 @@ def test_metadata_defines_exactly_the_seven_domain_tables() -> None:
         "genres",
         "film_genres",
     }
-    assert set(Base.metadata.tables) == {model.__tablename__ for model in domain_models}
+    assert set(Base.metadata.tables) == {model.__tablename__ for model in domain_models} | {
+        RewatchSuggestion.__tablename__
+    }
 
 
 def test_get_session_is_a_generator_dependency() -> None:
