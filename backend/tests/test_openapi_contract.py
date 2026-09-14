@@ -14,7 +14,7 @@ no route documented its 404/409 paths at all.
 This module is offline (``create_app().openapi()`` builds the schema without
 touching a database) and audits three things:
 
-1. every M1 route is present under the ``v1`` namespace;
+1. every expected route is present under the ``v1`` namespace;
 2. every documented non-2xx response references the single ``ErrorResponse``
    schema — never FastAPI's default validation-error shape;
 3. the full domain-code inventory actually defined in code (every
@@ -29,7 +29,7 @@ from typing import cast
 from app.core.errors import AppError
 from app.main import create_app
 
-_M1_ROUTES = {
+_EXPECTED_ROUTES = {
     ("GET", "/api/v1/health"),
     # The unfiltered library list, pulled forward from M2 to give the Angular
     # library view a data source; M2 adds this route's FR-SF query parameters.
@@ -64,13 +64,13 @@ def _paths(schema: dict[str, object]) -> dict[str, dict[str, dict[str, object]]]
     return cast(dict[str, dict[str, dict[str, object]]], schema["paths"])
 
 
-def test_every_m1_route_is_documented_under_the_v1_namespace() -> None:
+def test_every_expected_route_is_documented_under_the_v1_namespace() -> None:
     schema = _schema()
     documented = {
         (method.upper(), path) for path, methods in _paths(schema).items() for method in methods
     }
-    missing = _M1_ROUTES - documented
-    assert not missing, f"undocumented M1 routes: {missing}"
+    missing = _EXPECTED_ROUTES - documented
+    assert not missing, f"undocumented routes: {missing}"
 
 
 def test_no_route_documents_fastapis_default_validation_error_shape() -> None:
