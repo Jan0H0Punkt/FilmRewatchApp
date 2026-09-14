@@ -12,6 +12,8 @@ CORS is wired below from configuration (PR2), and the single error-envelope
 exception handler (PR5) is registered on the app (DESIGN §5.4, NFR-MAINT-03).
 """
 
+import logging
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -55,6 +57,11 @@ def build_api_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     """Application factory: build and configure the FastAPI app (DESIGN §5.1)."""
+    # Uvicorn configures only its own loggers, leaving the root logger without a
+    # handler — so the rewatch scheduler's INFO/exception lines (§5.8) would go
+    # nowhere. Its failures are swallowed by design so one bad run cannot kill
+    # the loop, which makes this log the only sign the daily job is alive.
+    logging.basicConfig(level=logging.INFO)
     settings = get_settings()
     app = FastAPI(
         title="Film Rewatch API",
