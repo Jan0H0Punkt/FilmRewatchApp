@@ -36,13 +36,20 @@ due. Each is tagged:
   running one container (§1.3), where a scheduler that lives and dies with the
   app is the whole requirement — and every start recomputes, so a restart costs
   nothing. (DESIGN §5.8, §8.1.)
-- **[design] Rewatch algorithm internals** — **Still open.** The repo owner
-  supplies the scoring logic. A documented placeholder ships in its place
-  (`app/rewatch/algorithm.py`): every film is due one year after its last
-  watch, deferred by `delay_days`; `average_rating`, `watch_count` and
-  `is_favorite` are accepted and ignored. The input/output contract is fixed,
-  so the real algorithm replaces `suggest`'s body and nothing else.
-  (DESIGN §5.8.)
+- **[design] Rewatch algorithm internals** — **Decided (2026-09-14):** the
+  repo owner's formula, in `algorithm.interval_days`. A film waits
+  `BASE_INTERVAL_DAYS` plus a spacing of `(watch_count + reverse_rating) *
+  (10 * reverse_rating + runtime_minutes)`, where `reverse_rating` is the
+  average rating doubled onto a 1..10 scale and subtracted from 10. The rating
+  therefore drives the interval quadratically; each prior watch adds one step;
+  a longer film widens every step. Favourites halve the spacing but not the
+  base, so **no film is ever suggested within a year of its last watch** — the
+  point of the base being a floor rather than a target. `MAX_INTERVAL_DAYS`
+  caps the result; `delay_days` is added outside that cap, because a deferral
+  is the user's instruction rather than something the scoring invented.
+  Scoring is a pure function of the input row — no clock, no randomness — so a
+  film cannot be due one run and gone the next. FR-RW-02 gained
+  `runtime_minutes`; the output contract is unchanged. (DESIGN §5.8.)
 
 ---
 
