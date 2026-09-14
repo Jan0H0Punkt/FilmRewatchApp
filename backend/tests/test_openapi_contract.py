@@ -43,6 +43,8 @@ _M1_ROUTES = {
     ("DELETE", "/api/v1/ratings/{rating_id}"),
     ("GET", "/api/v1/tags"),
     ("GET", "/api/v1/genres"),
+    # M4's rewatch engine (§5.8) — the stored daily due-list.
+    ("GET", "/api/v1/rewatch-suggestions"),
 }
 
 # The framework-level codes core/errors.py's handlers can emit without a

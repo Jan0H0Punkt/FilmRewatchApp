@@ -34,9 +34,9 @@ def health() -> dict[str, str]:
 def build_api_router() -> APIRouter:
     """Assemble the versioned ``/api/v1`` router from each feature module.
 
-    Films, ratings, tags, and genres carry the full M1 core-domain surface
-    (§5.1 wiring: a router never imports a repository); rewatch stays the M0
-    empty stub its module docstring describes — its route arrives in M4.
+    Films, ratings, tags, and genres carry the core-domain surface, and rewatch
+    serves the M4 daily due-list (§5.8) — the §5.1 wiring holds throughout: a
+    router never imports a repository.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
     api.add_api_route("/health", health, methods=["GET"], tags=["health"], summary="Liveness probe")
@@ -59,9 +59,9 @@ def create_app() -> FastAPI:
         title="Film Rewatch API",
         # App version (SemVer 2.0.0, policy in the root README). The /api/vN
         # contract is SemVer's "public API": breaking it bumps MAJOR and the
-        # URL version together. M1 is a completed milestone of new,
-        # backwards-compatible functionality, so this is the 0.2.0 MINOR bump.
-        version="0.2.0",
+        # URL version together. M4 adds the rewatch-suggestions route without
+        # touching any existing one, so this is a MINOR bump.
+        version="0.3.0",
         summary="Backend API for the Film Rewatch application.",
         description=(
             "Versioned (`v1`) HTTP/JSON API. M1 ships the core domain: log a "
@@ -70,8 +70,7 @@ def create_app() -> FastAPI:
             "error response uses the single envelope "
             '`{ "error": { "code", "message" } }` (NFR-MAINT-03) — each '
             "route below documents the specific codes it can return. "
-            "Listing/search, merge, and rewatch suggestions are later "
-            "milestones."
+            "Listing/search and merge are later milestones."
         ),
     )
     # Allowed origins come from config — the backend hardcodes no client origin
