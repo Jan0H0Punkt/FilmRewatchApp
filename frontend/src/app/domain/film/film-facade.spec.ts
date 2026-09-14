@@ -5,10 +5,13 @@
  * `list`, so every assertion below reaches it through `facade.detail()`
  * without a second resource to keep in sync.
  */
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import type { FilmDto } from './api';
 import { FilmApi } from './api';
 import { FilmFacade } from './facade';
@@ -32,12 +35,20 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
   };
 }
 
-/** A writable-signal stand-in for `httpResource.value`/`selectedId`, matching the shape the facade relies on. */
+/**
+ * A writable-signal stand-in for `httpResource.value`/`selectedId`, matching
+ * the shape the facade relies on. Backed by a real `signal()` — not a plain
+ * closure — so it stays reactive: `FilmFacade.listSafe` (a `linkedSignal`
+ * layered over `list.value`) only re-derives when a real signal write
+ * invalidates it, same as production's `httpResource.value`. `.set`/`.update`
+ * stay spies (`toHaveBeenCalledWith` assertions below) wrapping the real ones.
+ */
 function valueSignal<T>(initial: T) {
-  let current = initial;
-  const sig = (() => current) as { (): T; set: (v: T) => void; update: (fn: (v: T) => T) => void };
-  sig.set = vi.fn((v: T) => (current = v));
-  sig.update = vi.fn((fn: (v: T) => T) => (current = fn(current)));
+  const sig = signal(initial) as unknown as { (): T; set: (v: T) => void; update: (fn: (v: T) => T) => void };
+  const realSet = sig.set.bind(sig);
+  const realUpdate = sig.update.bind(sig);
+  sig.set = vi.fn(realSet);
+  sig.update = vi.fn(realUpdate);
   return sig;
 }
 
@@ -256,5 +267,87 @@ describe('FilmFacade', () => {
       expect(api.selectedId.set).toHaveBeenCalledWith(null);
       expect(api.list.reload).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * The residual-fix review's repro, against the real `FilmApi` (the stub in
+ * `stubApi` above has a constant `status` and a plain-function `value`, so it
+ * cannot exercise the error-state throw `httpResource.value()` performs in
+ * Angular 22). Sequence: open Rewatch (`/films` loads), click a film card
+ * (`select`), navigate back (`selectedId` is never cleared — see `FilmApi`),
+ * then a later `/films` reload fails. This is the facade-level equivalent of
+ * the reviewer's rendered-component repro (Rewatch → film card → back →
+ * `/films` fails); a true component-level version would additionally have to
+ * mount `FilmDetail`, which pulls in `GenreFacade`/`TagFacade`/`RatingFacade`
+ * and `MatDialog` — machinery unrelated to this resource-throw bug — so this
+ * drives the same code path through the facade instead.
+ *
+ * Per the reviewer's note: `listSafe` is a `linkedSignal`, so it only
+ * preserves a value that was actually READ before the error. The reads below
+ * (`facade.films()`/`facade.detail()`) before the failing reload stand in for
+ * the template re-rendering every frame in the running app.
+ */
+describe('FilmFacade against a real FilmApi, once list has errored', () => {
+  let httpTesting: HttpTestingController;
+
+  async function loadTwoFilms(): Promise<FilmFacade> {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const facade = TestBed.inject(FilmFacade);
+    httpTesting = TestBed.inject(HttpTestingController);
+
+    TestBed.tick();
+    httpTesting
+      .expectOne(`${environment.apiBaseUrl}/films`)
+      .flush([
+        filmDto({ id: 'f1' }),
+        filmDto({ id: 'f2', titles: [{ value: 'Mulholland Drive', is_primary: true, is_original: false }] }),
+      ]);
+    // `httpResource`'s loader is async even for a same-tick `flush` — see the
+    // fold-in test in `film-api.spec.ts` for the same pattern.
+    await Promise.resolve();
+    await Promise.resolve();
+    TestBed.tick();
+    return facade;
+  }
+
+  afterEach(() => {
+    httpTesting.verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('keeps the last good library and selected film readable after select, then a failing reload', async () => {
+    const facade = await loadTwoFilms();
+
+    // Click a film card: `FilmDetail`'s constructor effect calls `select`.
+    facade.select('f1');
+    TestBed.tick();
+    httpTesting.expectNone(`${environment.apiBaseUrl}/films/f1`); // already in the list, no fallback fetch
+
+    // The template reads these every render — priming `listSafe` the same way.
+    expect(facade.films().map((film) => film.id)).toEqual(['f1', 'f2']);
+    expect(facade.detail()?.id).toBe('f1');
+
+    // Navigate back: nothing clears `selectedId` (see `FilmApi.selectedId`'s
+    // docstring) — it stays 'f1'. A later reload (Rewatch reopening, say)
+    // then fails.
+    facade.reload();
+    TestBed.tick();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films`).flush('boom', { status: 500, statusText: 'Server Error' });
+    // `httpResource` settles an errored response through a microtask (its
+    // loader is async), so the effect that recomputes `api.detail`'s request
+    // (the decisive unguarded read, api.ts's `detail`) needs an actual tick
+    // of the microtask queue before a further `TestBed.tick()` reaches it.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(() => TestBed.tick()).not.toThrow();
+
+    // Reading state afterwards must not throw either, and must surface the
+    // failure as an error — not silently empty the library.
+    expect(() => facade.films()).not.toThrow();
+    expect(facade.error()).toBeTruthy();
+    expect(facade.films().map((film) => film.id)).toEqual(['f1', 'f2']);
+    expect(facade.detail()?.id).toBe('f1');
   });
 });

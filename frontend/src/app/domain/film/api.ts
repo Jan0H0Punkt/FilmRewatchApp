@@ -112,6 +112,16 @@ export class FilmApi {
     // request. Racing the library load would therefore cancel it and strand
     // `list` holding just this one film.
     if (this.list.isLoading()) return undefined;
+    // A failed `list` can't answer "is it already in the list" either:
+    // Angular 22's `httpResource.value()` THROWS `ResourceValueError` once
+    // its resource has errored, rather than falling back to `defaultValue`.
+    // This factory runs inside `list`'s own effect, so an unguarded read
+    // here crashes on the next tick after ANY `/films` reload fails while a
+    // film is selected — `selectedId` is never cleared on leaving the detail
+    // view, so that includes reloads long after this resource last fired.
+    // Bail out like the race guard above; a later successful reload clears
+    // `list.error()` and re-runs this normally.
+    if (this.list.error()) return undefined;
     const inList = this.list.value().some((film) => film.id === id);
     return inList ? undefined : `${environment.apiBaseUrl}/films/${id}`;
   });

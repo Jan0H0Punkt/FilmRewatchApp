@@ -135,3 +135,52 @@ describe('FilmApi with the detail view opened before the library lands', () => {
     expect(api.list.value().map((film) => film.id)).toEqual(['f1', 'f9']);
   });
 });
+
+/**
+ * The decisive unguarded reader (residual-fix review): `detail`'s request
+ * factory reads `this.list.value()` and runs inside `list`'s own effect, so
+ * it re-evaluates on every tick regardless of whether anything ever reads
+ * `detail` itself. A failed `/films` reload while a film stays selected
+ * therefore crashes purely from ticking change detection — no template, no
+ * `FilmFacade` read, required.
+ */
+describe('FilmApi.detail when list has errored', () => {
+  let api: FilmApi;
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(FilmApi);
+    httpTesting = TestBed.inject(HttpTestingController);
+
+    TestBed.tick();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films`).flush([filmDto({ id: 'f1' })]);
+    TestBed.tick();
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('does not crash the effect flush, and makes no fallback request, once list has errored', async () => {
+    // Selects a film already in `list` — no fallback fetch, exactly like
+    // opening the detail view for a film the library already has.
+    api.selectedId.set('f1');
+    TestBed.tick();
+
+    // A later reload (re-opening a view that refetches) fails. `selectedId`
+    // was never cleared, so `detail`'s factory re-evaluates on the next tick
+    // even though nothing here ever reads `api.detail` itself.
+    api.list.reload();
+    TestBed.tick();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films`).flush('boom', { status: 500, statusText: 'Server Error' });
+    // `httpResource` settles an errored response through a microtask (its
+    // loader is async) — see the fold-in test above for the same pattern.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(() => TestBed.tick()).not.toThrow();
+    httpTesting.expectNone(`${environment.apiBaseUrl}/films/f1`);
+  });
+});

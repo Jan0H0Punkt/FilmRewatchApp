@@ -71,7 +71,11 @@ export class FilmFacade {
   readonly detail = computed<FilmDetail | null>(() => {
     const id = this.api.selectedId();
     if (id === null) return null;
-    const dto = this.api.list.value().find((film) => film.id === id);
+    // `listSafe`, not `api.list.value()` — see its docstring: a failed
+    // `/films` reload throws `ResourceValueError` on a raw read. `selectedId`
+    // is never cleared on leaving the detail view, so this keeps recomputing
+    // on every later reload too, not just while the view is open.
+    const dto = this.listSafe().find((film) => film.id === id);
     return dto ? toFilmDetail(dto) : null;
   });
   /** Either request being in flight counts — the fallback fetch is invisible until it resolves. */
@@ -91,9 +95,9 @@ export class FilmFacade {
     this.detailNotFound() ? undefined : (this.api.list.error() ?? this.api.detail.error()),
   );
 
-  /** Finds `id`'s current DTO in `list`. */
+  /** Finds `id`'s current DTO in `list`. `listSafe`, not `api.list.value()` — same throw-on-error hazard as `detail` above. */
   private findFilm(id: string): FilmDto | undefined {
-    return this.api.list.value().find((film) => film.id === id);
+    return this.listSafe().find((film) => film.id === id);
   }
 
   /** Applies `updater` to `id`'s DTO in `list`, wherever it's present. */
