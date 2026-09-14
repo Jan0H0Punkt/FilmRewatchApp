@@ -100,14 +100,24 @@ export class FilmFacade {
     return this.listSafe().find((film) => film.id === id);
   }
 
-  /** Applies `updater` to `id`'s DTO in `list`, wherever it's present. */
+  /**
+   * Applies `updater` to `id`'s DTO in `list`, wherever it's present.
+   *
+   * `.set`, not `.update` — `WritableResource.update` is `this.set(updateFn(
+   * untracked(this.value)))`, so it reads `this.value` internally, which
+   * throws `ResourceValueError` while `list` is errored (same hazard as
+   * `detail`/`findFilm` above). `.set` writes directly with no such read, so
+   * it works from `listSafe`'s last-good snapshot even while errored — which
+   * is exactly when a user is looking at a stale-but-rendered detail view
+   * and clicks an edit control.
+   */
   private updateFilm(id: string, updater: (film: FilmDto) => FilmDto): void {
-    this.api.list.value.update((films) => films.map((film) => (film.id === id ? updater(film) : film)));
+    this.api.list.value.set(this.listSafe().map((film) => (film.id === id ? updater(film) : film)));
   }
 
-  /** Drops `id` from `list` and clears `selectedId` — the film stopped existing. */
+  /** Drops `id` from `list` and clears `selectedId` — the film stopped existing. `.set`, not `.update` — see `updateFilm` above. */
   private removeFilmLocally(id: string): void {
-    this.api.list.value.update((films) => films.filter((film) => film.id !== id));
+    this.api.list.value.set(this.listSafe().filter((film) => film.id !== id));
     this.api.selectedId.set(null);
   }
 

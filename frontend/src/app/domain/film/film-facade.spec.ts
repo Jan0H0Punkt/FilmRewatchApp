@@ -148,6 +148,10 @@ describe('FilmFacade', () => {
       const api = stubApi([heat], 'f1');
       api.update.mockReturnValue(throwError(() => new Error('network error')));
       const facade = setUp(api);
+      // Read before the write: forces `listSafe` to compute against the
+      // pre-write state, so a stale-read bug (never re-deriving after the
+      // write) is distinguishable from a genuine rollback.
+      expect(facade.films()[0]?.isFavorite).toBe(false);
 
       await new Promise<void>((resolve) => {
         facade.update('f1', { isFavorite: true }).subscribe({ error: () => resolve() });
@@ -176,6 +180,9 @@ describe('FilmFacade', () => {
       const api = stubApi([heat], 'f1');
       api.update.mockReturnValue(throwError(() => new Error('fail')));
       const facade = setUp(api);
+      // Read before the write — see the rollback test above.
+      expect(facade.detail()?.delayDays).toBe(3);
+      expect(facade.detail()?.isFavorite).toBe(true);
 
       await new Promise<void>((resolve) => {
         facade.update('f1', { delayDays: 7 }).subscribe({ error: () => resolve() });
@@ -234,6 +241,8 @@ describe('FilmFacade', () => {
       });
       const api = stubApi([heat], 'f1');
       const facade = setUp(api);
+      // Read before the write — see the rollback test above.
+      expect(facade.detail()?.ratingHistory.map((entry) => entry.id)).toEqual(['r1', 'r2']);
 
       facade.applyRatingRemoved('f1', 'r2', false);
 
@@ -245,6 +254,8 @@ describe('FilmFacade', () => {
       const heat = filmDto();
       const api = stubApi([heat], 'f1');
       const facade = setUp(api);
+      // Read before the write — see the rollback test above.
+      expect(facade.films().map((film) => film.id)).toEqual(['f1']);
 
       facade.applyRatingRemoved('f1', 'r1', true);
 
@@ -349,5 +360,38 @@ describe('FilmFacade against a real FilmApi, once list has errored', () => {
     expect(facade.error()).toBeTruthy();
     expect(facade.films().map((film) => film.id)).toEqual(['f1', 'f2']);
     expect(facade.detail()?.id).toBe('f1');
+  });
+
+  /**
+   * The Important the reviewer found on top of the fix above: `detail()` now
+   * correctly renders the stale film while `list` is errored (the fix
+   * working), which makes its edit controls reachable — and `update()`'s
+   * optimistic write went through `updateFilm`'s `.value.update(...)`, which
+   * (per `BaseWritableResource.update`) reads `.value` internally and throws
+   * the same `ResourceValueError` `.set` does not.
+   */
+  it('applies an optimistic write without throwing while list is errored, and the change is visible', async () => {
+    const facade = await loadTwoFilms();
+
+    facade.select('f1');
+    TestBed.tick();
+    expect(facade.films().map((film) => film.id)).toEqual(['f1', 'f2']); // prime listSafe
+    expect(facade.detail()?.id).toBe('f1');
+
+    facade.reload();
+    TestBed.tick();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films`).flush('boom', { status: 500, statusText: 'Server Error' });
+    await Promise.resolve();
+    await Promise.resolve();
+    TestBed.tick();
+    expect(facade.error()).toBeTruthy();
+
+    // `update()`'s optimistic write (`findFilm` + `updateFilm`) runs
+    // synchronously on call, before the PATCH is even issued — not
+    // subscribing here keeps the PATCH from firing, so there's nothing left
+    // for `httpTesting.verify()` to complain about.
+    expect(() => facade.update('f1', { isFavorite: true })).not.toThrow();
+    expect(facade.detail()?.isFavorite).toBe(true);
+    expect(facade.films().find((film) => film.id === 'f1')?.isFavorite).toBe(true);
   });
 });
