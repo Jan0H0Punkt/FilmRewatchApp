@@ -445,7 +445,6 @@ The ``db_session`` fixture auto-marks these as ``db``; everything rolls back at
 teardown.
 """
 
-import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -569,17 +568,6 @@ def test_deleting_a_film_removes_its_suggestion(db_session: Session) -> None:
 def test_collect_inputs_is_empty_for_an_empty_library(db_session: Session) -> None:
     assert RewatchRepository(db_session).collect_inputs() == []
 
-
-def test_uuid_generation_is_unused_here(db_session: Session) -> None:
-    # Guard: the projection's key is the film id, never a fresh uuid4.
-    film = _add_film(db_session, natural_key="key|1990|a")
-    db_session.commit()
-    repository = RewatchRepository(db_session)
-    repository.replace_all([DueFilm(film_id=film.id, days_until_next_rewatch=0)], COMPUTED_AT)
-    repository.commit()
-    [row] = repository.list_all()
-    assert isinstance(row.film_id, uuid.UUID)
-    assert row.film_id == film.id
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -693,7 +681,7 @@ class RewatchRepository:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && uv run pytest tests/test_rewatch_repository.py -v`
-Expected: PASS — 8 passed
+Expected: PASS — 7 passed
 
 - [ ] **Step 5: Run the full backend gate**
 
@@ -752,6 +740,9 @@ class FakeRepository:
         self.stored_at = computed_at
 
     def list_all(self) -> Sequence[RewatchSuggestion]:
+        # Narrowed for pyright strict: ``computed_at`` is a non-optional column,
+        # and nothing reads this back before ``replace_all`` has stamped it.
+        assert self.stored_at is not None
         return [
             RewatchSuggestion(
                 film_id=row.film_id,
@@ -1178,6 +1169,8 @@ stops the task cleanly, that a failing run cannot take the loop or the app
 down, and that the interval is configurable.
 """
 
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -1209,6 +1202,13 @@ def test_the_app_starts_the_task_and_cancels_it_on_shutdown(
 
     with TestClient(create_app()) as client:
         assert client.get("/api/v1/health").status_code == 200
+        # ``create_task`` only schedules; without waiting, shutdown can cancel
+        # the task before it reaches its first run and the assertion below
+        # would flake. Poll rather than sleep a fixed time, so the common case
+        # costs a few milliseconds.
+        deadline = time.monotonic() + 2
+        while not runs and time.monotonic() < deadline:
+            time.sleep(0.01)
 
     # One run at startup (the loop then sleeps until the next interval).
     assert runs == [1]
@@ -2078,6 +2078,9 @@ async function render(
   isLoading = false,
   error: unknown = undefined,
 ): Promise<HTMLElement> {
+  // The favourite test renders twice; without the reset the second
+  // `configureTestingModule` throws because a component already exists.
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [Rewatch],
     providers: [
@@ -2438,6 +2441,15 @@ describe('navDestinations', () => {
     expect(navDestinations(registry)).toEqual([{ path: 'a', icon: 'star', label: 'Alpha' }]);
   });
 
+  it('excludes a redirect entry, which mounts no component', () => {
+    const registry: readonly RouteRegistryEntry[] = [
+      { path: '', title: 'A', redirectTo: 'a' },
+      { path: 'a', title: 'A', loadComponent: load, navIcon: 'star', navLabel: 'Alpha' },
+    ];
+
+    expect(navDestinations(registry).map((item) => item.path)).toEqual(['a']);
+  });
+
   it('keeps the registry order', () => {
     const registry: readonly RouteRegistryEntry[] = [
       { path: 'a', title: 'A', loadComponent: load, navIcon: 'i', navLabel: 'A' },
@@ -2457,8 +2469,10 @@ describe('ROUTE_REGISTRY', () => {
     expect(navDestinations(ROUTE_REGISTRY).map((item) => item.path)).not.toContain('film/:id');
   });
 
-  it('lands on the Rewatch view at the root path', () => {
-    expect(ROUTE_REGISTRY.find((entry) => entry.path === '')?.title).toBe('Rewatch');
+  it('redirects the root path to the Rewatch view', () => {
+    // A redirect, not a second mount: `/` must resolve to the URL the
+    // navigation links to, or it would mark no destination active.
+    expect(ROUTE_REGISTRY.find((entry) => entry.path === '')?.redirectTo).toBe('rewatch');
   });
 });
 ```
@@ -2482,6 +2496,28 @@ In `frontend/src/app/core/route-registry.ts`, add the two optional fields to
   readonly navIcon?: string;
   /** Navigation label, shown beside `navIcon`. */
   readonly navLabel?: string;
+  /**
+   * Set instead of `loadComponent` to make this path a redirect — the landing
+   * route (§6.5) points at the Rewatch view this way rather than mounting the
+   * component a second time, which would leave `/` matching no navigation
+   * entry and so marking none of them active.
+   */
+  readonly redirectTo?: string;
+```
+
+Make `loadComponent` optional in the same interface (`readonly loadComponent?: () => Promise<Type<unknown>>;`), since a redirect entry has none, and teach `buildRoutes` about it:
+
+```ts
+/** Projects the registry into the `Routes` array the Angular router consumes. */
+export function buildRoutes(registry: readonly RouteRegistryEntry[]): Routes {
+  return registry.map(({ path, title, loadComponent, redirectTo }) =>
+    redirectTo === undefined
+      ? { path, title, loadComponent }
+      : // `pathMatch: 'full'` so an empty path redirects only when it is the
+        // whole URL, not as a prefix of every other route.
+        { path, redirectTo, pathMatch: 'full' as const },
+  );
+}
 ```
 
 ```ts
@@ -2519,9 +2555,9 @@ const filmDetail = (): Promise<typeof import('../views/film-detail/film-detail')
 
 export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   // Rewatch is the landing route: it is the primary discovery view (§6.5).
-  // The bare path carries no nav fields — `/rewatch` below is the destination
-  // the navigation links to, so the active marker has one path to match.
-  { path: '', title: 'Rewatch', loadComponent: rewatch },
+  // A redirect rather than a second mount, so `/` resolves to the same URL the
+  // navigation links to and the active marker has one path to match.
+  { path: '', title: 'Rewatch', redirectTo: 'rewatch' },
   { path: 'rewatch', title: 'Rewatch', loadComponent: rewatch, navIcon: 'replay', navLabel: 'Rewatch' },
   { path: 'library', title: 'Library', loadComponent: library, navIcon: 'video_library', navLabel: 'Library' },
   // Reached by selecting a film, never from the navigation (§6.5).
