@@ -16,7 +16,7 @@ It is a monorepo with **per-tier guidance** — when working inside a tier, read
 Development is **design-doc-driven and milestone-sequenced**. Before writing feature code, read the relevant sections of `docs/`:
 
 - `docs/designs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
-- `docs/milestones/MILESTONE_M1_V1.md` — the current milestone (M1, "Core domain"), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
+- `docs/milestones/MILESTONE_M1_V1.md` — the most recent milestone document (M1, "Core domain"; no M2-M4 milestone doc exists), broken into per-PR work items with acceptance criteria and an explicit out-of-scope list.
 - `docs/requirements/REQUIREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
 
 **The core domain (M1) and the rewatch engine (M4) are built.** The current open item is the real rewatch scoring algorithm — see `docs/requirements/OPEN_DECISIONS_V1.md`. Do not add logic to a milestone that doesn't own it (see the out-of-scope table in the relevant milestone doc). This discipline applies to **both tiers**.
