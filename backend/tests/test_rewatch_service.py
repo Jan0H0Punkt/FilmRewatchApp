@@ -11,6 +11,11 @@ from app.rewatch.service import RewatchService
 
 TODAY = date(2026, 9, 14)
 
+# What the :func:`_input` profile below scores: five stars (reverse rating 1),
+# so two steps of 10 + 90 days on top of the base. These tests are about
+# orchestration, not scoring — the number only has to be the helper's.
+REFERENCE_INTERVAL_DAYS = BASE_INTERVAL_DAYS + 200
+
 
 class FakeRepository:
     """Records what the service asked of it (satisfies ``RewatchRepositoryProtocol``)."""
@@ -49,16 +54,17 @@ class FakeRepository:
 def _input(days_since_watch: int) -> RewatchInput:
     return RewatchInput(
         film_id=uuid.uuid4(),
-        average_rating=Decimal("4.0"),
+        average_rating=Decimal("5.0"),
         watch_count=1,
         last_watched_date=TODAY - timedelta(days=days_since_watch),
         is_favorite=False,
         delay_days=0,
+        runtime_minutes=90,
     )
 
 
 def test_recompute_stores_only_the_due_films_and_reports_the_count() -> None:
-    repository = FakeRepository([_input(BASE_INTERVAL_DAYS + 5), _input(0)])
+    repository = FakeRepository([_input(REFERENCE_INTERVAL_DAYS + 5), _input(0)])
 
     stored_count = RewatchService(repository).recompute(TODAY)
 
@@ -67,7 +73,7 @@ def test_recompute_stores_only_the_due_films_and_reports_the_count() -> None:
 
 
 def test_recompute_commits_exactly_once() -> None:
-    repository = FakeRepository([_input(BASE_INTERVAL_DAYS)])
+    repository = FakeRepository([_input(REFERENCE_INTERVAL_DAYS)])
 
     RewatchService(repository).recompute(TODAY)
 
@@ -75,7 +81,7 @@ def test_recompute_commits_exactly_once() -> None:
 
 
 def test_recompute_stamps_every_row_with_one_timestamp() -> None:
-    repository = FakeRepository([_input(BASE_INTERVAL_DAYS)])
+    repository = FakeRepository([_input(REFERENCE_INTERVAL_DAYS)])
 
     RewatchService(repository).recompute(TODAY)
 
@@ -91,7 +97,9 @@ def test_recompute_over_an_empty_library_stores_nothing() -> None:
 
 
 def test_list_suggestions_passes_the_stored_order_through_untouched() -> None:
-    repository = FakeRepository([_input(BASE_INTERVAL_DAYS + 40), _input(BASE_INTERVAL_DAYS)])
+    repository = FakeRepository(
+        [_input(REFERENCE_INTERVAL_DAYS + 40), _input(REFERENCE_INTERVAL_DAYS)]
+    )
     service = RewatchService(repository)
     service.recompute(TODAY)
 

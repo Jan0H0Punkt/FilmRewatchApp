@@ -52,6 +52,7 @@ def test_collect_inputs_averages_only_the_rated_watches(db_session: Session) -> 
     assert row.average_rating == Decimal("4.5")
     assert row.watch_count == 3
     assert row.last_watched_date == date(2026, 1, 1)
+    assert row.runtime_minutes == 170
 
 
 def test_collect_inputs_reports_a_wholly_unrated_film_as_none(db_session: Session) -> None:
