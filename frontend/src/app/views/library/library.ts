@@ -25,6 +25,7 @@ import { RouterLink } from '@angular/router';
 
 import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../../domain/film/facade';
+import { ratingLabelFor, ratingStarsFor } from '../../shared/rating-stars';
 import { filterFilms, hasActiveCriteria, NO_CRITERIA, type LibraryCriteria } from './filters';
 
 /** One row of the result list (§7.2 "Film Result Item"). */
@@ -56,18 +57,6 @@ function endTimeFrom(now: number, runtimeMinutes: number): string {
   const end = now + runtimeMinutes * 60_000;
   const rounded = Math.ceil(end / QUARTER_HOUR_MS) * QUARTER_HOUR_MS;
   return timeFormat.format(new Date(rounded));
-}
-
-/** Rounds to the nearest half star and maps each of the 5 positions to a Material star icon. */
-function ratingStars(rating: number | null): readonly string[] | null {
-  if (rating === null) return null;
-  const rounded = Math.round(rating * 2) / 2;
-  return Array.from({ length: 5 }, (_, index) => {
-    const position = index + 1;
-    if (rounded >= position) return 'star';
-    if (position - rounded === 0.5) return 'star_half';
-    return 'star_border';
-  });
 }
 
 @Component({
@@ -137,9 +126,8 @@ export class Library {
       subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' • '),
       genres: film.genres,
       tags: film.tags,
-      ratingStars: ratingStars(film.averageRating),
-      ratingLabel:
-        film.averageRating === null ? 'Not rated' : `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
+      ratingStars: ratingStarsFor(film.averageRating),
+      ratingLabel: ratingLabelFor(film.averageRating),
       isFavorite: film.isFavorite,
       endTime: endTimeFrom(now, film.runtimeMinutes),
     }));
