@@ -1,7 +1,8 @@
 <div class="film-detail__nav">
-  <!-- The view's own back control (Navigation section): the app shell has no
-       drawer/bottom bar yet, and an installed PWA has no browser back button. -->
-  <a matIconButton routerLink="/library" aria-label="Back to library">
+  <!-- The view's own back control: Film Detail is reached contextually, not
+       a navigation destination (§6.5), so it carries no drawer/bottom-bar
+       entry of its own — it returns to wherever the user came from. -->
+  <a matIconButton [routerLink]="backTarget()" [attr.aria-label]="'Back to ' + backLabel()">
     <mat-icon>arrow_back</mat-icon>
   </a>
 </div>
@@ -16,7 +17,7 @@
 } @else if (notFound()) {
   <div class="film-detail__state">
     <p>This film could not be found.</p>
-    <a matButton routerLink="/library">Back to the library</a>
+    <a matButton [routerLink]="backTarget()">Back to {{ backLabel() }}</a>
   </div>
 } @else if (vm(); as film) {
   <mat-card class="film-detail">
@@ -134,7 +135,9 @@
               <mat-icon>check</mat-icon>
             </button>
           } @else {
-            <span class="film-detail__letterboxd-label">Letterboxd</span>
+            <!-- A fixed label rather than the URL: it names the destination
+                 instead of reading a path aloud, and cannot overflow the row.
+                 It also makes the separate "Letterboxd" caption redundant. -->
             @if (film.letterboxdUrl) {
               <a
                 class="film-detail__letterboxd-link"
@@ -142,11 +145,10 @@
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span class="film-detail__letterboxd-text">{{ letterboxdLinkText(film.letterboxdUrl) }}</span>
-                <mat-icon aria-hidden="true" inline>open_in_new</mat-icon>
+                See on Letterboxd
               </a>
             } @else {
-              <span class="film-detail__letterboxd-empty">No link set</span>
+              <span class="film-detail__letterboxd-empty">No Letterboxd link</span>
             }
             <button
               matIconButton
@@ -160,7 +162,7 @@
           }
         </div>
 
-        <button class="film-detail__delete" matButton type="button" (click)="confirmDeleteFilm()">
+        <button class="film-detail__delete destructive" matButton type="button" (click)="confirmDeleteFilm()">
           <mat-icon>delete</mat-icon>
           Delete film
         </button>
@@ -201,6 +203,7 @@
             </span>
             <span matListItemLine>Watched {{ entry.watchDate }} • Logged {{ entry.createdAt }}</span>
             <button
+              class="destructive"
               matIconButton
               matListItemMeta
               type="button"

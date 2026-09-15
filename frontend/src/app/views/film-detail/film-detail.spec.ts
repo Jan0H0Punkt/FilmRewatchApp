@@ -4,7 +4,7 @@
  */
 import { ENTER } from '@angular/cdk/keycodes';
 import { HttpErrorResponse } from '@angular/common/http';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,7 +17,7 @@ import { GenreFacade } from '../../domain/genre/facade';
 import { RatingFacade } from '../../domain/rating/facade';
 import { TagFacade } from '../../domain/tag/facade';
 import type { ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
-import { FilmDetail, stripScheme } from './film-detail';
+import { FilmDetail } from './film-detail';
 
 const HEAT: FilmDetailModel = {
   id: 'f1',
@@ -43,6 +43,10 @@ const HEAT: FilmDetailModel = {
   createdAt: '2024-01-01T10:00:00Z',
   updatedAt: '2024-01-02T10:00:00Z',
 };
+
+/** Matches a route in the test router config below without pulling in a real view. */
+@Component({ selector: 'app-blank', template: '' })
+class BlankComponent {}
 
 /** Stands in for `FilmFacade` so the view is tested without HTTP. */
 function stubFilmFacade(
@@ -92,7 +96,7 @@ async function render(
   TestBed.configureTestingModule({
     imports: [FilmDetail],
     providers: [
-      provideRouter([]),
+      provideRouter([{ path: 'rewatch', component: BlankComponent }]),
       provideNativeDateAdapter(),
       { provide: FilmFacade, useValue: filmFacade },
       { provide: RatingFacade, useValue: ratingFacade },
@@ -241,11 +245,22 @@ describe('FilmDetail', () => {
     expect(facade.select).toHaveBeenCalledWith(HEAT.id);
   });
 
-  it('points the back control at the library route', async () => {
+  it('points the back control at the library route by default', async () => {
     const element = await render(stubFilmFacade(HEAT));
 
-    const back = element.querySelector('a[aria-label="Back to library"]');
+    const back = element.querySelector('a[aria-label="Back to Library"]');
     expect(back?.getAttribute('href')).toBe('/library');
+  });
+
+  it('points the back control at the last route visited before this one', async () => {
+    const element = await render(stubFilmFacade(HEAT));
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/rewatch');
+    await settle();
+
+    const back = element.querySelector('a[aria-label="Back to Rewatch"]');
+    expect(back?.getAttribute('href')).toBe('/rewatch');
   });
 
   describe('rating history (Section B)', () => {
@@ -485,20 +500,22 @@ describe('FilmDetail', () => {
     });
 
     describe('Letterboxd link (read/edit toggle)', () => {
-      it('renders read mode as an external link whose text is the scheme-stripped URL', async () => {
+      it('renders read mode as an external link labelled by its destination', async () => {
         const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }));
 
         const link = element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-link');
         expect(link?.getAttribute('href')).toBe('https://boxd.it/aaaa');
         expect(link?.getAttribute('target')).toBe('_blank');
         expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-        expect(link?.querySelector('.film-detail__letterboxd-text')?.textContent).toBe('boxd.it/aaaa');
+        // The label names where the link goes; the URL itself is never shown.
+        expect(link?.textContent?.trim()).toBe('See on Letterboxd');
+        expect(link?.textContent).not.toContain('boxd.it');
       });
 
-      it('shows "No link set" and no anchor when none is set', async () => {
+      it('shows "No Letterboxd link" and no anchor when none is set', async () => {
         const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: null }));
 
-        expect(element.querySelector('.film-detail__letterboxd-empty')?.textContent).toBe('No link set');
+        expect(element.querySelector('.film-detail__letterboxd-empty')?.textContent).toBe('No Letterboxd link');
         expect(element.querySelector('.film-detail__letterboxd-link')).toBeNull();
       });
 
@@ -533,7 +550,9 @@ describe('FilmDetail', () => {
         await settle();
 
         expect(filmFacade.update).not.toHaveBeenCalled();
-        expect(element.querySelector('.film-detail__letterboxd-text')?.textContent).toBe('boxd.it/aaaa');
+        expect(element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-link')?.getAttribute('href')).toBe(
+          'https://boxd.it/aaaa',
+        );
       });
 
       it('commits a blank value as null through the confirm button', async () => {
@@ -557,20 +576,6 @@ describe('FilmDetail', () => {
         await settle();
 
         expect(filmFacade.update).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('stripScheme', () => {
-      it('strips a leading https:// scheme', () => {
-        expect(stripScheme('https://boxd.it/aaaa')).toBe('boxd.it/aaaa');
-      });
-
-      it('strips a leading http:// scheme', () => {
-        expect(stripScheme('http://boxd.it/aaaa')).toBe('boxd.it/aaaa');
-      });
-
-      it('returns a value with neither scheme unchanged', () => {
-        expect(stripScheme('boxd.it/aaaa')).toBe('boxd.it/aaaa');
       });
     });
 

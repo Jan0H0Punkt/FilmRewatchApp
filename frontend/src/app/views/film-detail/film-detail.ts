@@ -35,6 +35,7 @@ import { MatListModule } from '@angular/material/list';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 
+import { NavigationHistoryService } from '../../core/navigation-history';
 import { FilmFacade } from '../../domain/film/facade';
 import { GenreFacade } from '../../domain/genre/facade';
 import type { FilmDetail as FilmDetailModel, FilmPatch, RatingHistoryEntry } from '../../domain/film/model';
@@ -150,11 +151,6 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
   };
 }
 
-/** Strips a leading `https://`/`http://` for the read-mode link's visible text — the anchor's `href` keeps the full stored URL (REQ §4.1). */
-export function stripScheme(url: string): string {
-  return url.replace(/^https?:\/\//, '');
-}
-
 /** Formats a `Date` as `yyyy-MM-dd` in local time — `toISOString` would shift the day across time zones. */
 function toIsoDate(date: Date): string {
   const year = date.getFullYear();
@@ -201,6 +197,11 @@ export class FilmDetail {
   private readonly genres = inject(GenreFacade);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
+  private readonly navigationHistory = inject(NavigationHistoryService);
+
+  /** Where the view's own back control (§6.5) returns to — see `NavigationHistoryService`. */
+  protected readonly backTarget = this.navigationHistory.backTarget;
+  protected readonly backLabel = this.navigationHistory.backLabel;
 
   /** Bound from the `film/:id` route param via `withComponentInputBinding()`. */
   readonly id = input.required<string>();
@@ -412,11 +413,6 @@ export class FilmDetail {
   private readonly letterboxdEditButton = viewChild<ElementRef<HTMLButtonElement>>('letterboxdEditButton');
   /** Guards the focus effect against firing on initial render — only a genuine toggle should move focus. */
   private wasLetterboxdEditing = false;
-
-  /** Wraps the module-level `stripScheme` for template use (a free function can't be called from a template). */
-  protected letterboxdLinkText(url: string): string {
-    return stripScheme(url);
-  }
 
   protected startEditingLetterboxd(): void {
     this.letterboxdEditing.set(true);
