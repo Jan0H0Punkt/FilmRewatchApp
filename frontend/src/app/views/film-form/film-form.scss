@@ -51,6 +51,19 @@
   font: var(--mat-sys-body-small);
 }
 
+/* Genres vs tags colour, app-wide (`film-detail.scss` sets the same pair) — the shared
+   editable-chips component reads these custom properties, which inherit through its
+   view encapsulation. Without this override both rows fall back to the same default. */
+.film-form__genres {
+  --chips-container-color: var(--mat-sys-tertiary-container);
+  --chips-label-color: var(--mat-sys-on-tertiary-container);
+}
+
+.film-form__tags {
+  --chips-container-color: var(--mat-sys-secondary-container);
+  --chips-label-color: var(--mat-sys-on-secondary-container);
+}
+
 /* Rating picker — mirrors film-detail.scss's `.rating-form__*` (same widget, duplicated per that file's own convention). */
 .film-form__rating {
   align-items: center;
