@@ -9,28 +9,56 @@
 
   <!-- Plain `(submit)`, not `(ngSubmit)`: no `FormsModule`, just a submit button inside a native form — matches film-detail's Add Rating form. -->
   <form class="film-form__form" (submit)="onSubmit($event)">
-    <mat-form-field class="film-form__title" subscriptSizing="dynamic">
-      <mat-label>Title</mat-label>
-      <input
-        #titleInput
-        matInput
-        type="text"
-        required
-        [value]="primaryTitle()"
-        (input)="primaryTitle.set(titleInput.value)"
-      />
-    </mat-form-field>
-
-    <mat-form-field class="film-form__original-title" subscriptSizing="dynamic">
-      <mat-label>Original title (optional)</mat-label>
-      <input
-        #originalTitleInput
-        matInput
-        type="text"
-        [value]="originalTitle()"
-        (input)="originalTitle.set(originalTitleInput.value)"
-      />
-    </mat-form-field>
+    <!-- Any number of titles (REQ §4.1); Primary/Original are each mutually
+         exclusive across rows — see `titleRows`'s `primaryDisabled`/`originalDisabled`. -->
+    <div class="film-form__titles">
+      @for (row of titleRows(); track row.id) {
+        <div class="film-form__title-row">
+          <mat-form-field class="film-form__title-value" subscriptSizing="dynamic">
+            <mat-label>Title</mat-label>
+            <input
+              #titleValueInput
+              matInput
+              type="text"
+              required
+              [value]="row.value"
+              (input)="setTitleValue(row.id, titleValueInput.value)"
+            />
+          </mat-form-field>
+          <mat-checkbox
+            class="film-form__title-primary"
+            [checked]="row.isPrimary"
+            [disabled]="row.primaryDisabled"
+            (change)="toggleTitlePrimary(row.id)"
+          >
+            Primary
+          </mat-checkbox>
+          <mat-checkbox
+            class="film-form__title-original"
+            [checked]="row.isOriginal"
+            [disabled]="row.originalDisabled"
+            (change)="toggleTitleOriginal(row.id)"
+          >
+            Original
+          </mat-checkbox>
+          @if (row.canRemove) {
+            <button
+              matIconButton
+              type="button"
+              class="film-form__title-remove"
+              aria-label="Remove this title"
+              (click)="removeTitleRow(row.id)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+      }
+      <button matButton type="button" class="film-form__title-add" (click)="addTitleRow()">
+        <mat-icon>add</mat-icon>
+        Add another title
+      </button>
+    </div>
 
     <mat-form-field class="film-form__year" subscriptSizing="dynamic">
       <mat-label>Release year</mat-label>

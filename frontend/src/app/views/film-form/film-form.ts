@@ -9,6 +9,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -26,6 +27,21 @@ import { ratingStarsFor } from '../../shared/rating-stars';
 const MIN_RELEASE_YEAR = 1888; // REQ §4.1 — the year of the first film ever made, mirrors the backend bound.
 /** The picker's five star positions — reused from `film-detail.ts`'s Add Rating control. */
 const STAR_POSITIONS: readonly number[] = [1, 2, 3, 4, 5];
+
+/** One title row's editable state (REQ §4.1 Title object) — `id` is a client-only key, never sent on the wire. */
+interface TitleRowState {
+  readonly id: number;
+  readonly value: string;
+  readonly isPrimary: boolean;
+  readonly isOriginal: boolean;
+}
+
+/** A title row plus its mutual-exclusion disabled state, derived from its siblings on every render. */
+interface TitleRowVm extends TitleRowState {
+  readonly primaryDisabled: boolean;
+  readonly originalDisabled: boolean;
+  readonly canRemove: boolean;
+}
 
 /** Formats a `Date` as `yyyy-MM-dd` in local time — `toISOString` would shift the day across time zones. */
 function toIsoDate(date: Date): string {
@@ -60,6 +76,7 @@ function extractErrorMessage(error: unknown, fallback: string): string {
     EditableChips,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatDatepickerModule,
     MatFormFieldModule,
     MatIconModule,
@@ -84,13 +101,73 @@ export class FilmForm {
   protected readonly minReleaseYear = MIN_RELEASE_YEAR;
 
   /**
-   * Seeded from `title`, then freely editable — a `linkedSignal` so a direct
+   * Starts as one row seeded from `title` — a `linkedSignal` so a direct
    * `?title=` navigation still prefills it. `?? ''`: `withComponentInputBinding()`
    * leaves the input `undefined` (not the declared default) when the route
    * carries no `title` query param at all, e.g. reached without a search first.
+   * `addTitleRow`/`removeTitleRow`/`setTitleValue`/`toggleTitlePrimary`/
+   * `toggleTitleOriginal` below are the only other writers.
    */
-  protected readonly primaryTitle = linkedSignal(() => this.title() ?? '');
-  protected readonly originalTitle = signal('');
+  protected readonly titles = linkedSignal<readonly TitleRowState[]>(() => [
+    { id: 0, value: this.title() ?? '', isPrimary: false, isOriginal: false },
+  ]);
+  /** Monotonic — `@for`'s `track`, and every row lookup below, key off this rather than array index. */
+  private nextTitleRowId = 1;
+
+  /**
+   * Each row plus its disabled state: once any row has a flag set, every
+   * *other* row's matching checkbox disables — covers rows added afterward
+   * too, since this recomputes off the live list on every change.
+   */
+  protected readonly titleRows = computed<readonly TitleRowVm[]>(() => {
+    const rows = this.titles();
+    const anyPrimary = rows.some((row) => row.isPrimary);
+    const anyOriginal = rows.some((row) => row.isOriginal);
+    return rows.map((row) => ({
+      ...row,
+      primaryDisabled: anyPrimary && !row.isPrimary,
+      originalDisabled: anyOriginal && !row.isOriginal,
+      canRemove: rows.length > 1,
+    }));
+  });
+
+  protected addTitleRow(): void {
+    this.titles.update((rows) => [
+      ...rows,
+      { id: this.nextTitleRowId++, value: '', isPrimary: false, isOriginal: false },
+    ]);
+  }
+
+  /** No-op on the last remaining row — the backend requires at least one title. */
+  protected removeTitleRow(id: number): void {
+    this.titles.update((rows) => (rows.length > 1 ? rows.filter((row) => row.id !== id) : rows));
+  }
+
+  protected setTitleValue(id: number, value: string): void {
+    this.titles.update((rows) => rows.map((row) => (row.id === id ? { ...row, value } : row)));
+  }
+
+  /** Toggles this row's flag; every other row's is forced off — mutual exclusion (REQ §4.1: at most one primary). */
+  protected toggleTitlePrimary(id: number): void {
+    this.titles.update((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, isPrimary: !row.isPrimary } : { ...row, isPrimary: false })),
+    );
+  }
+
+  /** Same mutual exclusion as `toggleTitlePrimary`, independently — at most one original (REQ §4.1). */
+  protected toggleTitleOriginal(id: number): void {
+    this.titles.update((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, isOriginal: !row.isOriginal } : { ...row, isOriginal: false })),
+    );
+  }
+
+  /** Every row non-blank, and — once there's more than one — exactly one marked primary (mirrors the backend's own rule). */
+  protected readonly titlesValid = computed(() => {
+    const rows = this.titles();
+    if (rows.some((row) => row.value.trim() === '')) return false;
+    return rows.length === 1 || rows.filter((row) => row.isPrimary).length === 1;
+  });
+
   protected readonly releaseYear = signal<number | null>(null);
   protected readonly director = signal('');
   protected readonly runtimeMinutes = signal<number | null>(null);
@@ -151,7 +228,7 @@ export class FilmForm {
     const year = this.releaseYear();
     const runtime = this.runtimeMinutes();
     return (
-      this.primaryTitle().trim() !== '' &&
+      this.titlesValid() &&
       year !== null &&
       year >= MIN_RELEASE_YEAR &&
       year <= this.currentYear &&
@@ -179,12 +256,14 @@ export class FilmForm {
     const watchDate = this.watchDate();
     if (!this.isValid() || year === null || runtime === null || watchDate === null || this.isSubmitting()) return;
 
-    const originalTitle = this.originalTitle().trim();
     const posterImage = this.posterImage().trim();
     const selectedValue = this.selectedValue();
     const payload: FilmCreateInput = {
-      primaryTitle: this.primaryTitle().trim(),
-      originalTitle: originalTitle === '' ? null : originalTitle,
+      titles: this.titles().map((row) => ({
+        value: row.value.trim(),
+        isPrimary: row.isPrimary,
+        isOriginal: row.isOriginal,
+      })),
       releaseYear: year,
       director: this.director().trim(),
       runtimeMinutes: runtime,

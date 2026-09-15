@@ -95,9 +95,34 @@ async function addChip(element: HTMLElement, rowClass: string, value: string): P
   await settle();
 }
 
+function titleRowElements(element: HTMLElement): readonly HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>('.film-form__title-row')];
+}
+
+function titleValueInput(element: HTMLElement, index = 0): HTMLInputElement {
+  return titleRowElements(element)[index]!.querySelector<HTMLInputElement>('.film-form__title-value input')!;
+}
+
+function primaryCheckbox(element: HTMLElement, index = 0): HTMLInputElement {
+  return titleRowElements(element)[index]!.querySelector<HTMLInputElement>(
+    '.film-form__title-primary input[type="checkbox"]',
+  )!;
+}
+
+function originalCheckbox(element: HTMLElement, index = 0): HTMLInputElement {
+  return titleRowElements(element)[index]!.querySelector<HTMLInputElement>(
+    '.film-form__title-original input[type="checkbox"]',
+  )!;
+}
+
+async function addTitleRow(element: HTMLElement): Promise<void> {
+  element.querySelector<HTMLButtonElement>('.film-form__title-add')!.click();
+  await settle();
+}
+
 /** Fills every required field except whichever the caller omits from `skip`. */
 async function fillRequiredFields(element: HTMLElement, skip: ReadonlySet<string> = new Set()): Promise<void> {
-  if (!skip.has('title')) setValue(element, '.film-form__title input', 'Heat');
+  if (!skip.has('title')) setValue(element, '.film-form__title-value input', 'Heat');
   if (!skip.has('year')) setValue(element, '.film-form__year input', '1995');
   if (!skip.has('director')) setValue(element, '.film-form__director input', 'Michael Mann');
   if (!skip.has('runtime')) setValue(element, '.film-form__runtime input', '170');
@@ -130,7 +155,7 @@ describe('FilmForm', () => {
     });
     const harness = await RouterTestingHarness.create('/films/new');
 
-    const titleInput = harness.routeNativeElement?.querySelector<HTMLInputElement>('.film-form__title input');
+    const titleInput = harness.routeNativeElement?.querySelector<HTMLInputElement>('.film-form__title-value input');
 
     expect(titleInput?.value).toBe('');
   });
@@ -138,7 +163,7 @@ describe('FilmForm', () => {
   it('prefills the title from the ?title= query param', async () => {
     const element = await render(stubFilmFacade(), 'Heat');
 
-    expect(element.querySelector<HTMLInputElement>('.film-form__title input')?.value).toBe('Heat');
+    expect(titleValueInput(element).value).toBe('Heat');
   });
 
   it('disables submit until every required field is filled', async () => {
@@ -171,7 +196,7 @@ describe('FilmForm', () => {
 
     expect(filmFacade.create).toHaveBeenCalledWith(
       expect.objectContaining<Partial<FilmCreateInput>>({
-        primaryTitle: 'Heat',
+        titles: [{ value: 'Heat', isPrimary: false, isOriginal: false }],
         releaseYear: 1995,
         director: 'Michael Mann',
         runtimeMinutes: 170,
@@ -204,5 +229,111 @@ describe('FilmForm', () => {
 
     expect(element.querySelector('[role="alert"]')?.textContent).toContain('Heat');
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  describe('titles (REQ §4.1)', () => {
+    it('starts with a single row that has no remove button', async () => {
+      const element = await render();
+
+      expect(titleRowElements(element)).toHaveLength(1);
+      expect(element.querySelector('.film-form__title-remove')).toBeNull();
+    });
+
+    it('adds a removable row when Add another title is clicked', async () => {
+      const element = await render();
+
+      await addTitleRow(element);
+
+      expect(titleRowElements(element)).toHaveLength(2);
+      expect(element.querySelectorAll('.film-form__title-remove')).toHaveLength(2);
+    });
+
+    it('removes a row, dropping back to one row with no remove button', async () => {
+      const element = await render();
+      await addTitleRow(element);
+
+      element.querySelectorAll<HTMLButtonElement>('.film-form__title-remove')[1]!.click();
+      await settle();
+
+      expect(titleRowElements(element)).toHaveLength(1);
+      expect(element.querySelector('.film-form__title-remove')).toBeNull();
+    });
+
+    it('disables every other row’s Primary checkbox once one is checked, including a row added afterward', async () => {
+      const element = await render();
+      await addTitleRow(element);
+
+      primaryCheckbox(element, 0).click();
+      await settle();
+      expect(primaryCheckbox(element, 1).disabled).toBe(true);
+
+      await addTitleRow(element);
+      expect(primaryCheckbox(element, 2).disabled).toBe(true);
+    });
+
+    it('re-enables every row’s Primary checkbox once the checked one is unchecked', async () => {
+      const element = await render();
+      await addTitleRow(element);
+      primaryCheckbox(element, 0).click();
+      await settle();
+
+      primaryCheckbox(element, 0).click();
+      await settle();
+
+      expect(primaryCheckbox(element, 1).disabled).toBe(false);
+    });
+
+    it('keeps Original mutually exclusive independently of Primary', async () => {
+      const element = await render();
+      await addTitleRow(element);
+
+      originalCheckbox(element, 0).click();
+      await settle();
+
+      expect(originalCheckbox(element, 1).disabled).toBe(true);
+      expect(primaryCheckbox(element, 1).disabled).toBe(false);
+    });
+
+    it('blocks submit once there is more than one title until exactly one is marked Primary', async () => {
+      const element = await render();
+      await fillRequiredFields(element);
+      await addTitleRow(element);
+      titleValueInput(element, 1).value = 'Hitze';
+      titleValueInput(element, 1).dispatchEvent(new Event('input'));
+      await settle();
+
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+
+      primaryCheckbox(element, 0).click();
+      await settle();
+
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+    });
+
+    it('sends every row flagged as checked, in row order', async () => {
+      const filmFacade = stubFilmFacade();
+      const element = await render(filmFacade);
+      await fillRequiredFields(element);
+      await addTitleRow(element);
+      titleValueInput(element, 1).value = 'Hitze';
+      titleValueInput(element, 1).dispatchEvent(new Event('input'));
+      await settle();
+      originalCheckbox(element, 1).click();
+      await settle();
+      primaryCheckbox(element, 0).click();
+      await settle();
+
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await settle();
+
+      expect(filmFacade.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<FilmCreateInput>>({
+          titles: [
+            { value: 'Heat', isPrimary: true, isOriginal: false },
+            { value: 'Hitze', isPrimary: false, isOriginal: true },
+          ],
+        }),
+      );
+    });
   });
 });
