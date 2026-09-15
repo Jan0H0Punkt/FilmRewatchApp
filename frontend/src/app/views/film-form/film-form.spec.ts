@@ -9,7 +9,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { Router, provideRouter } from '@angular/router';
+import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
 import { FilmFacade } from '../../domain/film/facade';
@@ -85,10 +86,8 @@ function pressEnter(input: HTMLInputElement): void {
   input.dispatchEvent(event);
 }
 
-/** Opens an editable-chips row's edit mode, types `value`, and commits it with Enter. */
+/** Types `value` into an editable-chips row (already open — `startExpanded`) and commits it with Enter. */
 async function addChip(element: HTMLElement, rowClass: string, value: string): Promise<void> {
-  element.querySelector<HTMLButtonElement>(`.${rowClass} .editable-chips__toggle`)!.click();
-  await settle();
   const input = element.querySelector<HTMLInputElement>(`.${rowClass} input`)!;
   input.value = value;
   input.dispatchEvent(new Event('input'));
@@ -109,6 +108,32 @@ async function fillRequiredFields(element: HTMLElement, skip: ReadonlySet<string
 
 describe('FilmForm', () => {
   afterEach(() => TestBed.resetTestingModule());
+
+  it('renders an empty title field, not the literal text "undefined", when the route carries no ?title= at all', async () => {
+    // Reached directly (no Library search first) — e.g. a bookmark, or the
+    // Library's empty-state "Add your first film" link, which routes to
+    // `films/new` with no query params. `withComponentInputBinding()` does
+    // not call `setInput` for a query param key absent from the URL, so this
+    // exercises the real gap the manual `render()` helper's explicit
+    // `setInput('title', '')` above always papers over.
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [{ path: 'films/new', loadComponent: () => Promise.resolve(FilmForm) }],
+          withComponentInputBinding(),
+        ),
+        provideNativeDateAdapter(),
+        { provide: FilmFacade, useValue: stubFilmFacade() },
+        { provide: TagFacade, useValue: stubLabelFacade([]) },
+        { provide: GenreFacade, useValue: stubLabelFacade([]) },
+      ],
+    });
+    const harness = await RouterTestingHarness.create('/films/new');
+
+    const titleInput = harness.routeNativeElement?.querySelector<HTMLInputElement>('.film-form__title input');
+
+    expect(titleInput?.value).toBe('');
+  });
 
   it('prefills the title from the ?title= query param', async () => {
     const element = await render(stubFilmFacade(), 'Heat');

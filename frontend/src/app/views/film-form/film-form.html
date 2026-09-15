@@ -71,6 +71,8 @@
       />
     </mat-form-field>
 
+    <!-- Starts expanded — a fresh film has nothing to show read-only, so the
+         collapsed mode would just be a bare, unlabelled edit icon. -->
     <app-editable-chips
       class="film-form__genres"
       label="Genres"
@@ -78,6 +80,7 @@
       [values]="selectedGenres()"
       [suggestions]="genreNames()"
       [orderable]="true"
+      [startExpanded]="true"
       (changed)="selectedGenres.set($event)"
     />
 
@@ -87,6 +90,7 @@
       itemNoun="tag"
       [values]="selectedTags()"
       [suggestions]="tagNames()"
+      [startExpanded]="true"
       (changed)="selectedTags.set($event)"
     />
 

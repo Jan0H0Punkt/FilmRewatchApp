@@ -83,8 +83,13 @@ export class FilmForm {
   protected readonly currentYear = new Date().getFullYear();
   protected readonly minReleaseYear = MIN_RELEASE_YEAR;
 
-  /** Seeded from `title`, then freely editable — a `linkedSignal` so a direct `?title=` navigation still prefills it. */
-  protected readonly primaryTitle = linkedSignal(() => this.title());
+  /**
+   * Seeded from `title`, then freely editable — a `linkedSignal` so a direct
+   * `?title=` navigation still prefills it. `?? ''`: `withComponentInputBinding()`
+   * leaves the input `undefined` (not the declared default) when the route
+   * carries no `title` query param at all, e.g. reached without a search first.
+   */
+  protected readonly primaryTitle = linkedSignal(() => this.title() ?? '');
   protected readonly originalTitle = signal('');
   protected readonly releaseYear = signal<number | null>(null);
   protected readonly director = signal('');

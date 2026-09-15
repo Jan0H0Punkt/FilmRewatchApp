@@ -1,9 +1,13 @@
 /* Add Film form. Colours come from Material's M3 system variables, which
    resolve per `color-scheme` — light/dark needs no rule of its own. */
 
+/* `mat-card` pads only its own `mat-card-content`/`mat-card-header` sub-elements,
+   not arbitrary projected content — same reason `film-detail.scss`'s `.film-detail`
+   and `library.scss`'s `.film` set their own padding rather than adding those. */
 .film-form {
   margin: 0 auto;
   max-width: 40rem;
+  padding: 1rem;
 }
 
 .film-form__heading {
