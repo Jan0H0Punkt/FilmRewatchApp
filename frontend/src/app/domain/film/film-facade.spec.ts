@@ -285,8 +285,7 @@ describe('FilmFacade', () => {
 
   describe('create()', () => {
     const draft: FilmCreateInput = {
-      primaryTitle: 'Heat',
-      originalTitle: null,
+      titles: [{ value: 'Heat', isPrimary: false, isOriginal: false }],
       releaseYear: 1995,
       director: 'Michael Mann',
       runtimeMinutes: 170,

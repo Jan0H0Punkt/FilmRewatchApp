@@ -89,14 +89,24 @@ export interface FilmPatch {
 }
 
 /**
+ * One title row in the create form — mirrors the backend's `TitleCreate`
+ * (REQ §4.1 Title object) directly: any number of titles, at most one
+ * `isPrimary` and at most one `isOriginal` (the form enforces both via
+ * mutual exclusion; a single title may carry neither, since the backend
+ * auto-designates a lone title primary).
+ */
+export interface FilmTitleInput {
+  readonly value: string;
+  readonly isPrimary: boolean;
+  readonly isOriginal: boolean;
+}
+
+/**
  * The `POST /films` payload, write direction (FR-LIB-01..03) — a film plus
- * its mandatory first watch, created atomically. Two title slots, not n
- * (`add-film-via-search.md`'s deliberate cut #1): `originalTitle` is `null`
- * when the film has none.
+ * its mandatory first watch, created atomically.
  */
 export interface FilmCreateInput {
-  readonly primaryTitle: string;
-  readonly originalTitle: string | null;
+  readonly titles: readonly FilmTitleInput[];
   readonly releaseYear: number;
   readonly director: string;
   readonly runtimeMinutes: number;

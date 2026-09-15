@@ -54,8 +54,7 @@ describe('toFilmUpdateDto', () => {
 
 function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput {
   return {
-    primaryTitle: 'Heat',
-    originalTitle: null,
+    titles: [{ value: 'Heat', isPrimary: false, isOriginal: false }],
     releaseYear: 1995,
     director: 'Michael Mann',
     runtimeMinutes: 170,
@@ -69,13 +68,20 @@ function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput 
 }
 
 describe('toFilmCreateDto', () => {
-  it('sends a single unflagged title when there is no original title', () => {
+  it('sends a single unflagged title as-is (the backend auto-promotes a lone title to primary)', () => {
     const dto = toFilmCreateDto(createInput());
     expect(dto.titles).toEqual([{ value: 'Heat' }]);
   });
 
-  it('sends the primary and original titles flagged when an original title is given', () => {
-    const dto = toFilmCreateDto(createInput({ originalTitle: 'Hitze' }));
+  it('sends each flag only when its row set it, in row order', () => {
+    const dto = toFilmCreateDto(
+      createInput({
+        titles: [
+          { value: 'Heat', isPrimary: true, isOriginal: false },
+          { value: 'Hitze', isPrimary: false, isOriginal: true },
+        ],
+      }),
+    );
     expect(dto.titles).toEqual([
       { value: 'Heat', is_primary: true },
       { value: 'Hitze', is_original: true },

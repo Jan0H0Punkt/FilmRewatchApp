@@ -75,20 +75,16 @@ export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
 }
 
 /**
- * Maps a new-film input to the `POST /films` payload. Two title slots, not n
- * (`add-film-via-search.md`'s deliberate cut #1): a lone primary title is
- * sent unflagged, which `FilmCreate`'s model validator auto-designates
- * primary (`_titles_with_rules_applied`) — only an original title needs the
- * explicit flags to disambiguate which of the two is which.
+ * Maps a new-film input to the `POST /films` payload. A flag is sent only
+ * when its row set it — an unflagged lone title is what `FilmCreate`'s
+ * model validator auto-designates primary (`_titles_with_rules_applied`).
  */
 export function toFilmCreateDto(input: FilmCreateInput): FilmCreateDto {
-  const titles: TitleCreateDto[] =
-    input.originalTitle === null
-      ? [{ value: input.primaryTitle }]
-      : [
-          { value: input.primaryTitle, is_primary: true },
-          { value: input.originalTitle, is_original: true },
-        ];
+  const titles: TitleCreateDto[] = input.titles.map((title) => ({
+    value: title.value,
+    ...(title.isPrimary ? { is_primary: true } : {}),
+    ...(title.isOriginal ? { is_original: true } : {}),
+  }));
   return {
     titles,
     release_year: input.releaseYear,
