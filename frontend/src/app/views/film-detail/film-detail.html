@@ -112,7 +112,55 @@
           <input matInput type="number" min="0" step="1" [value]="film.delayDays" (change)="onDelayChange($event)" />
         </mat-form-field>
 
-        <button matButton type="button" (click)="confirmDeleteFilm()">
+        <div class="film-detail__letterboxd">
+          @if (letterboxdEditing()) {
+            <mat-form-field subscriptSizing="dynamic">
+              <mat-label>Letterboxd link</mat-label>
+              <input
+                matInput
+                type="url"
+                #letterboxdInput
+                [value]="film.letterboxdUrl ?? ''"
+                (keydown.enter)="commitLetterboxdEdit(letterboxdInput.value)"
+                (keydown.escape)="cancelLetterboxdEdit()"
+              />
+            </mat-form-field>
+            <button
+              matIconButton
+              type="button"
+              aria-label="Save the Letterboxd link"
+              (click)="commitLetterboxdEdit(letterboxdInput.value)"
+            >
+              <mat-icon>check</mat-icon>
+            </button>
+          } @else {
+            <span class="film-detail__letterboxd-label">Letterboxd</span>
+            @if (film.letterboxdUrl) {
+              <a
+                class="film-detail__letterboxd-link"
+                [href]="film.letterboxdUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span class="film-detail__letterboxd-text">{{ letterboxdLinkText(film.letterboxdUrl) }}</span>
+                <mat-icon aria-hidden="true" inline>open_in_new</mat-icon>
+              </a>
+            } @else {
+              <span class="film-detail__letterboxd-empty">No link set</span>
+            }
+            <button
+              matIconButton
+              type="button"
+              #letterboxdEditButton
+              aria-label="Edit the Letterboxd link"
+              (click)="startEditingLetterboxd()"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
+        </div>
+
+        <button class="film-detail__delete" matButton type="button" (click)="confirmDeleteFilm()">
           <mat-icon>delete</mat-icon>
           Delete film
         </button>
@@ -123,6 +171,9 @@
       }
       @if (delayError()) {
         <p class="film-detail__error" role="alert">{{ delayError() }}</p>
+      }
+      @if (letterboxdUrlError()) {
+        <p class="film-detail__error" role="alert">{{ letterboxdUrlError() }}</p>
       }
       @if (deleteFilmError()) {
         <p class="film-detail__error" role="alert">{{ deleteFilmError() }}</p>

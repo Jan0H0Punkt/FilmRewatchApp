@@ -14,9 +14,11 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   input,
   signal,
+  viewChild,
   type WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -84,6 +86,8 @@ interface FilmDetailVm {
   /** Section A controls (phase 3, FR-LIB-06). */
   readonly isFavorite: boolean;
   readonly delayDays: number;
+  /** User-entered Letterboxd link (REQ §4.1), `null` when never set. */
+  readonly letterboxdUrl: string | null;
 }
 
 const timestampFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -142,7 +146,13 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
     ratingHistory: film.ratingHistory.map(toRatingHistoryVm),
     isFavorite: film.isFavorite,
     delayDays: film.delayDays,
+    letterboxdUrl: film.letterboxdUrl,
   };
+}
+
+/** Strips a leading `https://`/`http://` for the read-mode link's visible text — the anchor's `href` keeps the full stored URL (REQ §4.1). */
+export function stripScheme(url: string): string {
+  return url.replace(/^https?:\/\//, '');
 }
 
 /** Formats a `Date` as `yyyy-MM-dd` in local time — `toISOString` would shift the day across time zones. */
@@ -209,6 +219,21 @@ export class FilmDetail {
       // "raise, then lower back to the original" sequence into a no-op.
       if (value === this.films.detail()?.delayDays) return;
       this.patch({ delayDays: value }, this.delayError, 'The rewatch delay could not be updated.');
+    });
+
+    // Read/edit toggle for the Letterboxd field: focuses the input on entering
+    // edit mode, and returns focus to the edit button on leaving it (commit,
+    // cancel, or Escape) — `library.ts`'s `searchInput` focus effect, adapted
+    // for a two-way toggle via the `wasLetterboxdEditing` guard so the effect
+    // does nothing on initial render, only on an actual open/close.
+    effect(() => {
+      const editing = this.letterboxdEditing();
+      if (editing) {
+        this.letterboxdInput()?.nativeElement.focus();
+      } else if (this.wasLetterboxdEditing) {
+        this.letterboxdEditButton()?.nativeElement.focus();
+      }
+      this.wasLetterboxdEditing = editing;
     });
   }
 
@@ -346,6 +371,7 @@ export class FilmDetail {
   protected readonly favoriteError = signal<string | null>(null);
   protected readonly delayError = signal<string | null>(null);
   protected readonly deleteFilmError = signal<string | null>(null);
+  protected readonly letterboxdUrlError = signal<string | null>(null);
 
   private patch(patch: FilmPatch, errorSignal: WritableSignal<string | null>, fallback: string): void {
     this.films.update(this.id(), patch).subscribe({
@@ -378,6 +404,36 @@ export class FilmDetail {
       return;
     }
     this.delayChange$.next(value);
+  }
+
+  /** Read/edit toggle state for the Letterboxd row — see the constructor's focus effect. */
+  protected readonly letterboxdEditing = signal(false);
+  private readonly letterboxdInput = viewChild<ElementRef<HTMLInputElement>>('letterboxdInput');
+  private readonly letterboxdEditButton = viewChild<ElementRef<HTMLButtonElement>>('letterboxdEditButton');
+  /** Guards the focus effect against firing on initial render — only a genuine toggle should move focus. */
+  private wasLetterboxdEditing = false;
+
+  /** Wraps the module-level `stripScheme` for template use (a free function can't be called from a template). */
+  protected letterboxdLinkText(url: string): string {
+    return stripScheme(url);
+  }
+
+  protected startEditingLetterboxd(): void {
+    this.letterboxdEditing.set(true);
+  }
+
+  /** Escape cancels without saving — the input is uncontrolled, so it simply unmounts with whatever was typed discarded. */
+  protected cancelLetterboxdEdit(): void {
+    this.letterboxdEditing.set(false);
+  }
+
+  /** Enter, or the confirm button, commits. Blank commits as `null` (clears the link, REQ §4.1); an unchanged value skips the PATCH. */
+  protected commitLetterboxdEdit(rawValue: string): void {
+    const trimmed = rawValue.trim();
+    const value = trimmed === '' ? null : trimmed;
+    this.letterboxdEditing.set(false);
+    if (value === (this.films.detail()?.letterboxdUrl ?? null)) return;
+    this.patch({ letterboxdUrl: value }, this.letterboxdUrlError, 'The Letterboxd link could not be updated.');
   }
 
   /** Confirm dialog (FR-LIB-11), then `DELETE /films/{id}`, then back to the Library. */

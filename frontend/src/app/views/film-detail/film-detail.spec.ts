@@ -17,7 +17,7 @@ import { GenreFacade } from '../../domain/genre/facade';
 import { RatingFacade } from '../../domain/rating/facade';
 import { TagFacade } from '../../domain/tag/facade';
 import type { ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
-import { FilmDetail } from './film-detail';
+import { FilmDetail, stripScheme } from './film-detail';
 
 const HEAT: FilmDetailModel = {
   id: 'f1',
@@ -28,6 +28,7 @@ const HEAT: FilmDetailModel = {
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
   posterImage: null,
+  letterboxdUrl: null,
   averageRating: 4,
   isFavorite: true,
   titles: [
@@ -116,6 +117,13 @@ function pressEnter(input: HTMLInputElement): void {
   const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
   Object.defineProperty(event, 'keyCode', { get: () => ENTER });
   input.dispatchEvent(event);
+}
+
+/** Opens the Letterboxd row's edit mode and returns its text input. */
+async function startEditingLetterboxd(element: HTMLElement): Promise<HTMLInputElement> {
+  element.querySelector<HTMLButtonElement>('[aria-label="Edit the Letterboxd link"]')!.click();
+  await settle();
+  return element.querySelector<HTMLInputElement>('.film-detail__letterboxd input')!;
 }
 
 /** Puts one of the two chip rows into edit mode and returns its text input. */
@@ -474,6 +482,96 @@ describe('FilmDetail', () => {
       vi.useRealTimers();
 
       expect(filmFacade.update).not.toHaveBeenCalled();
+    });
+
+    describe('Letterboxd link (read/edit toggle)', () => {
+      it('renders read mode as an external link whose text is the scheme-stripped URL', async () => {
+        const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }));
+
+        const link = element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-link');
+        expect(link?.getAttribute('href')).toBe('https://boxd.it/aaaa');
+        expect(link?.getAttribute('target')).toBe('_blank');
+        expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+        expect(link?.querySelector('.film-detail__letterboxd-text')?.textContent).toBe('boxd.it/aaaa');
+      });
+
+      it('shows "No link set" and no anchor when none is set', async () => {
+        const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: null }));
+
+        expect(element.querySelector('.film-detail__letterboxd-empty')?.textContent).toBe('No link set');
+        expect(element.querySelector('.film-detail__letterboxd-link')).toBeNull();
+      });
+
+      it('reveals an input pre-filled with the current URL when edit is clicked', async () => {
+        const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }));
+
+        const input = await startEditingLetterboxd(element);
+
+        expect(input.value).toBe('https://boxd.it/aaaa');
+      });
+
+      it('commits a new value on Enter and returns to read mode', async () => {
+        const filmFacade = stubFilmFacade(HEAT); // HEAT.letterboxdUrl is null
+        const element = await render(filmFacade);
+        const input = await startEditingLetterboxd(element);
+
+        input.value = '  https://boxd.it/bbbb  ';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        await settle();
+
+        expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { letterboxdUrl: 'https://boxd.it/bbbb' });
+        expect(element.querySelector('.film-detail__letterboxd input')).toBeNull();
+      });
+
+      it('cancels on Escape without patching, leaving the original value in read mode', async () => {
+        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
+        const element = await render(filmFacade);
+        const input = await startEditingLetterboxd(element);
+
+        input.value = 'https://boxd.it/zzzz';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await settle();
+
+        expect(filmFacade.update).not.toHaveBeenCalled();
+        expect(element.querySelector('.film-detail__letterboxd-text')?.textContent).toBe('boxd.it/aaaa');
+      });
+
+      it('commits a blank value as null through the confirm button', async () => {
+        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
+        const element = await render(filmFacade);
+        const input = await startEditingLetterboxd(element);
+
+        input.value = '   ';
+        element.querySelector<HTMLButtonElement>('[aria-label="Save the Letterboxd link"]')!.click();
+        await settle();
+
+        expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { letterboxdUrl: null });
+      });
+
+      it('does not patch when the committed value is unchanged', async () => {
+        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
+        const element = await render(filmFacade);
+        const input = await startEditingLetterboxd(element);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        await settle();
+
+        expect(filmFacade.update).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('stripScheme', () => {
+      it('strips a leading https:// scheme', () => {
+        expect(stripScheme('https://boxd.it/aaaa')).toBe('boxd.it/aaaa');
+      });
+
+      it('strips a leading http:// scheme', () => {
+        expect(stripScheme('http://boxd.it/aaaa')).toBe('boxd.it/aaaa');
+      });
+
+      it('returns a value with neither scheme unchanged', () => {
+        expect(stripScheme('boxd.it/aaaa')).toBe('boxd.it/aaaa');
+      });
     });
 
     it('requires confirmation before deleting the film', async () => {
