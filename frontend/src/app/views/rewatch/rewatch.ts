@@ -9,7 +9,7 @@
  * There is deliberately no refresh control (§7.1) — the list re-reads when the
  * view opens, and the backend recomputes once a day (§5.8).
  */
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,6 +29,11 @@ export class Rewatch {
   private readonly rewatch = inject(RewatchFacade);
 
   protected readonly cards = this.rewatch.cards;
+  /** Mirrors the library's own count line; the template hides it at zero, where the empty state already says so. */
+  protected readonly countLabel = computed<string>(() => {
+    const due = this.cards().length;
+    return `${due} film${due === 1 ? '' : 's'} due`;
+  });
   protected readonly isLoading = this.rewatch.isLoading;
   protected readonly error = this.rewatch.error;
 

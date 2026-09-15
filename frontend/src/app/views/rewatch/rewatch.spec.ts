@@ -92,6 +92,24 @@ describe('Rewatch view', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
   });
 
+  it('states how many films are due', async () => {
+    const element = await render([HEAT, { ...HEAT, id: 'f2', title: 'Se7en' }]);
+
+    expect(element.querySelector('.rewatch__count')?.textContent).toBe('2 films due');
+  });
+
+  it('says "film" rather than "films" for a single due film', async () => {
+    const element = await render([HEAT]);
+
+    expect(element.querySelector('.rewatch__count')?.textContent).toBe('1 film due');
+  });
+
+  it('states no count when nothing is due, since the empty state already says so', async () => {
+    const element = await render([]);
+
+    expect(element.querySelector('.rewatch__count')).toBeNull();
+  });
+
   it('shows a non-blocking error without hiding the cards it already has', async () => {
     // FR-RW-07: the error is additive — the last successful run stays on screen.
     const element = await render([HEAT], false, new Error('boom'));
