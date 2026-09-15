@@ -84,3 +84,18 @@
   font: var(--mat-sys-body-small);
   margin: 0;
 }
+
+/* Centres the clock against the label instead of letting an `inline` icon sit
+   on the text baseline, where it rides high. Same treatment, and the same
+   explicit icon size, as the library row's `.film__end-time`. */
+.rewatch__due {
+  align-items: center;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rewatch__due mat-icon {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
