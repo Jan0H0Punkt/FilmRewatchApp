@@ -70,6 +70,28 @@ export interface FilmUpdateDto {
   readonly letterboxd_url?: string | null;
 }
 
+/** One title in the `POST /films` payload (mirrors `TitleCreate`). Unflagged means "the lone title, primary by default". */
+export interface TitleCreateDto {
+  readonly value: string;
+  readonly is_primary?: boolean;
+  readonly is_original?: boolean;
+}
+
+/** The `POST /films` payload (mirrors `FilmCreate`) — a film plus its mandatory first rating (FR-LIB-01..03). */
+export interface FilmCreateDto {
+  readonly titles: readonly TitleCreateDto[];
+  readonly release_year: number;
+  readonly director: string;
+  readonly runtime_minutes: number;
+  readonly genre: readonly string[];
+  readonly tags: readonly string[];
+  readonly poster_image: string | null;
+  readonly first_rating: {
+    readonly value: number | null;
+    readonly watch_date: string;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class FilmApi {
   private readonly http = inject(HttpClient);
@@ -143,6 +165,11 @@ export class FilmApi {
    */
   update(id: string, dto: FilmUpdateDto): Observable<FilmDto> {
     return this.http.patch<FilmDto>(`${environment.apiBaseUrl}/films/${id}`, dto);
+  }
+
+  /** `POST /films` (FR-LIB-01..03) — 201 with the full §7.3 projection, same shape as `GET`. */
+  create(dto: FilmCreateDto): Observable<FilmDto> {
+    return this.http.post<FilmDto>(`${environment.apiBaseUrl}/films`, dto);
   }
 
   /** `DELETE /films/{id}` (FR-LIB-10..12) — 204 No Content on success. */

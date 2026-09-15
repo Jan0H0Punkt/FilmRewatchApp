@@ -1,6 +1,6 @@
 /** DTO ↔ domain mapping for films (DESIGN §6.1). Read direction: DTO → domain; write direction: domain → DTO. */
-import type { FilmDto, FilmUpdateDto, RatingEntryDto } from './api';
-import type { Film, FilmDetail, FilmPatch } from './model';
+import type { FilmCreateDto, FilmDto, FilmUpdateDto, RatingEntryDto, TitleCreateDto } from './api';
+import type { Film, FilmCreateInput, FilmDetail, FilmPatch } from './model';
 
 /**
  * Arithmetic mean of `history`'s *rated* entries (FR-RAT-09/10/11), one
@@ -71,5 +71,32 @@ export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
     tags: patch.tags,
     genre: patch.genres,
     letterboxd_url: patch.letterboxdUrl,
+  };
+}
+
+/**
+ * Maps a new-film input to the `POST /films` payload. Two title slots, not n
+ * (`add-film-via-search.md`'s deliberate cut #1): a lone primary title is
+ * sent unflagged, which `FilmCreate`'s model validator auto-designates
+ * primary (`_titles_with_rules_applied`) — only an original title needs the
+ * explicit flags to disambiguate which of the two is which.
+ */
+export function toFilmCreateDto(input: FilmCreateInput): FilmCreateDto {
+  const titles: TitleCreateDto[] =
+    input.originalTitle === null
+      ? [{ value: input.primaryTitle }]
+      : [
+          { value: input.primaryTitle, is_primary: true },
+          { value: input.originalTitle, is_original: true },
+        ];
+  return {
+    titles,
+    release_year: input.releaseYear,
+    director: input.director,
+    runtime_minutes: input.runtimeMinutes,
+    genre: input.genres,
+    tags: input.tags,
+    poster_image: input.posterImage,
+    first_rating: { value: input.rating, watch_date: input.watchDate },
   };
 }

@@ -15,6 +15,7 @@ import { environment } from '../../../environments/environment';
 import type { FilmDto } from './api';
 import { FilmApi } from './api';
 import { FilmFacade } from './facade';
+import type { Film, FilmCreateInput } from './model';
 
 function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
   return {
@@ -66,6 +67,7 @@ function stubApi(list: readonly FilmDto[] = [], selectedId: string | null = null
     detail: { isLoading: () => false, error: () => detailError, reload: vi.fn() },
     selectedId: valueSignal(selectedId),
     update: vi.fn(),
+    create: vi.fn(),
     remove: vi.fn().mockReturnValue(of(undefined)),
   };
 }
@@ -278,6 +280,47 @@ describe('FilmFacade', () => {
       expect(facade.films()).toEqual([]);
       expect(api.selectedId.set).toHaveBeenCalledWith(null);
       expect(api.list.reload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('create()', () => {
+    const draft: FilmCreateInput = {
+      primaryTitle: 'Heat',
+      originalTitle: null,
+      releaseYear: 1995,
+      director: 'Michael Mann',
+      runtimeMinutes: 170,
+      genres: ['Crime'],
+      tags: ['heist'],
+      posterImage: null,
+      watchDate: '2024-01-01',
+      rating: 4,
+    };
+
+    it('POSTs the mapped payload and resolves to the created film', async () => {
+      const api = stubApi([]);
+      const created = filmDto({ id: 'new-film' });
+      api.create.mockReturnValue(of(created));
+      const facade = setUp(api);
+
+      const film = await new Promise<Film>((resolve) => {
+        facade.create(draft).subscribe(resolve);
+      });
+
+      expect(film.id).toBe('new-film');
+      expect(api.create).toHaveBeenCalledWith(expect.objectContaining({ director: 'Michael Mann' }));
+    });
+
+    it('reloads the list on success, so the film lands in its sorted position', async () => {
+      const api = stubApi([]);
+      api.create.mockReturnValue(of(filmDto({ id: 'new-film' })));
+      const facade = setUp(api);
+
+      await new Promise<void>((resolve) => {
+        facade.create(draft).subscribe(() => resolve());
+      });
+
+      expect(api.list.reload).toHaveBeenCalled();
     });
   });
 });

@@ -1,7 +1,7 @@
-/** DTO ↔ domain mapping for `letterboxd_url`/`letterboxdUrl` (mirrors `poster_image`, FR-LIB-14/15). */
+/** DTO ↔ domain mapping for `letterboxd_url`/`letterboxdUrl` (mirrors `poster_image`, FR-LIB-14/15) and for film creation. */
 import type { FilmDto } from './api';
-import { toFilmDetail, toFilmUpdateDto } from './mapper';
-import type { FilmPatch } from './model';
+import { toFilmCreateDto, toFilmDetail, toFilmUpdateDto } from './mapper';
+import type { FilmCreateInput, FilmPatch } from './model';
 
 function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
   return {
@@ -49,5 +49,52 @@ describe('toFilmUpdateDto', () => {
   it('drops the key when unset, so JSON.stringify leaves it unchanged on the wire', () => {
     const patch: FilmPatch = {};
     expect(JSON.stringify(toFilmUpdateDto(patch))).not.toContain('letterboxd_url');
+  });
+});
+
+function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput {
+  return {
+    primaryTitle: 'Heat',
+    originalTitle: null,
+    releaseYear: 1995,
+    director: 'Michael Mann',
+    runtimeMinutes: 170,
+    genres: ['Crime'],
+    tags: ['heist'],
+    posterImage: null,
+    watchDate: '2024-01-01',
+    rating: 4,
+    ...overrides,
+  };
+}
+
+describe('toFilmCreateDto', () => {
+  it('sends a single unflagged title when there is no original title', () => {
+    const dto = toFilmCreateDto(createInput());
+    expect(dto.titles).toEqual([{ value: 'Heat' }]);
+  });
+
+  it('sends the primary and original titles flagged when an original title is given', () => {
+    const dto = toFilmCreateDto(createInput({ originalTitle: 'Hitze' }));
+    expect(dto.titles).toEqual([
+      { value: 'Heat', is_primary: true },
+      { value: 'Hitze', is_original: true },
+    ]);
+  });
+
+  it('maps the scalar fields and the first rating', () => {
+    const dto = toFilmCreateDto(createInput());
+    expect(dto.release_year).toBe(1995);
+    expect(dto.director).toBe('Michael Mann');
+    expect(dto.runtime_minutes).toBe(170);
+    expect(dto.genre).toEqual(['Crime']);
+    expect(dto.tags).toEqual(['heist']);
+    expect(dto.poster_image).toBeNull();
+    expect(dto.first_rating).toEqual({ value: 4, watch_date: '2024-01-01' });
+  });
+
+  it('sends an explicit null rating for "do not rate this"', () => {
+    const dto = toFilmCreateDto(createInput({ rating: null }));
+    expect(dto.first_rating).toEqual({ value: null, watch_date: '2024-01-01' });
   });
 });

@@ -22,8 +22,8 @@ import { type Observable, catchError, map, tap, throwError } from 'rxjs';
 
 import type { FilmDto, RatingEntryDto } from './api';
 import { FilmApi } from './api';
-import { toFilm, toFilmDetail, toFilmUpdateDto } from './mapper';
-import type { Film, FilmDetail, FilmPatch } from './model';
+import { toFilm, toFilmCreateDto, toFilmDetail, toFilmUpdateDto } from './mapper';
+import type { Film, FilmCreateInput, FilmDetail, FilmPatch } from './model';
 
 @Injectable({ providedIn: 'root' })
 export class FilmFacade {
@@ -182,6 +182,20 @@ export class FilmFacade {
       const ratingHistory = film.rating_history.filter((entry) => entry.id !== ratingId);
       return { ...film, rating_history: ratingHistory };
     });
+  }
+
+  /**
+   * `POST /films` (FR-LIB-01..03). Reloads `list` on success rather than
+   * inserting locally (unlike `update` above) — `add-film-via-search.md`
+   * has the view navigate back to the Library "which reloads its list",
+   * so the created film lands in its actual primary-title-sorted position
+   * instead of wherever a local append would put it.
+   */
+  create(input: FilmCreateInput): Observable<Film> {
+    return this.api.create(toFilmCreateDto(input)).pipe(
+      tap(() => this.api.list.reload()),
+      map(toFilm),
+    );
   }
 
   /** `DELETE /films/{id}` (FR-LIB-10..12). The view navigates to the Library on success. */

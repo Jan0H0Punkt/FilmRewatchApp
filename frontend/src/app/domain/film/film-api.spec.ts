@@ -9,7 +9,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../environments/environment';
-import type { FilmDto } from './api';
+import type { FilmCreateDto, FilmDto } from './api';
 import { FilmApi } from './api';
 
 function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
@@ -183,5 +183,37 @@ describe('FilmApi.detail when list has errored', () => {
 
     expect(() => TestBed.tick()).not.toThrow();
     httpTesting.expectNone(`${environment.apiBaseUrl}/films/f1`);
+  });
+});
+
+describe('FilmApi.create', () => {
+  it('POSTs the payload to /films and returns the created film', () => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const api = TestBed.inject(FilmApi);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    TestBed.tick();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/films`).flush([]);
+    TestBed.tick();
+
+    const payload: FilmCreateDto = {
+      titles: [{ value: 'Heat' }],
+      release_year: 1995,
+      director: 'Michael Mann',
+      runtime_minutes: 170,
+      genre: ['Crime'],
+      tags: ['heist'],
+      poster_image: null,
+      first_rating: { value: 4, watch_date: '2024-01-01' },
+    };
+    let created: FilmDto | undefined;
+    api.create(payload).subscribe((film) => (created = film));
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/films`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBe(payload);
+    req.flush(filmDto({ id: 'new-film' }));
+
+    expect(created?.id).toBe('new-film');
+    httpTesting.verify();
   });
 });

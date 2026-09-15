@@ -87,3 +87,25 @@ export interface FilmPatch {
    */
   readonly letterboxdUrl?: string | null;
 }
+
+/**
+ * The `POST /films` payload, write direction (FR-LIB-01..03) — a film plus
+ * its mandatory first watch, created atomically. Two title slots, not n
+ * (`add-film-via-search.md`'s deliberate cut #1): `originalTitle` is `null`
+ * when the film has none.
+ */
+export interface FilmCreateInput {
+  readonly primaryTitle: string;
+  readonly originalTitle: string | null;
+  readonly releaseYear: number;
+  readonly director: string;
+  readonly runtimeMinutes: number;
+  /** At least one of each — the backend rejects an empty list (FR-TAG-06). */
+  readonly genres: readonly string[];
+  readonly tags: readonly string[];
+  readonly posterImage: string | null;
+  /** ISO `yyyy-MM-dd`, never in the future (FR-RAT-03). */
+  readonly watchDate: string;
+  /** `null` for a watch the user explicitly chose not to rate (FR-RAT-12). */
+  readonly rating: number | null;
+}
