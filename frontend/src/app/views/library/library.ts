@@ -1,12 +1,13 @@
 /**
  * The Library view (REQ §7.2) — the whole film library as a result list,
  * narrowable by a title search (FR-SF-01), plus the Add Film action
- * (`open work/library-view/add-film-via-search.md`): a visible "Add Film"
- * button/link that only ever focuses the search field or routes to
- * `films/new` — never opens a form itself, so there is exactly one path
- * into the create flow. Per §6.1 the view calls the facade only and holds
- * no rules — the ViewModel shaping (the parts of a film this list actually
- * prints) and the filtering (`filters.ts`) both live here.
+ * (`open work/library-view/add-film-via-search.md`): the search field
+ * doubles as the add entry point (labelled "Search or Add Film") and only
+ * ever routes to `films/new` when a search yields no match — never opens a
+ * form itself, so there is exactly one path into the create flow. Per §6.1
+ * the view calls the facade only and holds no rules — the ViewModel shaping
+ * (the parts of a film this list actually prints) and the filtering
+ * (`filters.ts`) both live here.
  */
 import {
   ChangeDetectionStrategy,
@@ -85,7 +86,23 @@ export class Library {
   protected readonly error = this.films.error;
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
+  private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private hasFocusedSearch = false;
+
+  /**
+   * Up/Down roves focus across the search field, the "Add new film" link, and the
+   * result rows — all plain focusable elements already in tab order, so this only
+   * ever moves focus among `.library__nav-target`s, never changes tabindex.
+   */
+  protected onNavKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const targets = [...(this.body()?.nativeElement.querySelectorAll<HTMLElement>('.library__nav-target') ?? [])];
+    const current = targets.indexOf(document.activeElement as HTMLElement);
+    if (current === -1) return;
+    event.preventDefault();
+    const next = current + (event.key === 'ArrowDown' ? 1 : -1);
+    targets[next]?.focus();
+  }
 
   constructor() {
     // The search field is the view's entry point, so it takes focus on arrival.

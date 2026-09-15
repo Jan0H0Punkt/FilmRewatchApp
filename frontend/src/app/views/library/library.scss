@@ -1,11 +1,6 @@
 /* Library view (REQ §7.2). Colours come from Material's M3 system variables,
    which resolve per `color-scheme` — so light/dark needs no rule of its own. */
 
-.library__heading {
-  font: var(--mat-sys-headline-small);
-  margin: 0 0 1rem;
-}
-
 .library__state {
   color: var(--mat-sys-on-surface-variant);
 }
@@ -42,6 +37,7 @@
 
 .library__add {
   justify-self: start;
+  margin-bottom: 0.75rem;
 }
 
 .film__link {

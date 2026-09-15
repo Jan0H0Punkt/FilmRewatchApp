@@ -131,17 +131,6 @@ describe('Library', () => {
     expect(document.activeElement).toBe(element.querySelector('.library__search input'));
   });
 
-  it('has an Add Film button that focuses the search field — the one path into the create flow', async () => {
-    const element = await render(stubFacade([HEAT]));
-    const input = element.querySelector<HTMLInputElement>('.library__search input')!;
-    input.blur();
-
-    element.querySelector<HTMLButtonElement>('.library__add-button')!.click();
-    await currentFixture.whenStable();
-
-    expect(document.activeElement).toBe(input);
-  });
-
   describe('title search (FR-SF-01..05)', () => {
     it('shows the unfiltered count when nothing is searched', async () => {
       const element = await render(stubFacade([HEAT, SEVEN]));
@@ -189,15 +178,16 @@ describe('Library', () => {
       expect(addLink?.getAttribute('href')).toBe('/films/new?title=nonexistent');
     });
 
-    it('adds a "+ Add new film" entry at the end of the matches once a title is typed', async () => {
+    it('adds a "+ Add new film" link right below the search, before the matches, once a title is typed', async () => {
       const element = await render(stubFacade([HEAT, SEVEN]));
 
       await search(element, 'heat');
 
-      const list = element.querySelector('.library__list')!;
-      const addLink = list.querySelector<HTMLAnchorElement>('a.library__add');
+      const addLink = element.querySelector<HTMLAnchorElement>('a.library__add');
+      const list = element.querySelector('.library__list');
       expect(addLink).not.toBeNull();
       expect(addLink?.getAttribute('href')).toBe('/films/new?title=heat');
+      expect(list && addLink!.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('shows no "+ Add new film" entry while the search is empty', async () => {
