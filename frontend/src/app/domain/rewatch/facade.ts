@@ -5,7 +5,7 @@
  * joined to the cached film metadata to make a card. The view therefore holds
  * no lookup logic and no ordering logic of its own.
  */
-import { Injectable, computed, inject, linkedSignal, signal, type ResourceStatus } from '@angular/core';
+import { Injectable, computed, effect, inject, linkedSignal, signal, type ResourceStatus } from '@angular/core';
 
 import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../film/facade';
@@ -14,11 +14,38 @@ import { RewatchApi } from './api';
 import { finishesInTime, toRewatchCardVm, toRewatchSuggestion } from './mapper';
 import type { RewatchCardVm } from './model';
 
+const STORAGE_KEY = 'rewatch-done-before';
+
 /** The filter's default: most evenings, done watching by half ten. */
 function defaultDoneBefore(): Date {
   const cutoff = new Date();
   cutoff.setHours(22, 30, 0, 0);
   return cutoff;
+}
+
+/**
+ * Only hours/minutes are ever read (see `finishesInTime`), so that's all that's
+ * persisted — a "HH:mm" string applied to today's date, not a stored `Date`
+ * that would otherwise anchor the filter to whatever day it was last set.
+ */
+function withStoredTime(cutoff: Date): Date {
+  try {
+    const match = localStorage.getItem(STORAGE_KEY)?.match(/^(\d{2}):(\d{2})$/);
+    if (match) cutoff.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  } catch {
+    // Private browsing and blocked site data make `localStorage` throw on access.
+  }
+  return cutoff;
+}
+
+function storeTime(cutoff: Date): void {
+  try {
+    const hh = String(cutoff.getHours()).padStart(2, '0');
+    const mm = String(cutoff.getMinutes()).padStart(2, '0');
+    localStorage.setItem(STORAGE_KEY, `${hh}:${mm}`);
+  } catch {
+    // A preference that cannot be persisted still applies for this visit.
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -28,7 +55,11 @@ export class RewatchFacade {
   private readonly clock = inject(ClockService);
 
   /** The "done watching by" filter's time of day — only its hours/minutes are read (see `finishesInTime`). */
-  readonly doneBefore = signal<Date>(defaultDoneBefore());
+  readonly doneBefore = signal<Date>(withStoredTime(defaultDoneBefore()));
+
+  constructor() {
+    effect(() => storeTime(this.doneBefore()));
+  }
 
   setDoneBefore(cutoff: Date): void {
     this.doneBefore.set(cutoff);
