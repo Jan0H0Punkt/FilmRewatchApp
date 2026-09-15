@@ -1,0 +1,76 @@
+/* Add Film form. Colours come from Material's M3 system variables, which
+   resolve per `color-scheme` — light/dark needs no rule of its own. */
+
+.film-form {
+  margin: 0 auto;
+  max-width: 40rem;
+}
+
+.film-form__heading {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 1rem;
+}
+
+.film-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.film-form__date {
+  max-width: 16rem;
+}
+
+.film-form__error {
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+/* Rating picker — mirrors film-detail.scss's `.rating-form__*` (same widget, duplicated per that file's own convention). */
+.film-form__rating {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+}
+
+.film-form__star {
+  color: var(--mat-sys-outline);
+  display: inline-flex;
+  height: 2.5rem;
+  position: relative;
+  width: 2.5rem;
+}
+
+.film-form__star--filled {
+  color: var(--mat-sys-primary);
+}
+
+.film-form__star mat-icon {
+  font-size: 2rem;
+  height: 2rem;
+  margin: auto;
+  pointer-events: none;
+  width: 2rem;
+}
+
+.film-form__star-half {
+  background: none;
+  border: none;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+  width: 50%;
+}
+
+.film-form__star-half--right {
+  left: 50%;
+}
+
+.film-form__unrated {
+  margin-left: 0.5rem;
+}
+
+.film-form__unrated--active {
+  outline: 2px solid var(--mat-sys-primary);
+}

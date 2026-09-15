@@ -1,9 +1,12 @@
 /**
  * The Library view (REQ §7.2) — the whole film library as a result list,
- * narrowable by a title search (FR-SF-01). The Add Film action is the rest
- * of §7.2 and is not built yet. Per §6.1 the view calls the facade only and
- * holds no rules — the ViewModel shaping (the parts of a film this list
- * actually prints) and the filtering (`filters.ts`) both live here.
+ * narrowable by a title search (FR-SF-01), plus the Add Film action
+ * (`open work/library-view/add-film-via-search.md`): a visible "Add Film"
+ * button/link that only ever focuses the search field or routes to
+ * `films/new` — never opens a form itself, so there is exactly one path
+ * into the create flow. Per §6.1 the view calls the facade only and holds
+ * no rules — the ViewModel shaping (the parts of a film this list actually
+ * prints) and the filtering (`filters.ts`) both live here.
  */
 import {
   ChangeDetectionStrategy,

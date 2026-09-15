@@ -108,13 +108,14 @@ describe('Library', () => {
     expect(genres).toEqual(['Crime', 'Thriller']);
   });
 
-  it('shows the empty state when the library holds no films', async () => {
+  it('shows the empty state when the library holds no films, with a way to add the first one', async () => {
     const element = await render(stubFacade([]));
 
     expect(element.querySelector('.library__list')).toBeNull();
     expect(element.textContent).toContain('No films yet');
     // Searching an empty library is pointless — the field shouldn't even appear.
     expect(element.querySelector('.library__search')).toBeNull();
+    expect(element.querySelector<HTMLAnchorElement>('a.library__add')?.getAttribute('href')).toBe('/films/new');
   });
 
   it('shows an error state instead of the list when the request failed', async () => {
@@ -128,6 +129,17 @@ describe('Library', () => {
     const element = await render(stubFacade([HEAT]));
 
     expect(document.activeElement).toBe(element.querySelector('.library__search input'));
+  });
+
+  it('has an Add Film button that focuses the search field — the one path into the create flow', async () => {
+    const element = await render(stubFacade([HEAT]));
+    const input = element.querySelector<HTMLInputElement>('.library__search input')!;
+    input.blur();
+
+    element.querySelector<HTMLButtonElement>('.library__add-button')!.click();
+    await currentFixture.whenStable();
+
+    expect(document.activeElement).toBe(input);
   });
 
   describe('title search (FR-SF-01..05)', () => {
@@ -165,14 +177,33 @@ describe('Library', () => {
       expect(element.querySelector('.library__count')?.textContent).toBe('1 of 2 films');
     });
 
-    it('shows the no-matches state, not the "No films yet" empty state, for a query with no hits', async () => {
+    it('shows only the "+ Add new film" link, not the "No films yet" empty state, for a query with no hits', async () => {
       const element = await render(stubFacade([HEAT, SEVEN]));
 
       await search(element, 'nonexistent');
 
       expect(element.querySelector('.library__list')).toBeNull();
-      expect(element.textContent).toContain('No films match your search.');
       expect(element.textContent).not.toContain('No films yet');
+      const addLink = element.querySelector<HTMLAnchorElement>('a.library__add');
+      expect(addLink?.textContent).toContain('Add new film');
+      expect(addLink?.getAttribute('href')).toBe('/films/new?title=nonexistent');
+    });
+
+    it('adds a "+ Add new film" entry at the end of the matches once a title is typed', async () => {
+      const element = await render(stubFacade([HEAT, SEVEN]));
+
+      await search(element, 'heat');
+
+      const list = element.querySelector('.library__list')!;
+      const addLink = list.querySelector<HTMLAnchorElement>('a.library__add');
+      expect(addLink).not.toBeNull();
+      expect(addLink?.getAttribute('href')).toBe('/films/new?title=heat');
+    });
+
+    it('shows no "+ Add new film" entry while the search is empty', async () => {
+      const element = await render(stubFacade([HEAT, SEVEN]));
+
+      expect(element.querySelector('a.library__add')).toBeNull();
     });
 
     it('restores the full list once the search is cleared', async () => {

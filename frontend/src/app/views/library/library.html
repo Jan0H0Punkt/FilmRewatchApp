@@ -8,10 +8,11 @@
     <button matButton type="button" (click)="reload()">Try again</button>
   </div>
 } @else if (totalCount() === 0) {
-  <p class="library__state">
-    No films yet. Add one through the API docs at
-    <code>http://localhost:8000/docs</code> — the Add Film form is next.
-  </p>
+  <p class="library__state">No films yet.</p>
+  <a class="library__add" matButton="filled" routerLink="/films/new">
+    <mat-icon>add</mat-icon>
+    Add your first film
+  </a>
 } @else {
   <div class="library__toolbar">
     <mat-form-field class="library__search" subscriptSizing="dynamic">
@@ -26,9 +27,20 @@
     </mat-form-field>
     <!-- role="status" so a screen reader announces the result count as it changes while typing. -->
     <p class="library__count" role="status">{{ countLabel() }}</p>
+    <!-- Never opens a form itself — just focuses the search field, so there is
+         exactly one path into the create flow (add-film-via-search.md). Stays
+         visible unconditionally: an add action that only appears once you
+         type is undiscoverable. -->
+    <button class="library__add-button" matButton type="button" (click)="search.focus()">
+      <mat-icon>add</mat-icon>
+      Add Film
+    </button>
   </div>
   @if (rows().length === 0) {
-    <p class="library__state">No films match your search.</p>
+    <a class="library__add" matButton="filled" routerLink="/films/new" [queryParams]="{ title: criteria().title }">
+      <mat-icon>add</mat-icon>
+      Add new film
+    </a>
   } @else {
     <ul class="library__list">
       @for (row of rows(); track row.id) {
@@ -81,6 +93,14 @@
                 </p>
               </div>
             </mat-card>
+          </a>
+        </li>
+      }
+      @if (isFiltered()) {
+        <li>
+          <a class="library__add" matButton routerLink="/films/new" [queryParams]="{ title: criteria().title }">
+            <mat-icon>add</mat-icon>
+            Add new film
           </a>
         </li>
       }

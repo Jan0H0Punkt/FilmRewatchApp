@@ -1,0 +1,161 @@
+<div class="film-form__nav">
+  <a matIconButton routerLink="/library" aria-label="Back to Library">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+</div>
+
+<mat-card class="film-form">
+  <h2 class="film-form__heading">Add a film</h2>
+
+  <!-- Plain `(submit)`, not `(ngSubmit)`: no `FormsModule`, just a submit button inside a native form — matches film-detail's Add Rating form. -->
+  <form class="film-form__form" (submit)="onSubmit($event)">
+    <mat-form-field class="film-form__title" subscriptSizing="dynamic">
+      <mat-label>Title</mat-label>
+      <input
+        #titleInput
+        matInput
+        type="text"
+        required
+        [value]="primaryTitle()"
+        (input)="primaryTitle.set(titleInput.value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field class="film-form__original-title" subscriptSizing="dynamic">
+      <mat-label>Original title (optional)</mat-label>
+      <input
+        #originalTitleInput
+        matInput
+        type="text"
+        [value]="originalTitle()"
+        (input)="originalTitle.set(originalTitleInput.value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field class="film-form__year" subscriptSizing="dynamic">
+      <mat-label>Release year</mat-label>
+      <input
+        #yearInput
+        matInput
+        type="number"
+        required
+        [min]="minReleaseYear"
+        [max]="currentYear"
+        [value]="releaseYear()"
+        (input)="onReleaseYearChange(yearInput.value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field class="film-form__director" subscriptSizing="dynamic">
+      <mat-label>Director</mat-label>
+      <input
+        #directorInput
+        matInput
+        type="text"
+        required
+        [value]="director()"
+        (input)="director.set(directorInput.value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field class="film-form__runtime" subscriptSizing="dynamic">
+      <mat-label>Runtime (minutes)</mat-label>
+      <input
+        #runtimeInput
+        matInput
+        type="number"
+        required
+        min="1"
+        [value]="runtimeMinutes()"
+        (input)="onRuntimeChange(runtimeInput.value)"
+      />
+    </mat-form-field>
+
+    <app-editable-chips
+      class="film-form__genres"
+      label="Genres"
+      itemNoun="genre"
+      [values]="selectedGenres()"
+      [suggestions]="genreNames()"
+      [orderable]="true"
+      (changed)="selectedGenres.set($event)"
+    />
+
+    <app-editable-chips
+      class="film-form__tags"
+      label="Tags"
+      itemNoun="tag"
+      [values]="selectedTags()"
+      [suggestions]="tagNames()"
+      (changed)="selectedTags.set($event)"
+    />
+
+    <mat-form-field class="film-form__poster" subscriptSizing="dynamic">
+      <mat-label>Poster URL (optional)</mat-label>
+      <input #posterInput matInput type="url" [value]="posterImage()" (input)="posterImage.set(posterInput.value)" />
+    </mat-form-field>
+    @if (posterImage().trim() !== '' && !posterImageValid()) {
+      <p class="film-form__error" role="alert">The poster URL must be a well-formed http(s) URL.</p>
+    }
+
+    <mat-form-field class="film-form__date" subscriptSizing="dynamic">
+      <mat-label>Watched on</mat-label>
+      <input
+        matInput
+        [matDatepicker]="watchDatePicker"
+        [max]="today"
+        [value]="watchDate()"
+        (dateChange)="onWatchDateChange($event.value)"
+        required
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="watchDatePicker" />
+      <mat-datepicker #watchDatePicker />
+    </mat-form-field>
+
+    <!-- Rating (optional): same half-star picker as film-detail's Add Rating,
+         defaulting to "Don't rate this" rather than nothing chosen. -->
+    <div class="film-form__rating" role="group" aria-label="Rating value" (mouseleave)="hoverValue.set(null)">
+      @for (position of starPositions; track position) {
+        <span class="film-form__star" [class.film-form__star--filled]="pickerStars()[position - 1] !== 'star_border'">
+          <mat-icon aria-hidden="true">{{ pickerStars()[position - 1] }}</mat-icon>
+          <button
+            type="button"
+            class="film-form__star-half film-form__star-half--left"
+            [attr.aria-pressed]="selectedValue() === position - 0.5"
+            [attr.aria-label]="starLabel(position - 0.5)"
+            (mouseenter)="hoverValue.set(position - 0.5)"
+            (focus)="hoverValue.set(position - 0.5)"
+            (blur)="hoverValue.set(null)"
+            (click)="selectStar(position - 0.5)"
+          ></button>
+          <button
+            type="button"
+            class="film-form__star-half film-form__star-half--right"
+            [attr.aria-pressed]="selectedValue() === position"
+            [attr.aria-label]="starLabel(position)"
+            (mouseenter)="hoverValue.set(position)"
+            (focus)="hoverValue.set(position)"
+            (blur)="hoverValue.set(null)"
+            (click)="selectStar(position)"
+          ></button>
+        </span>
+      }
+      <button
+        matButton
+        type="button"
+        class="film-form__unrated"
+        [class.film-form__unrated--active]="selectedValue() === 'unrated'"
+        [attr.aria-pressed]="selectedValue() === 'unrated'"
+        (click)="selectUnrated()"
+      >
+        Don't rate this
+      </button>
+    </div>
+
+    @if (submitError()) {
+      <p class="film-form__error" role="alert">{{ submitError() }}</p>
+    }
+
+    <button matButton="filled" type="submit" [disabled]="!isValid() || isSubmitting()">Add film</button>
+  </form>
+</mat-card>
