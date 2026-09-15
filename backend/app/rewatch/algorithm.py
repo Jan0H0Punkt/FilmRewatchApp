@@ -24,7 +24,7 @@ BASE_INTERVAL_DAYS = 365
 # ponytail: a flat ceiling rather than a taper. Without it the quadratic term in
 # :func:`interval_days` sends a long, badly-rated, often-watched film past 20
 # years, which is indistinguishable from "never" but harder to reason about.
-MAX_INTERVAL_DAYS = 3650
+MAX_INTERVAL_DAYS = BASE_INTERVAL_DAYS * 5
 
 # Ratings run 0.5..5.0 in half steps (``ratings.schemas``), while the scoring
 # below is defined over 1..10 — doubling maps one onto the other exactly, with
@@ -32,9 +32,11 @@ MAX_INTERVAL_DAYS = 3650
 RATING_SCALE_FACTOR = 2
 
 # Where an unrated film sits on that 1..10 scale. A null average means no watch
-# was rated (FR-RAT-11/12), which is not the same as a bad rating, so it scores
-# mid-scale instead of inheriting the worst case.
-UNRATED_SCALED_RATING = 5
+# was rated (FR-RAT-11/12); scoring it below the lowest real rating — 0.5 stars
+# scales to 1 — makes an unrated film wait longer than any rated one. The two
+# only differ on short runtimes: at feature length both already clamp to
+# :data:`MAX_INTERVAL_DAYS`.
+UNRATED_SCALED_RATING = 0
 
 
 @dataclass(frozen=True)
@@ -103,17 +105,11 @@ def suggest(inputs: Sequence[RewatchInput], today: date) -> list[DueFilm]:
     value. Ties are broken by film id so two runs over unchanged data produce
     the same order and the view does not reshuffle underneath the user.
     """
-    due = [
-        DueFilm(film_id=item.film_id, days_until_next_rewatch=days_until)
-        for item in inputs
-        if (
-            days_until := (
-                item.last_watched_date
-                + timedelta(days=interval_days(item) + item.delay_days)
-                - today
-            ).days
-        )
-        <= 0
-    ]
+    due: list[DueFilm] = []
+    for item in inputs:
+        due_date = item.last_watched_date + timedelta(days=interval_days(item) + item.delay_days)
+        days_until = (due_date - today).days
+        if days_until <= 0:
+            due.append(DueFilm(film_id=item.film_id, days_until_next_rewatch=days_until))
     due.sort(key=lambda item: (item.days_until_next_rewatch, item.film_id.bytes))
     return due

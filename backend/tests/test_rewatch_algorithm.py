@@ -59,7 +59,12 @@ def test_a_lower_rating_pushes_a_film_quadratically_further_out() -> None:
 
 
 def test_the_worst_rating_is_capped_at_reverse_rating_nine() -> None:
-    assert interval_days(_input(average_rating=Decimal("0.5"))) == BASE_INTERVAL_DAYS + 2100
+    # A short runtime keeps the result under the ceiling, which is the only
+    # place the cap is observable — see the clamp test below.
+    assert (
+        interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
+        == BASE_INTERVAL_DAYS + 10 * 120
+    )
 
 
 def test_half_stars_survive_the_scale_conversion() -> None:
@@ -69,11 +74,20 @@ def test_half_stars_survive_the_scale_conversion() -> None:
     )
 
 
-def test_an_unrated_film_scores_mid_scale_rather_than_worst() -> None:
-    # A null average means no watch was rated (FR-RAT-11/12), not a bad film.
-    unrated = interval_days(_input(average_rating=None))
-    assert unrated == interval_days(_input(average_rating=Decimal("2.5")))
-    assert unrated < interval_days(_input(average_rating=Decimal("0.5")))
+def test_an_unrated_film_waits_longer_than_the_worst_rated_one() -> None:
+    # A null average (FR-RAT-11/12) scores past the bottom of the 1..10 scale,
+    # so it outlasts every rated film. Short runtimes again, to stay under the
+    # ceiling that would otherwise hide the difference.
+    unrated = interval_days(_input(average_rating=None, runtime_minutes=30))
+    assert unrated > interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
+    assert unrated > interval_days(_input(average_rating=Decimal("2.5"), runtime_minutes=30))
+
+
+def test_a_feature_length_film_clamps_whether_rated_worst_or_not_at_all() -> None:
+    # The consequence of the ceiling: across real runtimes an unrated film and a
+    # half-star one are indistinguishable, both waiting the maximum.
+    assert interval_days(_input(average_rating=None)) == MAX_INTERVAL_DAYS
+    assert interval_days(_input(average_rating=Decimal("0.5"))) == MAX_INTERVAL_DAYS
 
 
 def test_every_prior_watch_adds_one_step() -> None:
