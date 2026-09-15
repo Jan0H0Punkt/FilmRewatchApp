@@ -1,11 +1,6 @@
 /* Rewatch view (REQ §7.1). Colours come from Material's M3 system variables,
    which resolve per `color-scheme` — so light/dark needs no rule of its own. */
 
-.rewatch__heading {
-  font: var(--mat-sys-headline-small);
-  margin: 0 0 1rem;
-}
-
 /* The count sits beside the field, not under it: `subscriptSizing="dynamic"`
    leaves no subscript gap, so underneath it would read as a validation hint. */
 .rewatch__toolbar {
