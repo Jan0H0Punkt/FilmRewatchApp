@@ -36,8 +36,10 @@ async function render(
           cards: signal(cards),
           isLoading: signal(isLoading),
           error: signal(error),
+          doneBefore: signal(new Date(2024, 0, 1, 22, 30)),
           reload: (): void => undefined,
           onViewOpened: (): void => undefined,
+          setDoneBefore: (): void => undefined,
         },
       },
     ],
@@ -90,6 +92,13 @@ describe('Rewatch view', () => {
 
     expect(element.textContent).toContain('Nothing due right now');
     expect(element.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('shows the "done watching by" time filter', async () => {
+    const element = await render([HEAT]);
+
+    expect(element.textContent).toContain('Done watching by');
+    expect(element.querySelector('mat-timepicker-toggle')).not.toBeNull();
   });
 
   it('states how many films are due', async () => {

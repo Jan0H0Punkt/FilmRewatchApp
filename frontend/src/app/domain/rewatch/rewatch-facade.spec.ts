@@ -6,12 +6,21 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
+import { ClockService } from '../../core/clock';
 import { Rewatch } from '../../views/rewatch/rewatch';
 import { FilmFacade } from '../film/facade';
 import type { Film } from '../film/model';
 import type { RewatchSuggestionDto } from './api';
 import { RewatchApi } from './api';
 import { RewatchFacade } from './facade';
+
+/**
+ * A fixed 08:00 "now" for every test below that is not itself about the
+ * `doneBefore` filter. The filter's 22:30 default would otherwise make
+ * `film()`'s 170-minute runtime flip in and out of these unrelated tests
+ * depending on the real wall-clock time the suite happens to run at.
+ */
+const MORNING = new Date(2024, 0, 1, 8, 0, 0).getTime();
 
 function film(id: string, title: string, rating: number | null = 4): Film {
   return {
@@ -49,6 +58,7 @@ function configure(films: readonly Film[], suggestions: readonly RewatchSuggesti
         provide: FilmFacade,
         useValue: { films: signal(films), isLoading: signal(false), error: signal(undefined) },
       },
+      { provide: ClockService, useValue: { now: signal(MORNING) } },
     ],
   });
   return { facade: TestBed.inject(RewatchFacade), value };
@@ -115,6 +125,33 @@ describe('RewatchFacade', () => {
   });
 });
 
+describe('RewatchFacade "done watching by" filter', () => {
+  it('defaults to 22:30, keeping a film that finishes well before it', () => {
+    // MORNING is 08:00; `film()` defaults to a 170-minute runtime, ending 10:50.
+    const { facade } = configure([film('f1', 'Heat')], [{ film_id: 'f1', days_until_next_rewatch: 0 }]);
+
+    expect(facade.cards()).toHaveLength(1);
+  });
+
+  it('drops a film that would finish after the chosen cutoff', () => {
+    const { facade } = configure([film('f1', 'Heat')], [{ film_id: 'f1', days_until_next_rewatch: 0 }]);
+
+    facade.setDoneBefore(new Date(2024, 0, 1, 9, 0)); // ends 10:50, after a 09:00 cutoff
+
+    expect(facade.cards()).toEqual([]);
+  });
+
+  it('keeps a film again once the cutoff is moved back out', () => {
+    const { facade } = configure([film('f1', 'Heat')], [{ film_id: 'f1', days_until_next_rewatch: 0 }]);
+
+    facade.setDoneBefore(new Date(2024, 0, 1, 9, 0));
+    expect(facade.cards()).toEqual([]);
+
+    facade.setDoneBefore(new Date(2024, 0, 1, 11, 0));
+    expect(facade.cards()).toHaveLength(1);
+  });
+});
+
 /** A `FilmFacade` stub for the tests below — they drive `/rewatch-suggestions` through a real `RewatchApi`; the library side is not under test here. */
 function filmFacadeStub(films: readonly Film[] = [film('f1', 'Heat')]) {
   return { films: signal(films), isLoading: signal(false), error: signal(undefined), reload: (): void => undefined };
@@ -142,7 +179,12 @@ describe('RewatchFacade against a real RewatchApi', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: FilmFacade, useValue: filmFacadeStub() }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FilmFacade, useValue: filmFacadeStub() },
+        { provide: ClockService, useValue: { now: signal(MORNING) } },
+      ],
     });
     httpTesting = TestBed.inject(HttpTestingController);
     facade = TestBed.inject(RewatchFacade);

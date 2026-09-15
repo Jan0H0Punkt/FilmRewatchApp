@@ -5,18 +5,34 @@
  * joined to the cached film metadata to make a card. The view therefore holds
  * no lookup logic and no ordering logic of its own.
  */
-import { Injectable, computed, inject, linkedSignal, type ResourceStatus } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal, signal, type ResourceStatus } from '@angular/core';
 
+import { ClockService } from '../../core/clock';
 import { FilmFacade } from '../film/facade';
 import type { RewatchSuggestionDto } from './api';
 import { RewatchApi } from './api';
-import { toRewatchCardVm, toRewatchSuggestion } from './mapper';
+import { finishesInTime, toRewatchCardVm, toRewatchSuggestion } from './mapper';
 import type { RewatchCardVm } from './model';
+
+/** The filter's default: most evenings, done watching by half ten. */
+function defaultDoneBefore(): Date {
+  const cutoff = new Date();
+  cutoff.setHours(22, 30, 0, 0);
+  return cutoff;
+}
 
 @Injectable({ providedIn: 'root' })
 export class RewatchFacade {
   private readonly api = inject(RewatchApi);
   private readonly films = inject(FilmFacade);
+  private readonly clock = inject(ClockService);
+
+  /** The "done watching by" filter's time of day — only its hours/minutes are read (see `finishesInTime`). */
+  readonly doneBefore = signal<Date>(defaultDoneBefore());
+
+  setDoneBefore(cutoff: Date): void {
+    this.doneBefore.set(cutoff);
+  }
 
   /**
    * `api.list.value()`, guarded against the error state.
@@ -42,13 +58,21 @@ export class RewatchFacade {
    * rendered as a blank card: the two lists are fetched separately, so a film
    * deleted since the last daily run can still appear in the due-list. It
    * disappears for good at the next run.
+   *
+   * Also drops a film that would not finish by `doneBefore`, using the
+   * shared `ClockService` "now" rather than a fresh `Date.now()` — the same
+   * clock the library row's "Done by" estimate reads, so this re-filters
+   * once a minute as real time passes, not just when the view reopens.
    */
   readonly cards = computed<readonly RewatchCardVm[]>(() => {
     const byId = new Map(this.films.films().map((film) => [film.id, film]));
+    const now = this.clock.now();
+    const doneBefore = this.doneBefore();
     return this.suggestions().flatMap((dto) => {
       const suggestion = toRewatchSuggestion(dto);
       const film = byId.get(suggestion.filmId);
-      return film === undefined ? [] : [toRewatchCardVm(film, suggestion)];
+      if (film === undefined || !finishesInTime(now, film.runtimeMinutes, doneBefore)) return [];
+      return [toRewatchCardVm(film, suggestion)];
     });
   });
 

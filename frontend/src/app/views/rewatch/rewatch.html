@@ -1,5 +1,18 @@
 <h2 class="rewatch__heading">Rewatch</h2>
 
+<div class="rewatch__toolbar">
+  <mat-form-field class="rewatch__filter" subscriptSizing="dynamic">
+    <mat-label>Done watching by</mat-label>
+    <input matInput [matTimepicker]="doneByPicker" [value]="doneBefore()" (valueChange)="onDoneBeforeChange($event)" />
+    <mat-timepicker-toggle matIconSuffix [for]="doneByPicker" />
+    <mat-timepicker #doneByPicker interval="15m" />
+  </mat-form-field>
+  @if (cards().length > 0) {
+    <!-- role="status" so the number is announced once the list lands. -->
+    <p class="rewatch__count" role="status">{{ countLabel() }}</p>
+  }
+</div>
+
 @if (isLoading()) {
   <p class="rewatch__state" role="status">Looking for films that are due…</p>
   <mat-progress-bar mode="indeterminate" aria-hidden="true" />
@@ -15,8 +28,6 @@
 }
 
 @if (cards().length > 0) {
-  <!-- role="status" so the number is announced once the list lands. -->
-  <p class="rewatch__count" role="status">{{ countLabel() }}</p>
   <ul class="rewatch__grid">
     @for (card of cards(); track card.id) {
       <li>

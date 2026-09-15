@@ -1,6 +1,6 @@
 /** DTO → domain mapping and the §7.1 "Rewatch status" wording. */
 import type { Film } from '../film/model';
-import { dueLabelFor, toRewatchCardVm, toRewatchSuggestion } from './mapper';
+import { dueLabelFor, finishesInTime, toRewatchCardVm, toRewatchSuggestion } from './mapper';
 
 const HEAT: Film = {
   id: 'f1',
@@ -36,6 +36,26 @@ describe('dueLabelFor', () => {
 
   it('says "day" for exactly one', () => {
     expect(dueLabelFor(-1)).toBe('Overdue by 1 day');
+  });
+});
+
+describe('finishesInTime', () => {
+  const NOW = new Date(2024, 0, 1, 20, 0, 0).getTime(); // 20:00
+
+  it('keeps a film that would finish well before the cutoff', () => {
+    expect(finishesInTime(NOW, 90, new Date(2024, 0, 1, 22, 30))).toBe(true); // ends 21:30
+  });
+
+  it('drops a film that would finish after the cutoff', () => {
+    expect(finishesInTime(NOW, 170, new Date(2024, 0, 1, 22, 30))).toBe(false); // ends 22:50
+  });
+
+  it('keeps a film that finishes exactly at the cutoff', () => {
+    expect(finishesInTime(NOW, 150, new Date(2024, 0, 1, 22, 30))).toBe(true); // ends 22:30
+  });
+
+  it("reads only the cutoff's time of day, not its date", () => {
+    expect(finishesInTime(NOW, 90, new Date(2019, 5, 15, 22, 30))).toBe(true);
   });
 });
 
