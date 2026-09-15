@@ -130,6 +130,20 @@
       <p class="film-form__error" role="alert">The poster URL must be a well-formed http(s) URL.</p>
     }
 
+    <mat-form-field class="film-form__letterboxd" subscriptSizing="dynamic">
+      <mat-label>Letterboxd link (optional)</mat-label>
+      <input
+        #letterboxdInput
+        matInput
+        type="url"
+        [value]="letterboxdUrl()"
+        (input)="letterboxdUrl.set(letterboxdInput.value)"
+      />
+    </mat-form-field>
+    @if (letterboxdUrl().trim() !== '' && !letterboxdUrlValid()) {
+      <p class="film-form__error" role="alert">The Letterboxd link must be a well-formed http(s) URL.</p>
+    }
+
     <mat-form-field class="film-form__date" subscriptSizing="dynamic">
       <mat-label>Watched on</mat-label>
       <input

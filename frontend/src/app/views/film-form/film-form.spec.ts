@@ -202,10 +202,38 @@ describe('FilmForm', () => {
         runtimeMinutes: 170,
         genres: ['Crime'],
         tags: ['heist'],
+        posterImage: null,
+        letterboxdUrl: null,
         rating: null,
       }),
     );
     expect(navigateSpy).toHaveBeenCalledWith('/library');
+  });
+
+  it('includes a filled-in Letterboxd link in the payload', async () => {
+    const filmFacade = stubFilmFacade();
+    const element = await render(filmFacade);
+    await fillRequiredFields(element);
+    setValue(element, '.film-form__letterboxd input', 'https://boxd.it/aaaa');
+    await settle();
+
+    element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+    await settle();
+
+    expect(filmFacade.create).toHaveBeenCalledWith(
+      expect.objectContaining<Partial<FilmCreateInput>>({ letterboxdUrl: 'https://boxd.it/aaaa' }),
+    );
+  });
+
+  it('blocks submit when the Letterboxd link is not a well-formed URL', async () => {
+    const element = await render();
+    await fillRequiredFields(element);
+
+    setValue(element, '.film-form__letterboxd input', 'not-a-url');
+    await settle();
+
+    expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain('Letterboxd');
   });
 
   it('blocks submission and names the colliding film on a 409 DUPLICATE_FILM response', async () => {

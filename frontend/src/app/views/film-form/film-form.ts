@@ -181,6 +181,7 @@ export class FilmForm {
   protected readonly selectedGenres = signal<readonly string[]>([]);
   protected readonly selectedTags = signal<readonly string[]>([]);
   protected readonly posterImage = signal('');
+  protected readonly letterboxdUrl = signal('');
   protected readonly today = new Date();
   protected readonly watchDate = signal<Date | null>(this.today);
 
@@ -231,6 +232,11 @@ export class FilmForm {
     return value === '' || isWellFormedHttpUrl(value);
   });
 
+  protected readonly letterboxdUrlValid = computed(() => {
+    const value = this.letterboxdUrl().trim();
+    return value === '' || isWellFormedHttpUrl(value);
+  });
+
   protected readonly isValid = computed(() => {
     const year = this.releaseYear();
     const runtime = this.runtimeMinutes();
@@ -245,6 +251,7 @@ export class FilmForm {
       this.selectedGenres().length > 0 &&
       this.selectedTags().length > 0 &&
       this.posterImageValid() &&
+      this.letterboxdUrlValid() &&
       this.watchDate() !== null
     );
   });
@@ -264,6 +271,7 @@ export class FilmForm {
     if (!this.isValid() || year === null || runtime === null || watchDate === null || this.isSubmitting()) return;
 
     const posterImage = this.posterImage().trim();
+    const letterboxdUrl = this.letterboxdUrl().trim();
     const selectedValue = this.selectedValue();
     const payload: FilmCreateInput = {
       titles: this.titles().map((row) => ({
@@ -277,6 +285,7 @@ export class FilmForm {
       genres: this.selectedGenres(),
       tags: this.selectedTags(),
       posterImage: posterImage === '' ? null : posterImage,
+      letterboxdUrl: letterboxdUrl === '' ? null : letterboxdUrl,
       watchDate: toIsoDate(watchDate),
       rating: selectedValue === 'unrated' ? null : selectedValue,
     };
