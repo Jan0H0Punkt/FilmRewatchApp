@@ -377,6 +377,15 @@ def test_poster_image_must_be_a_well_formed_short_url() -> None:
             payload(poster_image=bad_url)
 
 
+def test_letterboxd_url_must_be_a_well_formed_short_url() -> None:
+    # Same FR-LIB-14 rule as poster_image, no letterboxd.com host allowlist:
+    # short links like boxd.it are well-formed http(s) URLs too.
+    assert payload(letterboxd_url="https://boxd.it/abcd").letterboxd_url is not None
+    for bad_url in ("not a url", "ftp://letterboxd.com/film/heat", "https://" + "x" * 2050):
+        with pytest.raises(ValidationError):
+            payload(letterboxd_url=bad_url)
+
+
 # --------------------------------------------------------------------------- #
 # Service flows against the fakes (§9)
 # --------------------------------------------------------------------------- #
@@ -565,6 +574,10 @@ def test_update_payload_field_bounds_match_create() -> None:
         update_payload(poster_image="not a url")
     with pytest.raises(ValidationError):
         update_payload(poster_image="https://" + "x" * 2050)
+    with pytest.raises(ValidationError):
+        update_payload(letterboxd_url="not a url")
+    with pytest.raises(ValidationError):
+        update_payload(letterboxd_url="https://" + "x" * 2050)
 
 
 def test_update_payload_null_poster_is_distinguishable_from_absent() -> None:
@@ -577,6 +590,16 @@ def test_update_payload_null_poster_is_distinguishable_from_absent() -> None:
     explicit_null = update_payload(poster_image=None)
     assert "poster_image" in explicit_null.model_fields_set
     assert explicit_null.poster_image is None
+
+
+def test_update_payload_null_letterboxd_url_is_distinguishable_from_absent() -> None:
+    # Same FR-LIB-15 rule as poster_image, applied to letterboxd_url.
+    absent = update_payload()
+    assert "letterboxd_url" not in absent.model_fields_set
+
+    explicit_null = update_payload(letterboxd_url=None)
+    assert "letterboxd_url" in explicit_null.model_fields_set
+    assert explicit_null.letterboxd_url is None
 
 
 # --------------------------------------------------------------------------- #
@@ -725,6 +748,25 @@ def test_update_poster_can_be_set_replaced_and_removed() -> None:
     # A later edit that never mentions poster_image leaves it removed.
     untouched = service.update(created.id, update_payload(is_favorite=True))
     assert untouched.poster_image is None
+
+
+def test_update_letterboxd_url_can_be_set_replaced_and_removed() -> None:
+    service, _, _, _ = make_service()
+    created = service.create(payload())
+    assert created.letterboxd_url is None
+
+    set_ = service.update(created.id, update_payload(letterboxd_url="https://boxd.it/aaaa"))
+    assert set_.letterboxd_url == "https://boxd.it/aaaa"
+
+    replaced = service.update(created.id, update_payload(letterboxd_url="https://boxd.it/bbbb"))
+    assert replaced.letterboxd_url == "https://boxd.it/bbbb"
+
+    removed = service.update(created.id, update_payload(letterboxd_url=None))
+    assert removed.letterboxd_url is None
+
+    # A later edit that never mentions letterboxd_url leaves it removed.
+    untouched = service.update(created.id, update_payload(is_favorite=True))
+    assert untouched.letterboxd_url is None
 
 
 def test_update_reassigns_tags_and_genres_sparing_labels_shared_with_other_films() -> None:

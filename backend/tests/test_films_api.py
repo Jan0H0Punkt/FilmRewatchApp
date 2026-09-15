@@ -112,6 +112,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "genre",
         "tags",
         "poster_image",
+        "letterboxd_url",
         "is_favorite",
         "delay_days",
         "rating_history",
@@ -194,6 +195,7 @@ def test_each_validation_failure_yields_the_validation_error_envelope(
         _payload(natural_key="heat|1995|michael mann"),  # unknown/system field
         _payload(is_favorite=True),  # not accepted at create (FR-LIB-02)
         _payload(poster_image="not a url"),  # FR-LIB-14
+        _payload(letterboxd_url="not a url"),  # FR-LIB-14, same rule
     ]
     for body in bad_bodies:
         response = client.post("/api/v1/films", json=body)
@@ -518,6 +520,36 @@ def test_edit_poster_can_be_set_replaced_and_removed(db_session: Session) -> Non
 
     unrelated_edit = client.patch(f"/api/v1/films/{film_id}", json={"is_favorite": True})
     assert cast(dict[str, object], unrelated_edit.json())["poster_image"] is None
+
+
+def test_letterboxd_url_round_trips_through_create_and_edit_and_clears_on_null(
+    db_session: Session,
+) -> None:
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object],
+        client.post("/api/v1/films", json=_payload(letterboxd_url="https://boxd.it/aaaa")).json(),
+    )
+    film_id = created["id"]
+    assert created["letterboxd_url"] == "https://boxd.it/aaaa"
+
+    invalid = client.patch(f"/api/v1/films/{film_id}", json={"letterboxd_url": "not a url"})
+    assert invalid.status_code == 422
+    assert _error_code(invalid.json()) == "VALIDATION_ERROR"
+
+    # Omitting the field leaves it unchanged.
+    unrelated_edit = client.patch(f"/api/v1/films/{film_id}", json={"is_favorite": True})
+    assert (
+        cast(dict[str, object], unrelated_edit.json())["letterboxd_url"] == "https://boxd.it/aaaa"
+    )
+
+    # An explicit null clears the link (FR-LIB-15), distinct from omitting it.
+    removed = client.patch(f"/api/v1/films/{film_id}", json={"letterboxd_url": None})
+    assert removed.status_code == 200
+    assert cast(dict[str, object], removed.json())["letterboxd_url"] is None
+
+    still_absent = client.patch(f"/api/v1/films/{film_id}", json={"is_favorite": False})
+    assert cast(dict[str, object], still_absent.json())["letterboxd_url"] is None
 
 
 def test_edit_rejects_immutable_and_unknown_fields(db_session: Session) -> None:

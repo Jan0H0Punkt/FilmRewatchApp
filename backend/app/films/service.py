@@ -241,6 +241,7 @@ class FilmService:
             director=data.director,
             runtime_minutes=data.runtime_minutes,
             poster_image=data.poster_image,
+            letterboxd_url=data.letterboxd_url,
         )
         self._repository.add_film(film)
         for title in data.titles:
@@ -293,6 +294,7 @@ class FilmService:
             genre=[genre.name for genre in self._genres.list_for_film(film.id)],
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
             poster_image=film.poster_image,
+            letterboxd_url=film.letterboxd_url,
             is_favorite=film.is_favorite,
             delay_days=film.delay_days,
             rating_history=[RatingEntryRead.model_validate(entry) for entry in history],
@@ -304,10 +306,11 @@ class FilmService:
         """Edit a film's user-editable fields (FR-LIB-06..09).
 
         Every field is optional; a field absent from the request — and, for
-        every field except ``poster_image``, an explicit ``null`` too — is
-        left unchanged (the schema docstring). ``updated_at`` is bumped only
-        when the request actually names at least one field; a body with none
-        (``{}``) is a pure no-op that leaves ``updated_at`` untouched.
+        every field except ``poster_image``/``letterboxd_url``, an explicit
+        ``null`` too — is left unchanged (the schema docstring). ``updated_at``
+        is bumped only when the request actually names at least one field; a
+        body with none (``{}``) is a pure no-op that leaves ``updated_at``
+        untouched.
 
         All validation, including the duplicate check, runs **before** any
         mutation: a colliding edit raises :class:`DuplicateFilmError` while
@@ -360,9 +363,12 @@ class FilmService:
         if data.runtime_minutes is not None:
             film.runtime_minutes = data.runtime_minutes
         if "poster_image" in data.model_fields_set:
-            # The one field whose stored value is itself nullable: an explicit
-            # null here means "remove" (FR-LIB-15), not "unchanged".
+            # One of the two fields whose stored value is itself nullable: an
+            # explicit null here means "remove", not "unchanged" — FR-LIB-15 for
+            # the poster, REQ §4.1 for the Letterboxd link.
             film.poster_image = data.poster_image
+        if "letterboxd_url" in data.model_fields_set:
+            film.letterboxd_url = data.letterboxd_url
         if data.is_favorite is not None:
             film.is_favorite = data.is_favorite
         if data.delay_days is not None:
