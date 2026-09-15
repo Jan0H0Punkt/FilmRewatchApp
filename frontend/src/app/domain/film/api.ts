@@ -86,6 +86,7 @@ export interface FilmCreateDto {
   readonly genre: readonly string[];
   readonly tags: readonly string[];
   readonly poster_image: string | null;
+  readonly letterboxd_url: string | null;
   readonly first_rating: {
     readonly value: number | null;
     readonly watch_date: string;

@@ -292,6 +292,7 @@ describe('FilmFacade', () => {
       genres: ['Crime'],
       tags: ['heist'],
       posterImage: null,
+      letterboxdUrl: null,
       watchDate: '2024-01-01',
       rating: 4,
     };

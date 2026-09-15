@@ -61,6 +61,7 @@ function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput 
     genres: ['Crime'],
     tags: ['heist'],
     posterImage: null,
+    letterboxdUrl: null,
     watchDate: '2024-01-01',
     rating: 4,
     ...overrides,
@@ -97,6 +98,11 @@ describe('toFilmCreateDto', () => {
     expect(dto.tags).toEqual(['heist']);
     expect(dto.poster_image).toBeNull();
     expect(dto.first_rating).toEqual({ value: 4, watch_date: '2024-01-01' });
+  });
+
+  it('sends a set letterboxd_url', () => {
+    const dto = toFilmCreateDto(createInput({ letterboxdUrl: 'https://boxd.it/aaaa' }));
+    expect(dto.letterboxd_url).toBe('https://boxd.it/aaaa');
   });
 
   it('sends an explicit null rating for "do not rate this"', () => {

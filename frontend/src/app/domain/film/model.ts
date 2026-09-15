@@ -114,6 +114,8 @@ export interface FilmCreateInput {
   readonly genres: readonly string[];
   readonly tags: readonly string[];
   readonly posterImage: string | null;
+  /** User-entered Letterboxd link (REQ §4.1), same optionality as `posterImage`. */
+  readonly letterboxdUrl: string | null;
   /** ISO `yyyy-MM-dd`, never in the future (FR-RAT-03). */
   readonly watchDate: string;
   /** `null` for a watch the user explicitly chose not to rate (FR-RAT-12). */

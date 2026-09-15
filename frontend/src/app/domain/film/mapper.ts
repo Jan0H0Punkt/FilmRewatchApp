@@ -93,6 +93,7 @@ export function toFilmCreateDto(input: FilmCreateInput): FilmCreateDto {
     genre: input.genres,
     tags: input.tags,
     poster_image: input.posterImage,
+    letterboxd_url: input.letterboxdUrl,
     first_rating: { value: input.rating, watch_date: input.watchDate },
   };
 }
