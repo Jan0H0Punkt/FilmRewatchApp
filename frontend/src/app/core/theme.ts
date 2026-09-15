@@ -30,6 +30,12 @@ function storedPreference(): ThemePreference {
 export class ThemeService {
   readonly preference = signal<ThemePreference>(storedPreference());
 
+  /** Advances to the next preference in `PREFERENCES` order, wrapping after `auto`. */
+  cycle(): void {
+    const next = PREFERENCES[(PREFERENCES.indexOf(this.preference()) + 1) % PREFERENCES.length];
+    this.preference.set(next);
+  }
+
   constructor() {
     effect(() => {
       const preference = this.preference();
