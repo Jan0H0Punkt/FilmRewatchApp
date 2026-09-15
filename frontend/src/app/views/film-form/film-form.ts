@@ -101,15 +101,18 @@ export class FilmForm {
   protected readonly minReleaseYear = MIN_RELEASE_YEAR;
 
   /**
-   * Starts as one row seeded from `title` — a `linkedSignal` so a direct
-   * `?title=` navigation still prefills it. `?? ''`: `withComponentInputBinding()`
+   * Starts as one row seeded from `title`, Primary already checked — a film
+   * always has exactly one primary title (REQ §4.1), so defaulting to
+   * unchecked would just make the user tick a box that's true for every
+   * film with only one title. A `linkedSignal` so a direct `?title=`
+   * navigation still prefills it. `?? ''`: `withComponentInputBinding()`
    * leaves the input `undefined` (not the declared default) when the route
    * carries no `title` query param at all, e.g. reached without a search first.
    * `addTitleRow`/`removeTitleRow`/`setTitleValue`/`toggleTitlePrimary`/
    * `toggleTitleOriginal` below are the only other writers.
    */
   protected readonly titles = linkedSignal<readonly TitleRowState[]>(() => [
-    { id: 0, value: this.title() ?? '', isPrimary: false, isOriginal: false },
+    { id: 0, value: this.title() ?? '', isPrimary: true, isOriginal: false },
   ]);
   /** Monotonic — `@for`'s `track`, and every row lookup below, key off this rather than array index. */
   private nextTitleRowId = 1;
@@ -121,11 +124,15 @@ export class FilmForm {
    */
   protected readonly titleRows = computed<readonly TitleRowVm[]>(() => {
     const rows = this.titles();
+    // A lone title has no other row to defer primacy to, so its Primary
+    // checkbox is locked checked rather than just defaulted — there is
+    // nothing a user unchecking it could mean.
+    const singleRow = rows.length === 1;
     const anyPrimary = rows.some((row) => row.isPrimary);
     const anyOriginal = rows.some((row) => row.isOriginal);
     return rows.map((row) => ({
       ...row,
-      primaryDisabled: anyPrimary && !row.isPrimary,
+      primaryDisabled: singleRow || (anyPrimary && !row.isPrimary),
       originalDisabled: anyOriginal && !row.isOriginal,
       canRemove: rows.length > 1,
     }));

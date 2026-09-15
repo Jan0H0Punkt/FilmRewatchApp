@@ -196,7 +196,7 @@ describe('FilmForm', () => {
 
     expect(filmFacade.create).toHaveBeenCalledWith(
       expect.objectContaining<Partial<FilmCreateInput>>({
-        titles: [{ value: 'Heat', isPrimary: false, isOriginal: false }],
+        titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],
         releaseYear: 1995,
         director: 'Michael Mann',
         runtimeMinutes: 170,
@@ -232,20 +232,23 @@ describe('FilmForm', () => {
   });
 
   describe('titles (REQ §4.1)', () => {
-    it('starts with a single row that has no remove button', async () => {
+    it('starts with a single row, Primary checked and disabled (a lone title has no other to defer to), with no remove button', async () => {
       const element = await render();
 
       expect(titleRowElements(element)).toHaveLength(1);
+      expect(primaryCheckbox(element, 0).checked).toBe(true);
+      expect(primaryCheckbox(element, 0).disabled).toBe(true);
       expect(element.querySelector('.film-form__title-remove')).toBeNull();
     });
 
-    it('adds a removable row when Add another title is clicked', async () => {
+    it('adds a removable row when Add another title is clicked, its Primary checkbox already disabled by the first row’s', async () => {
       const element = await render();
 
       await addTitleRow(element);
 
       expect(titleRowElements(element)).toHaveLength(2);
       expect(element.querySelectorAll('.film-form__title-remove')).toHaveLength(2);
+      expect(primaryCheckbox(element, 1).disabled).toBe(true);
     });
 
     it('removes a row, dropping back to one row with no remove button', async () => {
@@ -262,10 +265,12 @@ describe('FilmForm', () => {
     it('disables every other row’s Primary checkbox once one is checked, including a row added afterward', async () => {
       const element = await render();
       await addTitleRow(element);
-
-      primaryCheckbox(element, 0).click();
+      primaryCheckbox(element, 0).click(); // uncheck row 0's default so row 1 starts the mutual exclusion from a clean slate
       await settle();
-      expect(primaryCheckbox(element, 1).disabled).toBe(true);
+
+      primaryCheckbox(element, 1).click();
+      await settle();
+      expect(primaryCheckbox(element, 0).disabled).toBe(true);
 
       await addTitleRow(element);
       expect(primaryCheckbox(element, 2).disabled).toBe(true);
@@ -273,11 +278,9 @@ describe('FilmForm', () => {
 
     it('re-enables every row’s Primary checkbox once the checked one is unchecked', async () => {
       const element = await render();
-      await addTitleRow(element);
-      primaryCheckbox(element, 0).click();
-      await settle();
+      await addTitleRow(element); // row 1 starts disabled — row 0's default Primary is still checked
 
-      primaryCheckbox(element, 0).click();
+      primaryCheckbox(element, 0).click(); // uncheck it
       await settle();
 
       expect(primaryCheckbox(element, 1).disabled).toBe(false);
@@ -286,6 +289,8 @@ describe('FilmForm', () => {
     it('keeps Original mutually exclusive independently of Primary', async () => {
       const element = await render();
       await addTitleRow(element);
+      primaryCheckbox(element, 0).click(); // uncheck the default so this test isolates Original's own exclusion
+      await settle();
 
       originalCheckbox(element, 0).click();
       await settle();
@@ -294,20 +299,39 @@ describe('FilmForm', () => {
       expect(primaryCheckbox(element, 1).disabled).toBe(false);
     });
 
-    it('blocks submit once there is more than one title until exactly one is marked Primary', async () => {
+    it('ignores a click on the single title’s disabled Primary checkbox — it cannot be unchecked', async () => {
+      const element = await render();
+      await fillRequiredFields(element);
+
+      primaryCheckbox(element, 0).click();
+      await settle();
+
+      expect(primaryCheckbox(element, 0).checked).toBe(true);
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+    });
+
+    it('enables the first row’s Primary checkbox again once a second title exists', async () => {
+      const element = await render();
+
+      await addTitleRow(element);
+
+      expect(primaryCheckbox(element, 0).disabled).toBe(false);
+    });
+
+    it('blocks submit once there is more than one title unless exactly one is marked Primary', async () => {
       const element = await render();
       await fillRequiredFields(element);
       await addTitleRow(element);
       titleValueInput(element, 1).value = 'Hitze';
       titleValueInput(element, 1).dispatchEvent(new Event('input'));
       await settle();
+      // Row 0's default Primary already satisfies "exactly one".
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
 
-      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
-
-      primaryCheckbox(element, 0).click();
+      primaryCheckbox(element, 0).click(); // uncheck it — now nothing is marked Primary
       await settle();
 
-      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
     });
 
     it('sends every row flagged as checked, in row order', async () => {
@@ -319,8 +343,6 @@ describe('FilmForm', () => {
       titleValueInput(element, 1).dispatchEvent(new Event('input'));
       await settle();
       originalCheckbox(element, 1).click();
-      await settle();
-      primaryCheckbox(element, 0).click();
       await settle();
 
       element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
