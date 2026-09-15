@@ -1,11 +1,19 @@
-// The chips and the edit button share one line; the chips take the slack.
+// The chips and the edit button share one line, the button directly after the
+// chips it edits rather than pushed to the far end of the row.
 :host {
   align-items: center;
   display: flex;
   gap: 0.5rem;
 }
 
-.editable-chips__set,
+// Read mode sizes to its chips, so the edit button stays beside them.
+.editable-chips__set {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+// Edit mode is the exception: a form field wants the width, and its own label
+// and input would look truncated shrunk to the chips' size.
 .editable-chips__field {
   flex: 1;
   min-width: 0;
