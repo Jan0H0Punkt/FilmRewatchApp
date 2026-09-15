@@ -7,25 +7,61 @@
  * and never toggles is a static sidebar — the container, the breakpoint
  * observer and the `mode` binding would all render the same thing.
  */
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 
 import { navDestinations } from './core/route-registry';
 import { ROUTE_REGISTRY } from './core/routes.registry';
-import { ThemeService } from './core/theme';
+import { ThemeService, type ThemePreference } from './core/theme';
+
+/** One icon per preference (§theme) — the button shows the active one, not a menu of all three. */
+const THEME_ICONS: Record<ThemePreference, string> = {
+  light: 'light_mode',
+  dark: 'dark_mode',
+  auto: 'brightness_auto',
+};
 
 @Component({
   selector: 'app-root',
-  imports: [MatButtonToggleModule, MatIconModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [MatButtonModule, MatIconModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  protected readonly title = signal('Film Rewatch');
-  protected readonly theme = inject(ThemeService).preference;
+  /** App branding, shown in the sidebar — the app bar itself carries the current page's title instead. */
+  protected readonly appName = 'Film Rewatch';
+
+  private readonly router = inject(Router);
+
+  /**
+   * The active leaf route's `title` (`routes.registry.ts`), read straight off
+   * the route snapshot rather than back from the `Title` service: the
+   * router's default title strategy writes `document.title` in a microtask
+   * *after* `NavigationEnd` fires, so reading it back at that point would
+   * race and see the previous page's title.
+   */
+  protected readonly pageTitle = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map(() => this.router.routerState.snapshot.root.firstChild?.title ?? ''),
+      startWith(this.router.routerState.snapshot.root.firstChild?.title ?? ''),
+    ),
+    { requireSync: true },
+  );
+
+  private readonly themeService = inject(ThemeService);
+  protected readonly theme = this.themeService.preference;
+  protected readonly themeIcon = computed(() => THEME_ICONS[this.theme()]);
+
+  protected cycleTheme(): void {
+    this.themeService.cycle();
+  }
+
   /** Derived from the registry, so registering a route stays the one wiring point (FR-EXT-02). */
   protected readonly destinations = navDestinations(ROUTE_REGISTRY);
 }

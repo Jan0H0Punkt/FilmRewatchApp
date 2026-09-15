@@ -1,4 +1,5 @@
 <nav class="app-nav" aria-label="Primary">
+  <p class="app-nav__brand">{{ appName }}</p>
   @for (destination of destinations; track destination.path) {
     <a
       class="app-nav__link"
@@ -15,18 +16,15 @@
 
 <div class="app-shell">
   <header class="app-bar">
-    <h1 class="app-bar__title">{{ title() }}</h1>
-    <mat-button-toggle-group
-      class="app-bar__theme"
-      aria-label="Colour theme"
-      hideSingleSelectionIndicator
-      [value]="theme()"
-      (valueChange)="theme.set($event)"
+    <h1 class="app-bar__title">{{ pageTitle() }}</h1>
+    <button
+      matIconButton
+      type="button"
+      [attr.aria-label]="'Colour theme: ' + theme() + '. Click to switch.'"
+      (click)="cycleTheme()"
     >
-      <mat-button-toggle value="light">Light</mat-button-toggle>
-      <mat-button-toggle value="dark">Dark</mat-button-toggle>
-      <mat-button-toggle value="auto">Auto</mat-button-toggle>
-    </mat-button-toggle-group>
+      <mat-icon>{{ themeIcon() }}</mat-icon>
+    </button>
   </header>
 
   <main class="app-main">

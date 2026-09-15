@@ -28,6 +28,12 @@
   z-index: 2;
 }
 
+/* Branding earns its place only in the sidebar layout — a fixed mobile bottom
+   bar has no room to spare for it alongside the two nav destinations. */
+.app-nav__brand {
+  display: none;
+}
+
 .app-nav__link {
   align-items: center;
   color: var(--mat-sys-on-surface-variant);
@@ -64,6 +70,13 @@
     right: auto;
     top: 0;
     width: 14rem;
+  }
+
+  .app-nav__brand {
+    display: block;
+    font: var(--mat-sys-title-large);
+    margin: 0 0 1rem;
+    padding: 0 1rem;
   }
 
   .app-nav__link {

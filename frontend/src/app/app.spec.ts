@@ -1,22 +1,40 @@
-/** The app shell: the title, the theme control, and the §6.5 navigation. */
+/** The app shell: the branding, the theme control, and the §6.5 navigation. */
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 
 import { App } from './app';
 
-async function render(): Promise<HTMLElement> {
+async function render(routes: Parameters<typeof provideRouter>[0] = []): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [App],
-    providers: [provideRouter([])],
+    providers: [provideRouter(routes)],
   });
   const fixture = TestBed.createComponent(App);
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
 }
 
+@Component({ template: '' })
+class StubView {}
+
 describe('App', () => {
-  it('renders the app title', async () => {
-    expect((await render()).querySelector('h1')?.textContent).toContain('Film Rewatch');
+  it('renders the app name as the sidebar branding', async () => {
+    expect((await render()).querySelector('.app-nav__brand')?.textContent).toContain('Film Rewatch');
+  });
+
+  it("shows the active route's title in the app bar, not the app name", async () => {
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }])],
+    });
+    // Navigated before the component is created, so `pageTitle`'s initial
+    // `startWith` already sees it — no later `NavigationEnd` to wait out.
+    await TestBed.inject(Router).navigateByUrl('/rewatch');
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toBe('Rewatch');
   });
 
   it('renders both primary destinations in the navigation', async () => {
