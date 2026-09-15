@@ -12,7 +12,7 @@ const GENRES = ['Action', 'Comedy', 'Adventure', 'Comic'];
 
 let fixture: ComponentFixture<EditableChips>;
 
-async function render(values: readonly string[], orderable: boolean): Promise<HTMLElement> {
+async function render(values: readonly string[], orderable: boolean, startExpanded = false): Promise<HTMLElement> {
   TestBed.configureTestingModule({ imports: [EditableChips] });
   fixture = TestBed.createComponent(EditableChips);
   fixture.componentRef.setInput('label', 'Genres');
@@ -20,6 +20,7 @@ async function render(values: readonly string[], orderable: boolean): Promise<HT
   fixture.componentRef.setInput('values', values);
   fixture.componentRef.setInput('suggestions', []);
   fixture.componentRef.setInput('orderable', orderable);
+  fixture.componentRef.setInput('startExpanded', startExpanded);
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
 }
@@ -72,5 +73,18 @@ describe('EditableChips', () => {
   it('does not reorder a row that is not orderable (the tags row)', async () => {
     const element = await render(GENRES, false);
     expect(emissionFrom(element, 1, 'ArrowRight', 'ctrl')).toBeNull();
+  });
+
+  describe('startExpanded', () => {
+    it('starts in read-only mode by default, so an empty row is not just a bare edit icon', async () => {
+      const element = await render([], false);
+      expect(element.querySelector('.editable-chips__field')).toBeNull();
+    });
+
+    it('starts already in edit mode when startExpanded is set — a create form has nothing to show read-only', async () => {
+      const element = await render([], false, true);
+      expect(element.querySelector('.editable-chips__field')).not.toBeNull();
+      expect(element.querySelector('mat-label')?.textContent).toBe('Genres');
+    });
   });
 });

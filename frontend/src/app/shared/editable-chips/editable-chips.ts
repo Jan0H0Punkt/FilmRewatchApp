@@ -8,7 +8,7 @@
  * are the same shape on the wire (a full replacement list of names) and the
  * same shape on screen.
  */
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 import { CdkDrag, CdkDropList, moveItemInArray, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatAutocompleteModule, type MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
@@ -46,14 +46,23 @@ export class EditableChips {
    * Defaults to `false` so the tags row is unaffected.
    */
   readonly orderable = input(false);
+  /**
+   * Opens the row already in edit mode instead of the read-only chip set —
+   * for a row that starts empty (a create form's genres/tags), the read-only
+   * mode has nothing to show but a bare, unlabelled edit icon.
+   */
+  readonly startExpanded = input(false);
   /** The complete list after an add, a remove, or a reorder — never a delta. */
   readonly changed = output<readonly string[]>();
 
   /**
-   * Edit mode. There is no draft state behind it: the parent saves each
+   * Edit mode, seeded from `startExpanded` — a `linkedSignal`, not a plain
+   * `signal`, because a bound input isn't resolved yet when a field
+   * initializer runs; `toggleEditing` below still just flips it freely
+   * after that. There is no draft state behind it: the parent saves each
    * emitted list immediately, so leaving edit mode discards nothing.
    */
-  protected readonly isEditing = signal(false);
+  protected readonly isEditing = linkedSignal(() => this.startExpanded());
   /** What has been typed into the input, narrowing `options` below. */
   protected readonly query = signal('');
   /** Enter and comma both commit the typed text as a chip. */
