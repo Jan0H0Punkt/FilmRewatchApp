@@ -24,7 +24,9 @@ export interface ConfirmDialogData {
     <mat-dialog-content>{{ data.message }}</mat-dialog-content>
     <mat-dialog-actions align="end">
       <button matButton type="button" [mat-dialog-close]="false">Cancel</button>
-      <button matButton="filled" type="button" [mat-dialog-close]="true">{{ data.confirmLabel }}</button>
+      <button class="destructive" matButton="filled" type="button" [mat-dialog-close]="true">
+        {{ data.confirmLabel }}
+      </button>
     </mat-dialog-actions>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

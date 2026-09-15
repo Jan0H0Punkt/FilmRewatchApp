@@ -67,3 +67,20 @@ body {
   white-space: nowrap;
   width: 1px;
 }
+
+/* Deletions carry the error colour app-wide: every trash icon and every
+   confirm button that commits a delete. Applied as a class rather than derived
+   from the icon, since CSS cannot select on a ligature's text. The custom
+   properties cover the button appearances this app uses; `color` alone would
+   leave a filled button's container untouched. */
+.destructive {
+  --mat-filled-button-container-color: var(--mat-sys-error);
+  --mat-filled-button-label-text-color: var(--mat-sys-on-error);
+  --mat-icon-button-icon-color: var(--mat-sys-error);
+  --mat-outlined-button-icon-color: var(--mat-sys-error);
+  --mat-outlined-button-label-text-color: var(--mat-sys-error);
+  --mat-text-button-icon-color: var(--mat-sys-error);
+  --mat-text-button-label-text-color: var(--mat-sys-error);
+
+  color: var(--mat-sys-error);
+}
