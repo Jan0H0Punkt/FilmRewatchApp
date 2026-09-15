@@ -25,6 +25,27 @@
   max-width: 16rem;
 }
 
+.film-form__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.film-form__title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.film-form__title-value {
+  flex: 1 1 12rem;
+}
+
+.film-form__title-add {
+  align-self: flex-start;
+}
+
 .film-form__error {
   color: var(--mat-sys-error);
   font: var(--mat-sys-body-small);
