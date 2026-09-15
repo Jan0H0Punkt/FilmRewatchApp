@@ -46,6 +46,7 @@ export function toFilmDetail(dto: FilmDto): FilmDetail {
   return {
     ...toFilm(dto),
     delayDays: dto.delay_days,
+    letterboxdUrl: dto.letterboxd_url,
     ratingHistory: dto.rating_history.map((entry) => ({
       id: entry.id,
       value: entry.value,
@@ -69,5 +70,6 @@ export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
     delay_days: patch.delayDays,
     tags: patch.tags,
     genre: patch.genres,
+    letterboxd_url: patch.letterboxdUrl,
   };
 }

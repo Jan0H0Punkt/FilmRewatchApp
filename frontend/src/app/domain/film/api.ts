@@ -45,6 +45,7 @@ export interface FilmDto {
   readonly genre: readonly string[];
   readonly tags: readonly string[];
   readonly poster_image: string | null;
+  readonly letterboxd_url: string | null;
   readonly is_favorite: boolean;
   readonly delay_days: number;
   readonly rating_history: readonly RatingEntryDto[];
@@ -65,6 +66,8 @@ export interface FilmUpdateDto {
   readonly tags?: readonly string[];
   /** The full replacement genre list. Singular on the wire, unlike `tags`. */
   readonly genre?: readonly string[];
+  /** Absent means unchanged; an explicit `null` clears the link (FR-LIB-15). */
+  readonly letterboxd_url?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

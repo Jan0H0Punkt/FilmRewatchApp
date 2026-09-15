@@ -55,6 +55,8 @@ export interface RatingHistoryEntry {
  */
 export interface FilmDetail extends Film {
   readonly delayDays: number;
+  /** User-entered Letterboxd link (REQ §4.1), `null` when never set. */
+  readonly letterboxdUrl: string | null;
   /** Newest first (FR-RAT-05/06), as the backend orders it. */
   readonly ratingHistory: readonly RatingHistoryEntry[];
   readonly createdAt: string;
@@ -78,4 +80,10 @@ export interface FilmPatch {
   readonly tags?: readonly string[];
   /** The film's complete genre list — same full-replacement rule as `tags` (REQ §4.4). */
   readonly genres?: readonly string[];
+  /**
+   * Undefined means unchanged; an explicit `null` clears the link
+   * (REQ §4.1) — the one field in this patch whose stored value is itself
+   * nullable, mirroring `poster_image`'s FR-LIB-15 behaviour on the backend.
+   */
+  readonly letterboxdUrl?: string | null;
 }

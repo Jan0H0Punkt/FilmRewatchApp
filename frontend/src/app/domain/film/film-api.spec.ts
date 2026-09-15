@@ -22,6 +22,7 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     genre: ['Crime'],
     tags: [],
     poster_image: null,
+    letterboxd_url: null,
     is_favorite: false,
     delay_days: 0,
     rating_history: [],
