@@ -2,5 +2,8 @@
   "permissions": {
     "allow": [
     ]
+  },
+  "worktree": {
+    "bgIsolation": "none"
   }
 }
