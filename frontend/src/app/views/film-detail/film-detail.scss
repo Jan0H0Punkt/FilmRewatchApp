@@ -384,7 +384,7 @@
 
 @media (min-width: 900px) {
   .film-detail-page {
-    align-items: start;
+    align-items: stretch; // both cards match the row's full height (styles.scss makes that a real height, not just content)
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(22rem, 2fr) minmax(18rem, 1fr);

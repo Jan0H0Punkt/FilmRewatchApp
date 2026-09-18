@@ -90,6 +90,27 @@ body {
   .app-shell .app-main:has(.film-detail-page) {
     max-width: none;
   }
+
+  /* Both cards fill the page height (with `.app-main`'s own padding as the
+     margin), rather than shrink to content: the shell becomes a full-height
+     flex column, `.app-main` and `.film-detail-page` each take the rest of
+     it in turn, and `.film-detail-page`'s `align-items: stretch` (its own
+     file) makes the grid's two cards match that height. */
+  .app-shell:has(.film-detail-page) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .app-shell:has(.film-detail-page) .app-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .app-main .film-detail-page {
+    flex: 1;
+  }
 }
 
 /* Deletions carry the error colour app-wide: every trash icon and every
