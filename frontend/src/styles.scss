@@ -108,6 +108,18 @@ body {
     flex-direction: column;
   }
 
+  /* `flex: 1` only does anything on a flex CONTAINER's direct child — and
+     that's `<app-film-detail>` (the routed component's own host element,
+     a sibling of `<router-outlet>` in the real DOM), not `.film-detail-page`
+     two levels further in. Grow that first, make it a column too, then
+     `.film-detail-page` (its actual direct child) can grow inside it. */
+  .app-main app-film-detail {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0; // lets it size by flex-basis, not shrink-to-fit content
+  }
+
   .app-main .film-detail-page {
     flex: 1;
   }
