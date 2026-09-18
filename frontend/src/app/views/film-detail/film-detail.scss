@@ -61,6 +61,21 @@
   margin: 0.5rem 0 0;
 }
 
+.film-detail__end-time {
+  align-items: center;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  font: var(--mat-sys-body-small);
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+}
+
+.film-detail__end-time mat-icon {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+
 .film-detail__rating {
   align-items: center;
   display: flex;
@@ -209,18 +224,52 @@
   padding: 1rem;
 }
 
-/* The global `density: (scale: minimum)` squeezes a two-line list item until
-   the second line's descenders clip against Material's `overflow: hidden`.
-   This row carries a star row plus a full timestamp, so it takes the
-   undensified height back — for this list only, via the component's own token
-   rather than a hand-rolled height. */
 .rating-history__list {
-  --mat-list-list-item-two-line-container-height: 4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rating-history__item {
+  align-items: center;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+}
+
+.rating-history__item:last-child {
+  border-bottom: none;
+}
+
+.rating-history__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rating-history__line {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.rating-history__heading-row {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.5rem;
 }
 
 .rating-history__heading {
   font: var(--mat-sys-title-medium);
-  margin: 0 0 0.5rem;
+  margin: 0;
+}
+
+.rating-history__last-watched {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  margin: 0;
 }
 
 .rating-history__empty {

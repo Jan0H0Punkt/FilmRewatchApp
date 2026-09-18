@@ -43,6 +43,10 @@
         </ul>
       }
       <p class="film-detail__subtitle">{{ film.subtitle }}</p>
+      <p class="film-detail__end-time">
+        <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+        Done by {{ film.endTime }}
+      </p>
       <p class="film-detail__rating" [attr.aria-label]="film.ratingLabel">
         @if (film.averageFillPercent !== null) {
           <span class="film-detail__stars">
@@ -185,37 +189,43 @@
   </mat-card>
 
   <mat-card class="rating-history">
-    <h3 class="rating-history__heading">Rating history</h3>
+    <div class="rating-history__heading-row">
+      <h3 class="rating-history__heading">Rating history</h3>
+      @if (film.lastWatchedLabel) {
+        <p class="rating-history__last-watched">{{ film.lastWatchedLabel }}</p>
+      }
+    </div>
 
     @if (film.ratingHistory.length === 0) {
       <p class="rating-history__empty">No ratings yet.</p>
     } @else {
-      <mat-list class="rating-history__list">
+      <ul class="rating-history__list">
         @for (entry of film.ratingHistory; track entry.id) {
-          <mat-list-item class="rating-history__item">
-            <span matListItemTitle class="rating-history__value">
-              @if (entry.stars) {
-                @for (icon of entry.stars; track $index) {
-                  <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+          <li class="rating-history__item">
+            <div class="rating-history__body">
+              <span class="rating-history__value">
+                @if (entry.stars) {
+                  @for (icon of entry.stars; track $index) {
+                    <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                  }
+                } @else {
+                  Not rated
                 }
-              } @else {
-                Not rated
-              }
-            </span>
-            <span matListItemLine>Watched {{ entry.watchDate }} • Logged {{ entry.createdAt }}</span>
+              </span>
+              <span class="rating-history__line">Watched {{ entry.watchDate }} • Logged {{ entry.createdAt }}</span>
+            </div>
             <button
               class="destructive"
               matIconButton
-              matListItemMeta
               type="button"
               aria-label="Delete this rating entry"
               (click)="deleteRating(entry.id)"
             >
               <mat-icon>delete</mat-icon>
             </button>
-          </mat-list-item>
+          </li>
         }
-      </mat-list>
+      </ul>
     }
 
     @if (deleteRatingError()) {

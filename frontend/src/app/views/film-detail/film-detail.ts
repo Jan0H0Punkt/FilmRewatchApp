@@ -31,10 +31,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatListModule } from '@angular/material/list';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 
+import { ClockService } from '../../core/clock';
 import { NavigationHistoryService } from '../../core/navigation-history';
 import { FilmFacade } from '../../domain/film/facade';
 import { GenreFacade } from '../../domain/genre/facade';
@@ -80,10 +80,14 @@ interface FilmDetailVm {
   readonly ratingLabel: string;
   /** The numeric average formatted to one decimal, or `null` for unrated (FR-RAT-13). */
   readonly averageRatingText: string | null;
+  /** Rough clock time the film would end if watching started now, rounded up to the next quarter hour — as `library.ts`'s row does. */
+  readonly endTime: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   /** Newest first — the backend already orders it that way; not re-sorted here. */
   readonly ratingHistory: readonly RatingHistoryVm[];
+  /** How long since the most recent watch, or `null` with no history yet — the one place this shows, instead of on every entry below. */
+  readonly lastWatchedLabel: string | null;
   /** Section A controls (phase 3, FR-LIB-06). */
   readonly isFavorite: boolean;
   readonly delayDays: number;
@@ -93,6 +97,18 @@ interface FilmDetailVm {
 
 const timestampFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const QUARTER_HOUR_MS = 15 * 60_000;
+
+/**
+ * Duplicated from `library.ts`'s helper of the same name (same precedent as
+ * `ratingStars` above) — extract to `shared/` only if a third caller appears.
+ */
+function endTimeFrom(now: number, runtimeMinutes: number): string {
+  const end = now + runtimeMinutes * 60_000;
+  const rounded = Math.ceil(end / QUARTER_HOUR_MS) * QUARTER_HOUR_MS;
+  return timeFormat.format(new Date(rounded));
+}
 
 /** The picker's five star positions — each renders one glyph plus two half-width hit targets (FR-RAT-02). */
 const STAR_POSITIONS: readonly number[] = [1, 2, 3, 4, 5];
@@ -117,28 +133,31 @@ function ratingStars(rating: number | null): readonly string[] | null {
   });
 }
 
-/** e.g. "19 Jun 2021 (1,904 days ago)" — calendar days, not elapsed hours, so "today"/"yesterday" read right regardless of time of day. */
-function formatWatchDate(isoDate: string): string {
-  const watchDate = new Date(isoDate);
+/** Calendar days between an ISO date and now — not elapsed hours, so "today"/"yesterday" read right regardless of time of day. */
+function daysSince(isoDate: string): number {
+  const date = new Date(isoDate);
   const today = new Date();
   const msPerDay = 86_400_000;
-  const watchUtcDay = Date.UTC(watchDate.getFullYear(), watchDate.getMonth(), watchDate.getDate());
+  const dateUtcDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
   const todayUtcDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  const days = Math.round((todayUtcDay - watchUtcDay) / msPerDay);
-  const suffix = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days.toLocaleString()} days ago`;
-  return `${dateFormat.format(watchDate)} (${suffix})`;
+  return Math.round((todayUtcDay - dateUtcDay) / msPerDay);
+}
+
+/** e.g. "today", "yesterday", "1,904 days ago". */
+function relativeDaysLabel(days: number): string {
+  return days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days.toLocaleString()} days ago`;
 }
 
 function toRatingHistoryVm(entry: RatingHistoryEntry): RatingHistoryVm {
   return {
     id: entry.id,
     stars: ratingStars(entry.value),
-    watchDate: formatWatchDate(entry.watchDate),
+    watchDate: dateFormat.format(new Date(entry.watchDate)),
     createdAt: timestampFormat.format(new Date(entry.createdAt)),
   };
 }
 
-function toVm(film: FilmDetailModel): FilmDetailVm {
+function toVm(film: FilmDetailModel, now: number): FilmDetailVm {
   return {
     title: film.primaryTitle,
     alternativeTitles: film.titles
@@ -154,9 +173,14 @@ function toVm(film: FilmDetailModel): FilmDetailVm {
     ratingLabel:
       film.averageRating === null ? 'Not rated' : `Average rating: ${film.averageRating.toFixed(1)} out of 5`,
     averageRatingText: film.averageRating === null ? null : film.averageRating.toFixed(1),
+    endTime: endTimeFrom(now, film.runtimeMinutes),
     createdAt: timestampFormat.format(new Date(film.createdAt)),
     updatedAt: timestampFormat.format(new Date(film.updatedAt)),
     ratingHistory: film.ratingHistory.map(toRatingHistoryVm),
+    lastWatchedLabel:
+      film.ratingHistory.length > 0
+        ? `Last watched ${relativeDaysLabel(daysSince(film.ratingHistory[0].watchDate))}`
+        : null,
     isFavorite: film.isFavorite,
     delayDays: film.delayDays,
     letterboxdUrl: film.letterboxdUrl,
@@ -191,7 +215,6 @@ function extractErrorMessage(error: unknown, fallback: string): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatListModule,
     RouterLink,
   ],
   // The Add Rating form's `watch_date` picker (phase 2, FR-RAT-03) needs a
@@ -204,6 +227,7 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 })
 export class FilmDetail {
   private readonly films = inject(FilmFacade);
+  private readonly clock = inject(ClockService);
   private readonly ratings = inject(RatingFacade);
   private readonly tags = inject(TagFacade);
   private readonly genres = inject(GenreFacade);
@@ -254,8 +278,9 @@ export class FilmDetail {
   protected readonly error = this.films.detailError;
   protected readonly notFound = this.films.detailNotFound;
   protected readonly vm = computed<FilmDetailVm | null>(() => {
+    const now = this.clock.now();
     const film = this.films.detail();
-    return film ? toVm(film) : null;
+    return film ? toVm(film, now) : null;
   });
 
   /** Retries whichever of the list request or the fallback fetch is unsettled. */
