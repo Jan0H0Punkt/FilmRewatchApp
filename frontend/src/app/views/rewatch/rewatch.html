@@ -40,21 +40,23 @@
             }
             <div class="rewatch__body">
               <h3 class="rewatch__title">
-                <span class="rewatch__title-text">{{ card.title }}</span>
+                <span class="rewatch__title-text" [matTooltip]="card.title" appTruncatedTooltip>{{ card.title }}</span>
                 @if (card.isFavorite) {
                   <mat-icon class="rewatch__favorite" aria-label="Favourite">favorite</mat-icon>
                 }
               </h3>
-              <p class="rewatch__year">{{ card.year }}</p>
-              <p class="rewatch__rating" [attr.aria-label]="card.ratingLabel">
-                @if (card.ratingStars) {
-                  @for (icon of card.ratingStars; track $index) {
-                    <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+              <div class="rewatch__meta">
+                <p class="rewatch__year">{{ card.year }}</p>
+                <p class="rewatch__rating" [attr.aria-label]="card.ratingLabel">
+                  @if (card.ratingStars) {
+                    @for (icon of card.ratingStars; track $index) {
+                      <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                    }
+                  } @else {
+                    <span aria-hidden="true">&mdash;</span>
                   }
-                } @else {
-                  <span aria-hidden="true">&mdash;</span>
-                }
-              </p>
+                </p>
+              </div>
               <p class="rewatch__due">
                 <mat-icon aria-hidden="true" inline>schedule</mat-icon>
                 {{ card.dueLabel }}

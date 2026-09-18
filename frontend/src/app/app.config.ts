@@ -3,6 +3,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { MAT_BUTTON_CONFIG } from '@angular/material/button';
 import { MAT_CARD_CONFIG } from '@angular/material/card';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
+import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -20,5 +21,6 @@ export const appConfig: ApplicationConfig = {
     { provide: MAT_CARD_CONFIG, useValue: { appearance: 'outlined' } },
     { provide: MAT_BUTTON_CONFIG, useValue: { appearance: 'outlined' } },
     { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
+    { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { showDelay: 350 } },
   ],
 };

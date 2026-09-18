@@ -63,10 +63,7 @@
                   }
                   <div class="film__body">
                     <h3 class="film__title">
-                      <span class="film__title-text">{{ row.title }}</span>
-                      @if (row.isFavorite) {
-                        <mat-icon class="film__favorite" aria-label="Favourite">favorite</mat-icon>
-                      }
+                      <span class="film__title-text" [matTooltip]="row.title" appTruncatedTooltip>{{ row.title }}</span>
                     </h3>
                     <p class="film__subtitle">{{ row.subtitle }}</p>
                     <p class="film__end-time">
@@ -88,15 +85,20 @@
                       </mat-chip-set>
                     }
                   </div>
-                  <p class="film__rating" [attr.aria-label]="row.ratingLabel">
-                    @if (row.ratingStars) {
-                      @for (icon of row.ratingStars; track $index) {
-                        <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
-                      }
-                    } @else {
-                      <span aria-hidden="true">&mdash;</span>
+                  <div class="film__rating-col">
+                    @if (row.isFavorite) {
+                      <mat-icon class="film__favorite" aria-label="Favourite">favorite</mat-icon>
                     }
-                  </p>
+                    <p class="film__rating" [attr.aria-label]="row.ratingLabel">
+                      @if (row.ratingStars) {
+                        @for (icon of row.ratingStars; track $index) {
+                          <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                        }
+                      } @else {
+                        <span aria-hidden="true">&mdash;</span>
+                      }
+                    </p>
+                  </div>
                 </div>
               </mat-card>
             </a>

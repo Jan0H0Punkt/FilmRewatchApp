@@ -21,6 +21,8 @@
       matIconButton
       type="button"
       [attr.aria-label]="'Colour theme: ' + theme() + '. Click to switch.'"
+      [matTooltip]="themeTooltip()"
+      matTooltipPosition="left"
       (click)="cycleTheme()"
     >
       <mat-icon>{{ themeIcon() }}</mat-icon>

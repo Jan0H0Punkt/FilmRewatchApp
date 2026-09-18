@@ -26,6 +26,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 
 import { ClockService } from '../../core/clock';
@@ -33,6 +34,7 @@ import { ScrollMemoryService } from '../../core/scroll-memory';
 import { FilmFacade } from '../../domain/film/facade';
 import { ratingLabelFor, ratingStarsFor } from '../../shared/rating-stars';
 import { ScrollToTopFab } from '../../shared/scroll-to-top-fab/scroll-to-top-fab';
+import { TruncatedTooltipDirective } from '../../shared/truncated-tooltip';
 import { filterFilms, hasActiveCriteria, NO_CRITERIA, type LibraryCriteria } from './filters';
 
 /** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
@@ -78,8 +80,10 @@ function endTimeFrom(now: number, runtimeMinutes: number): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatTooltipModule,
     RouterLink,
     ScrollToTopFab,
+    TruncatedTooltipDirective,
   ],
   templateUrl: './library.html',
   styleUrl: './library.scss',

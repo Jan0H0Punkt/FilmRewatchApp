@@ -11,6 +11,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
@@ -25,9 +26,16 @@ const THEME_ICONS: Record<ThemePreference, string> = {
   auto: 'brightness_auto',
 };
 
+/** `ThemeService.cycle()`'s own order — mirrored here so the tooltip can name what a click does. */
+const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
+  light: 'dark',
+  dark: 'auto',
+  auto: 'light',
+};
+
 @Component({
   selector: 'app-root',
-  imports: [MatButtonModule, MatIconModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +65,7 @@ export class App {
   private readonly themeService = inject(ThemeService);
   protected readonly theme = this.themeService.preference;
   protected readonly themeIcon = computed(() => THEME_ICONS[this.theme()]);
+  protected readonly themeTooltip = computed(() => `Switch to ${NEXT_THEME[this.theme()]} theme`);
 
   protected cycleTheme(): void {
     this.themeService.cycle();

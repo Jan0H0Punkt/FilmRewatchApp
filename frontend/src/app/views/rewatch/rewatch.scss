@@ -104,6 +104,12 @@
   width: 1rem;
 }
 
+.rewatch__meta {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
 .rewatch__year,
 .rewatch__due {
   color: var(--mat-sys-on-surface-variant);

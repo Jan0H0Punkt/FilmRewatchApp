@@ -18,11 +18,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 
 import { ScrollMemoryService } from '../../core/scroll-memory';
 import { RewatchFacade } from '../../domain/rewatch/facade';
 import { ScrollToTopFab } from '../../shared/scroll-to-top-fab/scroll-to-top-fab';
+import { TruncatedTooltipDirective } from '../../shared/truncated-tooltip';
 
 /** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
 const SCROLL_KEY = 'rewatch';
@@ -52,8 +54,10 @@ const TWENTY_FOUR_HOUR_FORMATS: MatDateFormats = {
     MatInputModule,
     MatProgressBarModule,
     MatTimepickerModule,
+    MatTooltipModule,
     RouterLink,
     ScrollToTopFab,
+    TruncatedTooltipDirective,
   ],
   templateUrl: './rewatch.html',
   styleUrl: './rewatch.scss',

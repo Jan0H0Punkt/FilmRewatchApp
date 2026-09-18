@@ -74,18 +74,21 @@
 }
 
 .film__title {
-  align-items: center;
-  display: flex;
   font: var(--mat-sys-title-medium);
-  gap: 0.25rem;
   margin: 0;
 }
 
 .film__title-text {
-  min-width: 0; /* lets the ellipsis apply instead of pushing the heart out */
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.film__rating-col {
+  align-items: center;
+  display: flex;
+  gap: 1.25rem;
 }
 
 .film__favorite {
@@ -93,7 +96,6 @@
   flex: none;
   font-size: 1rem;
   height: 1rem;
-  margin-left: auto; /* pins it to the far right of the title row */
   width: 1rem;
 }
 
