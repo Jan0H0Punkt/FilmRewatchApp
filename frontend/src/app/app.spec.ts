@@ -59,4 +59,62 @@ describe('App', () => {
   it('labels the navigation landmark', async () => {
     expect((await render()).querySelector('nav')?.getAttribute('aria-label')).toBe('Primary');
   });
+
+  describe('back control (§6.5)', () => {
+    // Fixture created before any navigation in every case here — unlike
+    // `pageTitle` above, `NavigationHistoryService` has no synchronous
+    // fallback for a route change that happened before it existed, so it
+    // must already be subscribed when the navigation it needs to see fires.
+    it('shows no back control on a primary navigation destination', async () => {
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }])],
+      });
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      await TestBed.inject(Router).navigateByUrl('/rewatch');
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.app-bar__back')).toBeNull();
+    });
+
+    it('shows a back control on a contextual route, defaulting to the library route', async () => {
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [provideRouter([{ path: 'film/:id', title: 'Film', component: StubView }])],
+      });
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      await TestBed.inject(Router).navigateByUrl('/film/f1');
+      await fixture.whenStable();
+
+      const back = (fixture.nativeElement as HTMLElement).querySelector('.app-bar__back');
+      expect(back?.getAttribute('aria-label')).toBe('Back to Library');
+      expect(back?.getAttribute('href')).toBe('/library');
+    });
+
+    it('points the back control at the last route visited before the contextual one', async () => {
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideRouter([
+            { path: 'rewatch', title: 'Rewatch', component: StubView },
+            { path: 'film/:id', title: 'Film', component: StubView },
+          ]),
+        ],
+      });
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const router = TestBed.inject(Router);
+
+      await router.navigateByUrl('/rewatch');
+      await fixture.whenStable();
+      await router.navigateByUrl('/film/f1');
+      await fixture.whenStable();
+
+      const back = (fixture.nativeElement as HTMLElement).querySelector('.app-bar__back');
+      expect(back?.getAttribute('aria-label')).toBe('Back to Rewatch');
+      expect(back?.getAttribute('href')).toBe('/rewatch');
+    });
+  });
 });

@@ -2,10 +2,6 @@
    system variables, which resolve per `color-scheme` — so light/dark needs no
    rule of its own (see `library.scss` for the same pattern). */
 
-.film-detail__nav {
-  margin: 0 0 0.5rem -0.5rem; // pulls the icon button's own padding back to the edge
-}
-
 .film-detail__state {
   color: var(--mat-sys-on-surface-variant);
 }

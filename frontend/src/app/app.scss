@@ -8,6 +8,21 @@
   padding: 1rem;
 }
 
+/* Groups the back control with the title so `justify-content: space-between`
+   (above) only splits this from the theme button, not all three apart. */
+.app-bar__heading {
+  align-items: center;
+  display: flex;
+  gap: 1.25rem;
+}
+
+/* Pulls the icon button's own padding back to the bar's edge — same trick as
+   the old `.film-detail__nav` this replaced. Only present with a back
+   control, so a title-only bar (Rewatch, Library) is unaffected. */
+.app-bar__back {
+  margin-left: -0.25rem;
+}
+
 .app-bar__title {
   font: var(--mat-sys-title-large);
   margin: 0;

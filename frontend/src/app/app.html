@@ -16,7 +16,14 @@
 
 <div class="app-shell">
   <header class="app-bar">
-    <h1 class="app-bar__title">{{ pageTitle() }}</h1>
+    <div class="app-bar__heading">
+      @if (showBackControl()) {
+        <a class="app-bar__back" matIconButton [routerLink]="backTarget()" [attr.aria-label]="'Back to ' + backLabel()">
+          <mat-icon>arrow_back</mat-icon>
+        </a>
+      }
+      <h1 class="app-bar__title">{{ pageTitle() }}</h1>
+    </div>
     <button
       matIconButton
       type="button"

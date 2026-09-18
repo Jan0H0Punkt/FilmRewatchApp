@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
+import { NavigationHistoryService } from './core/navigation-history';
 import { navDestinations } from './core/route-registry';
 import { ROUTE_REGISTRY } from './core/routes.registry';
 import { ThemeService, type ThemePreference } from './core/theme';
@@ -61,6 +62,12 @@ export class App {
     ),
     { requireSync: true },
   );
+
+  /** The app bar's own back control (§6.5) — shown only on a contextual route like Film Detail. */
+  private readonly navigationHistory = inject(NavigationHistoryService);
+  protected readonly showBackControl = this.navigationHistory.showBackControl;
+  protected readonly backTarget = this.navigationHistory.backTarget;
+  protected readonly backLabel = this.navigationHistory.backLabel;
 
   private readonly themeService = inject(ThemeService);
   protected readonly theme = this.themeService.preference;

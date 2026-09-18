@@ -1,12 +1,3 @@
-<div class="film-detail__nav">
-  <!-- The view's own back control: Film Detail is reached contextually, not
-       a navigation destination (§6.5), so it carries no drawer/bottom-bar
-       entry of its own — it returns to wherever the user came from. -->
-  <a matIconButton [routerLink]="backTarget()" [attr.aria-label]="'Back to ' + backLabel()">
-    <mat-icon>arrow_back</mat-icon>
-  </a>
-</div>
-
 @if (isLoading()) {
   <p class="film-detail__state" role="status">Loading the film…</p>
 } @else if (error()) {

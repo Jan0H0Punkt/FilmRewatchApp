@@ -245,24 +245,6 @@ describe('FilmDetail', () => {
     expect(facade.select).toHaveBeenCalledWith(HEAT.id);
   });
 
-  it('points the back control at the library route by default', async () => {
-    const element = await render(stubFilmFacade(HEAT));
-
-    const back = element.querySelector('a[aria-label="Back to Library"]');
-    expect(back?.getAttribute('href')).toBe('/library');
-  });
-
-  it('points the back control at the last route visited before this one', async () => {
-    const element = await render(stubFilmFacade(HEAT));
-    const router = TestBed.inject(Router);
-
-    await router.navigateByUrl('/rewatch');
-    await settle();
-
-    const back = element.querySelector('a[aria-label="Back to Rewatch"]');
-    expect(back?.getAttribute('href')).toBe('/rewatch');
-  });
-
   describe('rating history (Section B)', () => {
     it('lists the rating history newest-first, without re-sorting', async () => {
       const element = await render(stubFilmFacade(HEAT));

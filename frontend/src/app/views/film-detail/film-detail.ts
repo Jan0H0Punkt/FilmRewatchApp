@@ -235,7 +235,7 @@ export class FilmDetail {
   private readonly router = inject(Router);
   private readonly navigationHistory = inject(NavigationHistoryService);
 
-  /** Where the view's own back control (§6.5) returns to — see `NavigationHistoryService`. */
+  /** Where the not-found state's own "Back to Library" link goes — the app bar's back icon (§6.5) uses the same service directly. */
   protected readonly backTarget = this.navigationHistory.backTarget;
   protected readonly backLabel = this.navigationHistory.backLabel;
 
