@@ -380,14 +380,14 @@
   max-width: 16rem;
 }
 
-// --- Desktop (≥900px): facts left, activity right (§ "F" layout option) ----
+// --- Desktop (≥900px): facts left (2/3), activity right (1/3) (§ "F" layout option) ----
 
 @media (min-width: 900px) {
   .film-detail-page {
     align-items: start;
     display: grid;
     gap: 1.5rem;
-    grid-template-columns: minmax(22rem, 28rem) 1fr;
+    grid-template-columns: minmax(22rem, 2fr) minmax(18rem, 1fr);
     padding-bottom: 0; // the quick-actions bar isn't fixed at this width
   }
 
