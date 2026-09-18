@@ -117,11 +117,23 @@ function ratingStars(rating: number | null): readonly string[] | null {
   });
 }
 
+/** e.g. "19 Jun 2021 (1,904 days ago)" — calendar days, not elapsed hours, so "today"/"yesterday" read right regardless of time of day. */
+function formatWatchDate(isoDate: string): string {
+  const watchDate = new Date(isoDate);
+  const today = new Date();
+  const msPerDay = 86_400_000;
+  const watchUtcDay = Date.UTC(watchDate.getFullYear(), watchDate.getMonth(), watchDate.getDate());
+  const todayUtcDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((todayUtcDay - watchUtcDay) / msPerDay);
+  const suffix = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days.toLocaleString()} days ago`;
+  return `${dateFormat.format(watchDate)} (${suffix})`;
+}
+
 function toRatingHistoryVm(entry: RatingHistoryEntry): RatingHistoryVm {
   return {
     id: entry.id,
     stars: ratingStars(entry.value),
-    watchDate: dateFormat.format(new Date(entry.watchDate)),
+    watchDate: formatWatchDate(entry.watchDate),
     createdAt: timestampFormat.format(new Date(entry.createdAt)),
   };
 }
