@@ -77,6 +77,17 @@ body {
   width: 1px;
 }
 
+/* `.app-main` caps at 60rem (below) for Library/Rewatch's comfortable list
+   width, but Film Detail's two-column layout wants the extra room — global,
+   not `app.scss`, because Angular's emulated view encapsulation would stop a
+   selector there from matching `.film-detail-page`, which is FilmDetail's own
+   template, not App's. */
+@media (min-width: 900px) {
+  .app-main:has(.film-detail-page) {
+    max-width: 90rem;
+  }
+}
+
 /* Deletions carry the error colour app-wide: every trash icon and every
    confirm button that commits a delete. Applied as a class rather than derived
    from the icon, since CSS cannot select on a ligature's text. The custom
