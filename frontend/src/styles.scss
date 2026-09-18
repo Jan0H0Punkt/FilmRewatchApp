@@ -82,9 +82,12 @@ body {
    stop at another arbitrary number — global, not `app.scss`, because
    Angular's emulated view encapsulation would stop a selector there from
    matching `.film-detail-page`, which is FilmDetail's own template, not
-   App's. */
+   App's. `.app-shell` (its real parent) is prefixed on purpose: Angular's
+   `[_ngcontent-*]` attribute makes `app.scss`'s own `.app-main` rule exactly
+   as specific as a bare `.app-main:has(...)` here, so without it this rule's
+   effect depends on injection order rather than actually winning. */
 @media (min-width: 900px) {
-  .app-main:has(.film-detail-page) {
+  .app-shell .app-main:has(.film-detail-page) {
     max-width: none;
   }
 }
