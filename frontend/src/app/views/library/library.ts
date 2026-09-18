@@ -13,6 +13,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
@@ -28,9 +29,14 @@ import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
 
 import { ClockService } from '../../core/clock';
+import { ScrollMemoryService } from '../../core/scroll-memory';
 import { FilmFacade } from '../../domain/film/facade';
 import { ratingLabelFor, ratingStarsFor } from '../../shared/rating-stars';
+import { ScrollToTopFab } from '../../shared/scroll-to-top-fab/scroll-to-top-fab';
 import { filterFilms, hasActiveCriteria, NO_CRITERIA, type LibraryCriteria } from './filters';
+
+/** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
+const SCROLL_KEY = 'library';
 
 /** One row of the result list (§7.2 "Film Result Item"). */
 interface FilmRowVm {
@@ -73,6 +79,7 @@ function endTimeFrom(now: number, runtimeMinutes: number): string {
     MatIconModule,
     MatInputModule,
     RouterLink,
+    ScrollToTopFab,
   ],
   templateUrl: './library.html',
   styleUrl: './library.scss',
@@ -81,6 +88,7 @@ function endTimeFrom(now: number, runtimeMinutes: number): string {
 export class Library {
   private readonly films = inject(FilmFacade);
   private readonly clock = inject(ClockService);
+  private readonly scrollMemory = inject(ScrollMemoryService);
 
   protected readonly isLoading = this.films.isLoading;
   protected readonly error = this.films.error;
@@ -88,6 +96,7 @@ export class Library {
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private hasFocusedSearch = false;
+  private hasRestoredScroll = false;
 
   /**
    * Up/Down roves focus across the search field, the "Add new film" link, and the
@@ -115,6 +124,16 @@ export class Library {
       this.hasFocusedSearch = true;
       input.nativeElement.focus();
     });
+
+    // Restores the scroll offset saved when this view was last left — waits
+    // for loading to finish so it lands in the real list, not the loading state.
+    effect(() => {
+      if (this.isLoading() || this.hasRestoredScroll) return;
+      this.hasRestoredScroll = true;
+      window.scrollTo(0, this.scrollMemory.restore(SCROLL_KEY));
+    });
+
+    inject(DestroyRef).onDestroy(() => this.scrollMemory.save(SCROLL_KEY, window.scrollY));
   }
 
   protected readonly criteria = signal<LibraryCriteria>(NO_CRITERIA);

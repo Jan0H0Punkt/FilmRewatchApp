@@ -1,0 +1,14 @@
+/* 5rem clears the fixed mobile bottom nav bar — same figure `app.scss`'s
+   `.app-main` uses for its bottom padding, for the same reason. */
+.scroll-to-top-fab {
+  bottom: 5rem;
+  position: fixed;
+  right: 1rem;
+  z-index: 1;
+}
+
+@media (min-width: 900px) {
+  .scroll-to-top-fab {
+    bottom: 1.5rem;
+  }
+}

@@ -9,7 +9,7 @@
  * There is deliberately no refresh control (§7.1) — the list re-reads when the
  * view opens, and the backend recomputes once a day (§5.8).
  */
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MAT_NATIVE_DATE_FORMATS, provideNativeDateAdapter, type MatDateFormats } from '@angular/material/core';
@@ -20,7 +20,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { RouterLink } from '@angular/router';
 
+import { ScrollMemoryService } from '../../core/scroll-memory';
 import { RewatchFacade } from '../../domain/rewatch/facade';
+import { ScrollToTopFab } from '../../shared/scroll-to-top-fab/scroll-to-top-fab';
+
+/** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
+const SCROLL_KEY = 'rewatch';
 
 /**
  * `MAT_NATIVE_DATE_FORMATS`'s `timeInput`/`timeOptionLabel` omit `hour12`, so
@@ -48,6 +53,7 @@ const TWENTY_FOUR_HOUR_FORMATS: MatDateFormats = {
     MatProgressBarModule,
     MatTimepickerModule,
     RouterLink,
+    ScrollToTopFab,
   ],
   templateUrl: './rewatch.html',
   styleUrl: './rewatch.scss',
@@ -56,6 +62,8 @@ const TWENTY_FOUR_HOUR_FORMATS: MatDateFormats = {
 })
 export class Rewatch {
   private readonly rewatch = inject(RewatchFacade);
+  private readonly scrollMemory = inject(ScrollMemoryService);
+  private hasRestoredScroll = false;
 
   protected readonly cards = this.rewatch.cards;
   protected readonly doneBefore = this.rewatch.doneBefore;
@@ -71,6 +79,16 @@ export class Rewatch {
     // See `RewatchFacade.onViewOpened` — this is what makes the docstring
     // above true rather than aspirational.
     this.rewatch.onViewOpened();
+
+    // Restores the scroll offset saved when this view was last left — waits
+    // for loading to finish so it lands in the real list, not the loading state.
+    effect(() => {
+      if (this.isLoading() || this.hasRestoredScroll) return;
+      this.hasRestoredScroll = true;
+      window.scrollTo(0, this.scrollMemory.restore(SCROLL_KEY));
+    });
+
+    inject(DestroyRef).onDestroy(() => this.scrollMemory.save(SCROLL_KEY, window.scrollY));
   }
 
   protected reload(): void {
