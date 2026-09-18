@@ -36,6 +36,15 @@ html {
   );
 }
 
+html {
+  /* Fixed, theme-independent semantic colours (unlike --mat-sys-primary,
+     which follows the configured palette). --favorite-color reuses the
+     error token: M3's error hue is red by convention regardless of the
+     primary/tertiary palette chosen, so it stays red across light/dark. */
+  --favorite-color: var(--mat-sys-error);
+  --rating-star-color: #ffb300;
+}
+
 body {
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these

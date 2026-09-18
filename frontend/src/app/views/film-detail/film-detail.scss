@@ -96,7 +96,7 @@
 // average (e.g. 66% for 3.3/5) so the fill can land mid-glyph — unlike the
 // half-step rounding `ratingStars()` uses for the Add Rating picker below.
 .film-detail__stars-fill {
-  color: var(--mat-sys-primary);
+  color: var(--rating-star-color);
   inset: 0;
   overflow: hidden;
   position: absolute;
@@ -168,6 +168,10 @@
   max-width: 10rem;
 }
 
+.film-detail__favorite {
+  --mat-icon-button-icon-color: var(--favorite-color);
+}
+
 .film-detail__letterboxd {
   align-items: center;
   display: flex;
@@ -224,7 +228,7 @@
 }
 
 .rating-history__value {
-  color: var(--mat-sys-primary);
+  color: var(--rating-star-color);
   display: flex;
   gap: 0.125rem;
 }
@@ -269,7 +273,7 @@
 }
 
 .rating-form__star--filled {
-  color: var(--mat-sys-primary);
+  color: var(--rating-star-color);
 }
 
 .rating-form__star mat-icon {

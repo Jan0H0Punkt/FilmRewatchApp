@@ -86,20 +86,33 @@
   font: var(--mat-sys-title-small);
   gap: 0.25rem;
   margin: 0;
+}
+
+.rewatch__title-text {
+  min-width: 0; /* lets the ellipsis apply instead of pushing the heart out */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .rewatch__favorite {
-  color: var(--mat-sys-primary);
+  color: var(--favorite-color);
   flex: none;
+  font-size: 1rem;
+  height: 1rem;
+  margin-left: auto; /* pins it to the far right of the title row */
+  width: 1rem;
 }
 
 .rewatch__year,
-.rewatch__rating,
 .rewatch__due {
   color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  margin: 0;
+}
+
+.rewatch__rating {
+  color: var(--rating-star-color);
   font: var(--mat-sys-body-small);
   margin: 0;
 }
