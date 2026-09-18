@@ -10,6 +10,16 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+/* Mobile-first, same technique as `app.scss`'s `.app-nav`: one wrapper, two
+   layouts, only the CSS branches at the 900px breakpoint. Below it the two
+   cards just stack (`.rating-history`'s own `margin-top` spaces them); at
+   900px this becomes the two-column grid — facts left, activity right. */
+.film-detail-page {
+  /* Clears `.film-detail__quick-actions`' fixed bottom bar below, on top of
+     `.app-main`'s own 5rem reserved for the fixed nav bar underneath it. */
+  padding-bottom: 4rem;
+}
+
 .film-detail {
   display: flex;
   flex-direction: column;
@@ -183,6 +193,24 @@
   max-width: 10rem;
 }
 
+/* Favourite, the Add Rating jump link and Delete (§ "G" mobile layout): a
+   fixed bottom bar below 900px, clearing the fixed nav bar the same way
+   `scroll-to-top-fab` does; inline with the rest of the row from 900px up. */
+.film-detail__quick-actions {
+  align-items: center;
+  background: var(--mat-sys-surface-container);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  bottom: 5rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-around;
+  left: 0;
+  padding: 0.5rem 1rem;
+  position: fixed;
+  right: 0;
+  z-index: 1;
+}
+
 .film-detail__favorite {
   --mat-icon-button-icon-color: var(--favorite-color);
 }
@@ -191,12 +219,6 @@
   align-items: center;
   display: flex;
   gap: 0.5rem;
-}
-
-/* Last in the row, set apart from the rest. Its colour comes from the global
-   `.destructive` class, not from here. */
-.film-detail__delete {
-  margin-left: auto;
 }
 
 .film-detail__letterboxd-link {
@@ -356,4 +378,46 @@
 
 .rating-form__date {
   max-width: 16rem;
+}
+
+// --- Desktop (≥900px): facts left, activity right (§ "F" layout option) ----
+
+@media (min-width: 900px) {
+  .film-detail-page {
+    align-items: start;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(22rem, 28rem) 1fr;
+    padding-bottom: 0; // the quick-actions bar isn't fixed at this width
+  }
+
+  // Poster beside the text instead of centered above it, so the card reads
+  // as a compact sidebar rather than a tall stack.
+  .film-detail {
+    flex-direction: row;
+  }
+
+  .film-detail__poster {
+    align-self: flex-start;
+    width: 8rem;
+  }
+
+  .film-detail__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rating-history {
+    margin-top: 0; // the grid's own `gap` spaces the two cards now
+  }
+
+  .film-detail__quick-actions {
+    background: none;
+    border-top: none;
+    bottom: auto;
+    left: auto;
+    padding: 0;
+    position: static;
+    right: auto;
+  }
 }
