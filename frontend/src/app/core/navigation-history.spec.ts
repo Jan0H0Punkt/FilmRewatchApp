@@ -1,4 +1,4 @@
-/** Film Detail's back control reads `backTarget`/`backLabel` from this service — see `navigation-history.ts`. */
+/** The app bar's back control reads `showBackControl`/`backTarget`/`backLabel` from this service — see `navigation-history.ts`. */
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -15,6 +15,7 @@ function setup(): { service: NavigationHistoryService; router: Router } {
         { path: 'rewatch', component: BlankComponent },
         { path: 'library', component: BlankComponent },
         { path: 'film/:id', component: BlankComponent },
+        { path: 'films/new', component: BlankComponent },
         { path: '**', component: BlankComponent },
       ]),
     ],
@@ -48,6 +49,28 @@ describe('NavigationHistoryService', () => {
     await router.navigateByUrl('/film/f1');
 
     expect(service.backTarget()).toBe('/rewatch');
+  });
+
+  it('does not let the add-film route overwrite the remembered one either', async () => {
+    const { service, router } = setup();
+
+    await router.navigateByUrl('/library');
+    await router.navigateByUrl('/films/new');
+
+    expect(service.backTarget()).toBe('/library');
+  });
+
+  it('shows the back control on both contextual routes, not on a primary destination', async () => {
+    const { service, router } = setup();
+
+    await router.navigateByUrl('/film/f1');
+    expect(service.showBackControl()).toBe(true);
+
+    await router.navigateByUrl('/films/new');
+    expect(service.showBackControl()).toBe(true);
+
+    await router.navigateByUrl('/library');
+    expect(service.showBackControl()).toBe(false);
   });
 
   it('falls back to the Library label for an unrecognised URL, without throwing', async () => {

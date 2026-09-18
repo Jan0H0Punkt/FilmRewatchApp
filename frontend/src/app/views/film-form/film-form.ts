@@ -15,7 +15,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { FilmFacade } from '../../domain/film/facade';
 import type { FilmCreateInput } from '../../domain/film/model';
@@ -81,7 +81,6 @@ function extractErrorMessage(error: unknown, fallback: string): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    RouterLink,
   ],
   // The Watched-on picker needs a date adapter, same as film-detail's Add
   // Rating form; scoped here (not app-wide) so it lands in this lazy chunk.
