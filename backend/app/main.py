@@ -23,7 +23,6 @@ from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
 from app.rewatch.router import router as rewatch_router
-from app.rewatch.scheduler import lifespan
 from app.tags.router import router as tags_router
 
 API_V1_PREFIX = "/api/v1"
@@ -38,7 +37,7 @@ def build_api_router() -> APIRouter:
     """Assemble the versioned ``/api/v1`` router from each feature module.
 
     Films, ratings, tags, and genres carry the core-domain surface, and rewatch
-    serves the M4 daily due-list (§5.8) — the §5.1 wiring holds throughout: a
+    serves the M4 due-list (§5.8) — the §5.1 wiring holds throughout: a
     router never imports a repository.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
@@ -57,17 +56,12 @@ def build_api_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     """Application factory: build and configure the FastAPI app (DESIGN §5.1)."""
-    # Uvicorn configures only its own loggers, leaving the root logger without a
-    # handler — so the rewatch scheduler's INFO/exception lines (§5.8) would go
-    # nowhere. Its failures are swallowed by design so one bad run cannot kill
-    # the loop, which makes this log the only sign the daily job is alive.
+    # Uvicorn configures only its own loggers, leaving the root logger without
+    # a handler, so nothing the app itself logs would reach the console.
     logging.basicConfig(level=logging.INFO)
     settings = get_settings()
     app = FastAPI(
         title="Film Rewatch API",
-        # The once-daily rewatch recompute runs as a task owned by this
-        # lifespan (§5.8) — it starts with the app and is cancelled with it.
-        lifespan=lifespan,
         # App version (SemVer 2.0.0, policy in the root README). The /api/vN
         # contract is SemVer's "public API": breaking it bumps MAJOR and the
         # URL version together. M4 adds the rewatch-suggestions route without

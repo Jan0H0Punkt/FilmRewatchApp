@@ -6,6 +6,7 @@ serialisation and ordering are tested without a database.
 
 import uuid
 from collections.abc import Sequence
+from datetime import date
 
 from fastapi.testclient import TestClient
 
@@ -19,7 +20,7 @@ def _client(rows: Sequence[RewatchSuggestion]) -> TestClient:
     app = create_app()
 
     class StubService:
-        def list_suggestions(self) -> Sequence[RewatchSuggestion]:
+        def list_suggestions(self, today: date) -> Sequence[RewatchSuggestion]:
             return rows
 
     app.dependency_overrides[get_rewatch_service] = StubService

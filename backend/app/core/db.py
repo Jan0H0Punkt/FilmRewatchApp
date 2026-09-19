@@ -59,7 +59,7 @@ def _session_factory() -> sessionmaker[Session]:
 
 @contextmanager
 def session_scope() -> Generator[Session]:
-    """A session outside the request cycle (the rewatch scheduler, §5.8).
+    """A session outside the request cycle (the ``simulate`` script).
 
     Same lifecycle as :func:`get_session`, usable with ``with``. Committing is
     the caller's business, as everywhere else.

@@ -1,8 +1,7 @@
 """rewatch_suggestions projection (DESIGN §5.2, §5.8)
 
-The stored output of the once-daily rewatch job, served verbatim by
-``GET /api/v1/rewatch-suggestions``. Created empty: the first scheduler run
-after startup populates it.
+The stored output of the rewatch algorithm, served verbatim by
+``GET /api/v1/rewatch-suggestions``. Created empty: the first read populates it.
 
 Revision ID: 0006_rewatch_suggestions
 Revises: 0005_film_genre_position

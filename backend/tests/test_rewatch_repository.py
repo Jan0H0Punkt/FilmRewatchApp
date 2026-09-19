@@ -13,7 +13,7 @@ from app.core.db import utc_now
 from app.films.models import Film, Title
 from app.ratings.models import RatingEntry
 from app.rewatch.algorithm import DueFilm
-from app.rewatch.repository import RewatchRepository
+from app.rewatch.repository import STALE_COMPUTED_AT, RewatchRepository
 
 COMPUTED_AT: datetime = utc_now()
 
@@ -134,3 +134,34 @@ def test_deleting_a_film_removes_its_suggestion(db_session: Session) -> None:
 
 def test_collect_inputs_is_empty_for_an_empty_library(db_session: Session) -> None:
     assert RewatchRepository(db_session).collect_inputs() == []
+
+
+def test_last_computed_at_returns_the_stamp_of_the_stored_run(db_session: Session) -> None:
+    film = _add_film(db_session, natural_key="stamped|1990|a")
+    db_session.commit()
+    repository = RewatchRepository(db_session)
+
+    repository.replace_all([DueFilm(film_id=film.id, days_until_next_rewatch=0)], COMPUTED_AT)
+    repository.commit()
+
+    assert repository.last_computed_at() == COMPUTED_AT
+
+
+def test_last_computed_at_is_none_when_the_projection_is_empty(db_session: Session) -> None:
+    # A run that stored nothing is indistinguishable from no run at all — the
+    # service treats both as stale and recomputes.
+    assert RewatchRepository(db_session).last_computed_at() is None
+
+
+def test_mark_stale_ages_the_projection_without_dropping_it(db_session: Session) -> None:
+    film = _add_film(db_session, natural_key="marked|1990|a")
+    db_session.commit()
+    repository = RewatchRepository(db_session)
+    repository.replace_all([DueFilm(film_id=film.id, days_until_next_rewatch=0)], COMPUTED_AT)
+    repository.commit()
+
+    repository.mark_stale()
+    repository.commit()
+
+    assert repository.last_computed_at() == STALE_COMPUTED_AT
+    assert [row.film_id for row in repository.list_all()] == [film.id]

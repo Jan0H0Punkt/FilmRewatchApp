@@ -7,7 +7,7 @@ Run from ``backend/``::
     uv run python -m simulate --years 20 --seeds 20
 
 The scoring is imported, never restated: the projection calls the same
-:func:`~app.rewatch.algorithm.suggest` the scheduler does, over the same rows
+:func:`~app.rewatch.algorithm.suggest` the endpoint does, over the same rows
 :meth:`~app.rewatch.repository.RewatchRepository.collect_inputs` assembles. Edit
 ``algorithm.py`` and the next run reflects it.
 

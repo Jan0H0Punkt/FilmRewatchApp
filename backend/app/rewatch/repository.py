@@ -1,8 +1,9 @@
 """Data-access layer for the rewatch module (DESIGN §5.1, §5.8).
 
-Two reads and one write, no business rules: the FR-RW-02 input assembly, the
-whole-list replacement of the projection, and the ordered read the router
-serves. Transaction control stays with the caller — only :meth:`commit` commits.
+Three reads and two writes, no business rules: the FR-RW-02 input assembly, the
+staleness probe, the invalidation the write paths trigger, the whole-list
+replacement of the projection, and the ordered read the router serves. Transaction control stays with the caller — only
+:meth:`commit` commits.
 
 :meth:`collect_inputs` returns :class:`~app.rewatch.algorithm.RewatchInput`
 dataclasses rather than ORM rows or raw tuples. The mapping is mechanical, and
@@ -13,15 +14,21 @@ nothing.
 """
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.films.models import Film
 from app.ratings.models import RatingEntry
 from app.rewatch.algorithm import DueFilm, RewatchInput
 from app.rewatch.models import RewatchSuggestion
+
+# The stamp :meth:`RewatchRepository.mark_stale` writes. Any instant before
+# today would do; the epoch is picked because it is unmistakably not a real run
+# and converts to a local date on every platform (``datetime.min`` does not —
+# it overflows west of UTC).
+STALE_COMPUTED_AT = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 class RewatchRepository:
@@ -64,6 +71,29 @@ class RewatchRepository:
             )
             for row in self._session.execute(statement)
         ]
+
+    def last_computed_at(self) -> datetime | None:
+        """When the stored projection was last computed, or ``None`` if never.
+
+        ``None`` also comes back when the last run stored no rows at all, since
+        the timestamp lives on the rows — the caller cannot tell "never ran"
+        from "ran, nothing was due", and treats both as stale.
+        """
+        return self._session.scalar(select(func.max(RewatchSuggestion.computed_at)))
+
+    def mark_stale(self) -> None:
+        """Age the stored projection out, so the next read recomputes it.
+
+        The write paths call this instead of recomputing: a burst of writes
+        then costs one cheap ``UPDATE`` each and a single run at the next read,
+        where recomputing per write would run the algorithm once per write for
+        a list nobody has asked for yet.
+
+        The rows themselves survive, so a recompute that fails still leaves the
+        client the last good list to show (FR-RW-07). An empty projection
+        updates nothing and needs nothing — it already reads back as stale.
+        """
+        self._session.execute(update(RewatchSuggestion).values(computed_at=STALE_COMPUTED_AT))
 
     def replace_all(self, rows: Sequence[DueFilm], computed_at: datetime) -> None:
         """Swap the whole projection for ``rows``, keeping their order as ``position``.
