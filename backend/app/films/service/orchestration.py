@@ -25,6 +25,7 @@ from app.films.service.protocols import (
     FilmRepositoryProtocol,
     GenreAssignmentProtocol,
     RatingHistoryProtocol,
+    RewatchProjectionProtocol,
     TagAssignmentProtocol,
 )
 from app.ratings.schemas import RatingDeletionResult, RatingEntryRead
@@ -39,11 +40,26 @@ class FilmService:
         tags: TagAssignmentProtocol,
         genres: GenreAssignmentProtocol,
         ratings: RatingHistoryProtocol,
+        rewatch: RewatchProjectionProtocol,
     ) -> None:
         self._repository = repository
         self._tags = tags
         self._genres = genres
         self._ratings = ratings
+        self._rewatch = rewatch
+
+    def _commit(self) -> None:
+        """Seal the unit of work, invalidating the rewatch due-list with it.
+
+        Every write here can move a film in or out of the due-list or change
+        its place in it — a new watch, a runtime or delay edit, a favourite
+        toggle, a deletion — so the invalidation belongs to the commit itself
+        rather than to the five callers, who would each have to remember it.
+        It is staged inside the same transaction: a rolled-back write leaves
+        the projection's stamp untouched.
+        """
+        self._rewatch.mark_stale()
+        self._repository.commit()
 
     def create(self, data: FilmCreate) -> FilmDetailRead:
         """The atomic "log a watched film" flow (FR-LIB-01..05).
@@ -90,7 +106,7 @@ class FilmService:
         for position, name in enumerate(deduplicated(data.genre)):
             genre = self._genres.get_or_create(name)
             self._genres.assign(film.id, genre.id, position)
-        self._repository.commit()
+        self._commit()
         return self.get_detail(film.id)
 
     def list_all(self) -> list[FilmDetailRead]:
@@ -210,7 +226,7 @@ class FilmService:
 
         if data.model_fields_set:
             film.updated_at = datetime.now(UTC)
-        self._repository.commit()
+        self._commit()
         return self.get_detail(film.id)
 
     def delete(self, film_id: uuid.UUID) -> None:
@@ -230,7 +246,7 @@ class FilmService:
         self._repository.delete_film(film)
         self._tags.delete_orphans()
         self._genres.delete_orphans()
-        self._repository.commit()
+        self._commit()
 
     def add_rating(
         self, film_id: uuid.UUID, value: Decimal | None, watch_date: date
@@ -249,7 +265,7 @@ class FilmService:
         if film is None:
             raise FilmNotFoundError(film_id)
         entry = self._ratings.add_entry(film_id, value, watch_date)
-        self._repository.commit()
+        self._commit()
         return RatingEntryRead.model_validate(entry)
 
     def delete_rating(self, rating_id: uuid.UUID) -> RatingDeletionResult:
@@ -269,7 +285,7 @@ class FilmService:
             self.delete(film_id)
             return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=True)
         self._ratings.delete(entry)
-        self._repository.commit()
+        self._commit()
         return RatingDeletionResult(rating_id=rating_id, film_id=film_id, film_deleted=False)
 
     def _reassign_tags(self, film_id: uuid.UUID, names: Sequence[str]) -> None:

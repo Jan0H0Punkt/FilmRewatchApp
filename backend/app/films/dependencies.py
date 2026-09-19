@@ -2,7 +2,8 @@
 
 Wires the film service and its collaborators for injection into the routes:
 request-scoped session → :class:`FilmRepository` → :class:`FilmService`, with
-the tag, genre, and rating services injected **service-to-service** (§5.1).
+the tag, genre, and rating services injected **service-to-service** (§5.1),
+and the rewatch repository the write paths invalidate (§5.8).
 FastAPI caches ``get_session`` per request, so every module's repository
 shares the one session — which is what makes the create flow a single atomic
 unit of work (FR-LIB-03, NFR-INT-02).
@@ -20,6 +21,8 @@ from app.genres.dependencies import get_genre_service
 from app.genres.service import GenreService
 from app.ratings.dependencies import get_rating_service
 from app.ratings.service import RatingService
+from app.rewatch.dependencies import get_rewatch_repository
+from app.rewatch.repository import RewatchRepository
 from app.tags.dependencies import get_tag_service
 from app.tags.service import TagService
 
@@ -34,6 +37,7 @@ def get_film_service(
     tags: Annotated[TagService, Depends(get_tag_service)],
     genres: Annotated[GenreService, Depends(get_genre_service)],
     ratings: Annotated[RatingService, Depends(get_rating_service)],
+    rewatch: Annotated[RewatchRepository, Depends(get_rewatch_repository)],
 ) -> FilmService:
     """The film service over its repository and peer services."""
-    return FilmService(repository, tags, genres, ratings)
+    return FilmService(repository, tags, genres, ratings, rewatch)

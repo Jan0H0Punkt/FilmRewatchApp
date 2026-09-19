@@ -211,11 +211,22 @@ class FakeRatingService:
         return sorted(rows, key=lambda entry: (entry.watch_date, entry.created_at), reverse=True)
 
 
+class FakeRewatchProjection:
+    """Counts the invalidations the service staged (``RewatchProjectionProtocol``)."""
+
+    def __init__(self) -> None:
+        self.stale_marks = 0
+
+    def mark_stale(self) -> None:
+        self.stale_marks += 1
+
+
 def make_service() -> tuple[FilmService, FakeFilmRepository, FakeTagService, FakeRatingService]:
     repository = FakeFilmRepository()
     tags = FakeTagService()
     ratings = FakeRatingService()
-    return FilmService(repository, tags, FakeGenreService(), ratings), repository, tags, ratings
+    service = FilmService(repository, tags, FakeGenreService(), ratings, FakeRewatchProjection())
+    return service, repository, tags, ratings
 
 
 def make_service_with_genres() -> tuple[
@@ -227,7 +238,8 @@ def make_service_with_genres() -> tuple[
     tags = FakeTagService()
     genres = FakeGenreService()
     ratings = FakeRatingService()
-    return FilmService(repository, tags, genres, ratings), repository, tags, genres, ratings
+    service = FilmService(repository, tags, genres, ratings, FakeRewatchProjection())
+    return service, repository, tags, genres, ratings
 
 
 def payload(**overrides: object) -> FilmCreate:
@@ -930,3 +942,19 @@ def test_delete_rating_unknown_id_maps_to_not_found() -> None:
 
     assert caught.value.code == "NOT_FOUND"
     assert repository.commits == commits_before
+
+
+def test_every_write_path_invalidates_the_rewatch_projection() -> None:
+    # Each of these can move a film in or out of the due-list, so none may
+    # leave yesterday's projection looking current (§5.8).
+    rewatch = FakeRewatchProjection()
+    service = FilmService(
+        FakeFilmRepository(), FakeTagService(), FakeGenreService(), FakeRatingService(), rewatch
+    )
+
+    created = service.create(payload())
+    service.update(created.id, FilmUpdate(is_favorite=True))
+    service.add_rating(created.id, Decimal("3.0"), date(1995, 12, 20))
+    service.delete(created.id)
+
+    assert rewatch.stale_marks == 4

@@ -1,7 +1,8 @@
 """The interfaces :class:`~app.films.service.FilmService` depends on (§5.1).
 
 One protocol per collaborator: the films repository, plus the tag, genre, and
-rating services reached **service-to-service**. Keeping them structural is what
+rating services reached **service-to-service**, and the rewatch projection the
+write paths invalidate. Keeping them structural is what
 lets the unit tests inject in-memory fakes (§9) without touching the database.
 """
 
@@ -87,3 +88,14 @@ class RatingHistoryProtocol(Protocol):
     def delete(self, entry: RatingEntry) -> None: ...
 
     def list_for_film(self, film_id: uuid.UUID) -> Sequence[RatingEntry]: ...
+
+
+class RewatchProjectionProtocol(Protocol):
+    """What the film flow needs of the rewatch projection (§5.8).
+
+    One method, and deliberately not the rewatch *service*: a film write must
+    invalidate the stored due-list, never run the algorithm — that is the
+    reading side's job.
+    """
+
+    def mark_stale(self) -> None: ...
