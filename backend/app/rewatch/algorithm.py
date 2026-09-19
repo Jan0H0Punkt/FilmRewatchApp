@@ -66,11 +66,13 @@ def interval_days(item: RewatchInput) -> int:
 
     The rating drives all three terms. It sets the floor outright — one year per
     full star counted down from six, so five stars floor at one year and one star
-    at five — and on top of that a lower average widens each step
-    (``10 * reverse_rating``) *and* adds steps, so the spacing grows
-    quadratically as the average falls. Each prior watch adds one step, and the
-    runtime widens every step: a three-hour film is a bigger ask than a
-    ninety-minute one at the same rating.
+    at five — and on top of that a lower average multiplies the runtime into a
+    wider step *and* adds steps, so the spacing grows quadratically as the
+    average falls. Each prior watch adds one step.
+
+    Runtime is a multiplier rather than an addend, so it gates the spacing
+    entirely: a film with no recorded runtime scores its floor and nothing more,
+    however badly rated.
 
     Being a favourite halves the finished interval, base included, so a
     favourite floors at half the years its rating earned — a five-star favourite
@@ -94,7 +96,7 @@ def interval_days(item: RewatchInput) -> int:
     base_days = (6 - (scaled_rating + 1) // 2) * DAYS_PER_YEAR
 
     step_count = item.watch_count + reverse_rating
-    step_days = 10 * reverse_rating + item.runtime_minutes
+    step_days = reverse_rating * item.runtime_minutes
     spacing = step_count * step_days
 
     total = base_days + spacing

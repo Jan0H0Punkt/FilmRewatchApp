@@ -23,8 +23,8 @@ TODAY = date(2026, 9, 14)
 
 # What the defaults below score: five stars, so a one-year floor (reverse rating
 # 1) plus two steps — one for the rating, one for the single prior watch — of
-# 10 + 120 days.
-REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 260
+# 1 * 120 days.
+REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 2 * 120
 
 
 def _input(
@@ -54,18 +54,17 @@ def test_the_reference_film_scores_the_documented_interval() -> None:
 
 def test_each_full_star_is_worth_a_year_of_floor() -> None:
     # Counted down from six: five stars floor at one year, one star at five.
-    # Stripped of every other input — never rewatched, no runtime — what is left
-    # on top of the floor is 10 * reverse_rating ** 2, which is why a low rating
-    # clears its own floor by more than a year.
-    for rating, years, spacing in (
-        (Decimal("5.0"), 1, 10),
-        (Decimal("4.0"), 2, 40),
-        (Decimal("3.0"), 3, 160),
-        (Decimal("2.0"), 4, 360),
-        (Decimal("1.0"), 5, 640),
+    # A zero runtime zeroes the whole spacing, so the floor is all that is left
+    # and shows through exactly.
+    for rating, years in (
+        (Decimal("5.0"), 1),
+        (Decimal("4.0"), 2),
+        (Decimal("3.0"), 3),
+        (Decimal("2.0"), 4),
+        (Decimal("1.0"), 5),
     ):
         bare = _input(average_rating=rating, watch_count=0, runtime_minutes=0)
-        assert interval_days(bare) == years * DAYS_PER_YEAR + spacing
+        assert interval_days(bare) == years * DAYS_PER_YEAR
 
 
 def test_a_half_step_floors_where_the_full_star_above_it_does() -> None:
@@ -78,18 +77,18 @@ def test_a_half_step_floors_where_the_full_star_above_it_does() -> None:
 
 
 def test_a_lower_rating_pushes_a_film_quadratically_further_out() -> None:
-    # Half the rating is four times the spacing: reverse rating 5 both widens
-    # each step (50 + 120) and raises the step count (1 watch + 5). 2.5 rounds
-    # up to 3 stars, so it floors at three years.
-    assert interval_days(_input(average_rating=Decimal("2.5"))) == 3 * DAYS_PER_YEAR + 1020
+    # Half the rating is fifteen times the spacing: reverse rating 5 both widens
+    # each step (5 * 120) and raises the step count (1 watch + 5). 2.5 rounds up
+    # to 3 stars, so it floors at three years.
+    assert interval_days(_input(average_rating=Decimal("2.5"))) == 3 * DAYS_PER_YEAR + 6 * 600
 
 
 def test_the_worst_rating_scores_reverse_rating_nine() -> None:
-    # 0.5 stars scales to 1, the lowest a real rating reaches, leaving nine
-    # steps of 90 + 30 days on top of the one-star floor it rounds up to.
+    # 0.5 stars scales to 1, the lowest a real rating reaches, leaving ten steps
+    # of 9 * 30 days on top of the one-star floor it rounds up to.
     assert (
         interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
-        == 5 * DAYS_PER_YEAR + 10 * 120
+        == 5 * DAYS_PER_YEAR + 10 * 270
     )
 
 
@@ -110,17 +109,25 @@ def test_an_unrated_film_waits_longer_than_the_worst_rated_one() -> None:
 
 
 def test_every_prior_watch_adds_one_step() -> None:
-    assert interval_days(_input(watch_count=3)) == 1 * DAYS_PER_YEAR + 4 * 130
+    assert interval_days(_input(watch_count=3)) == 1 * DAYS_PER_YEAR + 4 * 120
 
 
 def test_a_longer_runtime_widens_every_step() -> None:
-    assert interval_days(_input(runtime_minutes=180)) == 1 * DAYS_PER_YEAR + 2 * 190
+    assert interval_days(_input(runtime_minutes=180)) == 1 * DAYS_PER_YEAR + 2 * 180
+
+
+def test_a_film_with_no_runtime_scores_nothing_above_its_floor() -> None:
+    # Runtime multiplies the step rather than adding to it, so a missing runtime
+    # collapses the spacing to zero however bad the rating.
+    assert interval_days(_input(average_rating=Decimal("1.0"), runtime_minutes=0)) == (
+        5 * DAYS_PER_YEAR
+    )
 
 
 def test_a_favourite_halves_the_whole_interval() -> None:
     # The floor is halved along with the spacing, and an odd total rounds up
     # rather than down into a shorter wait than the scoring asked for — the
-    # reference film scores 625, which halves to 312.5.
+    # reference film scores 605, which halves to 302.5.
     assert interval_days(_input(is_favorite=True)) == (REFERENCE_INTERVAL_DAYS + 1) // 2
 
 
@@ -142,9 +149,9 @@ def test_the_interval_has_no_upper_bound() -> None:
         for n in (1, 10, 100)
     ]
     assert intervals == [
-        5 * DAYS_PER_YEAR + 2700,
-        5 * DAYS_PER_YEAR + 5130,
-        5 * DAYS_PER_YEAR + 29430,
+        5 * DAYS_PER_YEAR + 10 * 1620,
+        5 * DAYS_PER_YEAR + 19 * 1620,
+        5 * DAYS_PER_YEAR + 109 * 1620,
     ]
 
 

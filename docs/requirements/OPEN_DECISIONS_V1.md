@@ -39,10 +39,13 @@ due. Each is tagged:
 - **[design] Rewatch algorithm internals** — **Decided (2026-09-14):** the
   repo owner's formula, in `algorithm.interval_days`. A film waits a
   rating-derived floor plus a spacing of `(watch_count + reverse_rating) *
-  (10 * reverse_rating + runtime_minutes)`, where `reverse_rating` is the
+  (reverse_rating * runtime_minutes)`, where `reverse_rating` is the
   average rating doubled onto a 1..10 scale and subtracted from 10. The rating
   therefore drives the interval quadratically; each prior watch adds one step;
-  a longer film widens every step. **Revised 2026-09-19:** the floor is keyed on
+  a longer film widens every step. Runtime multiplies rather than adds
+  (**revised 2026-09-19:** was `10 * reverse_rating + runtime_minutes`), so a
+  film with no recorded runtime scores its floor and nothing more.
+  **Revised 2026-09-19:** the floor is keyed on
   the rating rather than shared — one year per full star counted down from six,
   so five stars floor at one year and one star at five, with a half step
   rounding up to the full star above it (4.5 counts as 5) and an unrated film

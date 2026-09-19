@@ -12,9 +12,9 @@ from app.rewatch.service import RewatchService
 TODAY = date(2026, 9, 14)
 
 # What the :func:`_input` profile below scores: five stars, so a one-year floor
-# (reverse rating 1) plus two steps of 10 + 90 days. These tests are about
+# (reverse rating 1) plus two steps of 1 * 90 days. These tests are about
 # orchestration, not scoring — the number only has to be the helper's.
-REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 200
+REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 2 * 90
 
 
 class FakeRepository:
