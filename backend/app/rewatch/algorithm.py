@@ -18,9 +18,10 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-# The floor every film shares: nothing is suggested within a year of its last
-# watch, however loved (OPEN_DECISIONS_V1 "M4 — Rewatch engine").
-BASE_INTERVAL_DAYS = 365 * 2
+# The unit the rating-derived floor is counted in (OPEN_DECISIONS_V1 "M4 —
+# Rewatch engine"). No leap-year handling: a floor measured in whole years is
+# already a judgement call, and a day either way cannot matter to it.
+DAYS_PER_YEAR = 365
 
 # Ratings run 0.5..5.0 in half steps (``ratings.schemas``), while the scoring
 # below is defined over 1..10 — doubling maps one onto the other exactly, with
@@ -63,15 +64,17 @@ class DueFilm:
 def interval_days(item: RewatchInput) -> int:
     """How long after its last watch a film becomes due again.
 
-    The rating dominates, because it drives both factors at once: a lower
-    average widens each step (``10 * reverse_rating``) *and* adds steps, so the
-    interval grows quadratically as a film's average falls. Each prior watch
-    adds one step on top, and the runtime widens every step — a three-hour film
-    is a bigger ask than a ninety-minute one at the same rating.
+    The rating drives all three terms. It sets the floor outright — one year per
+    full star counted down from six, so five stars floor at one year and one star
+    at five — and on top of that a lower average widens each step
+    (``10 * reverse_rating``) *and* adds steps, so the spacing grows
+    quadratically as the average falls. Each prior watch adds one step, and the
+    runtime widens every step: a three-hour film is a bigger ask than a
+    ninety-minute one at the same rating.
 
     Being a favourite halves the finished interval, base included, so a
-    favourite's own floor is half :data:`BASE_INTERVAL_DAYS` — still a year,
-    which is what the base is doubled to buy.
+    favourite floors at half the years its rating earned — a five-star favourite
+    can come due in six months, the one place nothing holds it to a year.
 
     The result is deliberately unbounded above. A ceiling would collapse the
     bottom of the rating scale onto one value — every film at or below it due on
@@ -85,11 +88,16 @@ def interval_days(item: RewatchInput) -> int:
     )
     reverse_rating = max(10 - scaled_rating, 1)
 
+    # Halving the 1..10 scale back to stars rounds a half step up to the full
+    # star above it, so 4.5 floors where 5.0 does. An unrated film scales to 0
+    # and so floors at six years, one past the worst rated film.
+    base_days = (6 - (scaled_rating + 1) // 2) * DAYS_PER_YEAR
+
     step_count = item.watch_count + reverse_rating
     step_days = 10 * reverse_rating + item.runtime_minutes
     spacing = step_count * step_days
 
-    total = BASE_INTERVAL_DAYS + spacing
+    total = base_days + spacing
     return math.ceil(total / 2) if item.is_favorite else total
 
 

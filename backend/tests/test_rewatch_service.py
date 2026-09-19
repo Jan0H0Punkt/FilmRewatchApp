@@ -5,16 +5,16 @@ from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from app.rewatch.algorithm import BASE_INTERVAL_DAYS, DueFilm, RewatchInput
+from app.rewatch.algorithm import DAYS_PER_YEAR, DueFilm, RewatchInput
 from app.rewatch.models import RewatchSuggestion
 from app.rewatch.service import RewatchService
 
 TODAY = date(2026, 9, 14)
 
-# What the :func:`_input` profile below scores: five stars (reverse rating 1),
-# so two steps of 10 + 90 days on top of the base. These tests are about
+# What the :func:`_input` profile below scores: five stars, so a one-year floor
+# (reverse rating 1) plus two steps of 10 + 90 days. These tests are about
 # orchestration, not scoring — the number only has to be the helper's.
-REFERENCE_INTERVAL_DAYS = BASE_INTERVAL_DAYS + 200
+REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 200
 
 
 class FakeRepository:

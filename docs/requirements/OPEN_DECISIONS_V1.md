@@ -37,17 +37,19 @@ due. Each is tagged:
   app is the whole requirement — and every start recomputes, so a restart costs
   nothing. (DESIGN §5.8, §8.1.)
 - **[design] Rewatch algorithm internals** — **Decided (2026-09-14):** the
-  repo owner's formula, in `algorithm.interval_days`. A film waits
-  `BASE_INTERVAL_DAYS` plus a spacing of `(watch_count + reverse_rating) *
+  repo owner's formula, in `algorithm.interval_days`. A film waits a
+  rating-derived floor plus a spacing of `(watch_count + reverse_rating) *
   (10 * reverse_rating + runtime_minutes)`, where `reverse_rating` is the
   average rating doubled onto a 1..10 scale and subtracted from 10. The rating
   therefore drives the interval quadratically; each prior watch adds one step;
-  a longer film widens every step. Favourites halve the finished interval,
-  base included, rounded up (**revised 2026-09-19:** was half the spacing only;
-  `BASE_INTERVAL_DAYS` doubled to two years in the same change, which leaves a
-  favourite's own floor at one year). So **no film is ever suggested within a
-  year of its last watch** — the point of the base being a floor rather than a
-  target. The result is unbounded
+  a longer film widens every step. **Revised 2026-09-19:** the floor is keyed on
+  the rating rather than shared — one year per full star counted down from six,
+  so five stars floor at one year and one star at five, with a half step
+  rounding up to the full star above it (4.5 counts as 5) and an unrated film
+  floored at six. Favourites halve the finished interval, floor included,
+  rounded up, which is the **one case that falls inside the year its rating
+  bought** — a five-star favourite can come due in six months. The result is
+  unbounded
   above (**revised 2026-09-19:** `MAX_INTERVAL_DAYS` removed — a ceiling
   collapsed the bottom of the rating scale onto a single due date, and measured
   against the real library it never bound anything else). `delay_days` is added

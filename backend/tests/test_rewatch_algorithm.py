@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from app.rewatch.algorithm import (
-    BASE_INTERVAL_DAYS,
+    DAYS_PER_YEAR,
     RewatchInput,
     interval_days,
     suggest,
@@ -21,9 +21,10 @@ from app.rewatch.algorithm import (
 
 TODAY = date(2026, 9, 14)
 
-# What the defaults below score: five stars (reverse rating 1), so two steps
-# — one for the rating, one for the single prior watch — of 10 + 120 days.
-REFERENCE_INTERVAL_DAYS = BASE_INTERVAL_DAYS + 260
+# What the defaults below score: five stars, so a one-year floor (reverse rating
+# 1) plus two steps — one for the rating, one for the single prior watch — of
+# 10 + 120 days.
+REFERENCE_INTERVAL_DAYS = 1 * DAYS_PER_YEAR + 260
 
 
 def _input(
@@ -51,18 +52,44 @@ def test_the_reference_film_scores_the_documented_interval() -> None:
     assert interval_days(_input()) == REFERENCE_INTERVAL_DAYS
 
 
+def test_each_full_star_is_worth_a_year_of_floor() -> None:
+    # Counted down from six: five stars floor at one year, one star at five.
+    # Stripped of every other input — never rewatched, no runtime — what is left
+    # on top of the floor is 10 * reverse_rating ** 2, which is why a low rating
+    # clears its own floor by more than a year.
+    for rating, years, spacing in (
+        (Decimal("5.0"), 1, 10),
+        (Decimal("4.0"), 2, 40),
+        (Decimal("3.0"), 3, 160),
+        (Decimal("2.0"), 4, 360),
+        (Decimal("1.0"), 5, 640),
+    ):
+        bare = _input(average_rating=rating, watch_count=0, runtime_minutes=0)
+        assert interval_days(bare) == years * DAYS_PER_YEAR + spacing
+
+
+def test_a_half_step_floors_where_the_full_star_above_it_does() -> None:
+    # 4.5 counts as 5 for the floor. It also shares reverse_rating with 5.0,
+    # which max(10 - scaled, 1) pins at 1 — so at the top of the scale a half
+    # star makes no difference to the interval at all.
+    assert interval_days(_input(average_rating=Decimal("4.5"))) == interval_days(
+        _input(average_rating=Decimal("5.0"))
+    )
+
+
 def test_a_lower_rating_pushes_a_film_quadratically_further_out() -> None:
     # Half the rating is four times the spacing: reverse rating 5 both widens
-    # each step (50 + 120) and raises the step count (1 watch + 5).
-    assert interval_days(_input(average_rating=Decimal("2.5"))) == BASE_INTERVAL_DAYS + 1020
+    # each step (50 + 120) and raises the step count (1 watch + 5). 2.5 rounds
+    # up to 3 stars, so it floors at three years.
+    assert interval_days(_input(average_rating=Decimal("2.5"))) == 3 * DAYS_PER_YEAR + 1020
 
 
 def test_the_worst_rating_scores_reverse_rating_nine() -> None:
     # 0.5 stars scales to 1, the lowest a real rating reaches, leaving nine
-    # steps of 90 + 30 days.
+    # steps of 90 + 30 days on top of the one-star floor it rounds up to.
     assert (
         interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
-        == BASE_INTERVAL_DAYS + 10 * 120
+        == 5 * DAYS_PER_YEAR + 10 * 120
     )
 
 
@@ -83,37 +110,28 @@ def test_an_unrated_film_waits_longer_than_the_worst_rated_one() -> None:
 
 
 def test_every_prior_watch_adds_one_step() -> None:
-    assert interval_days(_input(watch_count=3)) == BASE_INTERVAL_DAYS + 4 * 130
+    assert interval_days(_input(watch_count=3)) == 1 * DAYS_PER_YEAR + 4 * 130
 
 
 def test_a_longer_runtime_widens_every_step() -> None:
-    assert interval_days(_input(runtime_minutes=180)) == BASE_INTERVAL_DAYS + 2 * 190
+    assert interval_days(_input(runtime_minutes=180)) == 1 * DAYS_PER_YEAR + 2 * 190
 
 
 def test_a_favourite_halves_the_whole_interval() -> None:
-    # The base is halved along with the spacing, not just the spacing.
-    assert interval_days(_input(is_favorite=True)) == REFERENCE_INTERVAL_DAYS // 2
+    # The floor is halved along with the spacing, and an odd total rounds up
+    # rather than down into a shorter wait than the scoring asked for — the
+    # reference film scores 625, which halves to 312.5.
+    assert interval_days(_input(is_favorite=True)) == (REFERENCE_INTERVAL_DAYS + 1) // 2
 
 
-def test_a_favourite_rounds_its_halved_interval_up() -> None:
-    # An odd total must not round down into a shorter wait than the scoring
-    # asked for. 730 + 3 * 131 = 1123, which halves to 561.5.
-    assert interval_days(_input(is_favorite=True, watch_count=2, runtime_minutes=121)) == 562
-
-
-def test_the_base_interval_is_a_floor_even_for_the_best_possible_film() -> None:
-    # Top-rated, never rewatched, no runtime at all — the shortest the scoring
-    # can go. A favourite floors at the halved base instead, which is why
-    # doubling the base is what keeps every film past a year
-    # (OPEN_DECISIONS_V1 "M4 — Rewatch engine").
-    best = _input(average_rating=Decimal("5.0"), watch_count=0, runtime_minutes=0)
-    assert interval_days(best) >= BASE_INTERVAL_DAYS
-
+def test_a_favourite_is_the_one_case_that_drops_below_its_rating_floor() -> None:
+    # Halving the finished interval halves the floor with it, so a five-star
+    # favourite can fall inside the year its rating bought. Deliberate: the
+    # halving is the whole point of the flag (OPEN_DECISIONS_V1 "M4").
     best_favourite = _input(
         average_rating=Decimal("5.0"), watch_count=0, is_favorite=True, runtime_minutes=0
     )
-    assert interval_days(best_favourite) >= BASE_INTERVAL_DAYS // 2
-    assert interval_days(best_favourite) >= 365
+    assert interval_days(best_favourite) < DAYS_PER_YEAR
 
 
 def test_the_interval_has_no_upper_bound() -> None:
@@ -124,9 +142,9 @@ def test_the_interval_has_no_upper_bound() -> None:
         for n in (1, 10, 100)
     ]
     assert intervals == [
-        BASE_INTERVAL_DAYS + 2700,
-        BASE_INTERVAL_DAYS + 5130,
-        BASE_INTERVAL_DAYS + 29430,
+        5 * DAYS_PER_YEAR + 2700,
+        5 * DAYS_PER_YEAR + 5130,
+        5 * DAYS_PER_YEAR + 29430,
     ]
 
 
