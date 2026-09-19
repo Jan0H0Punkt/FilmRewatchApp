@@ -52,7 +52,7 @@ markers = [
 # same engine as Pylance in the editor — so `make typecheck` and editor feedback
 # agree. `strict` is enforced over the whole backend from M0's first commit.
 [tool.pyright]
-include = ["app", "tests"]
+include = ["app", "tests", "simulate"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 pythonPlatform = "Linux"
