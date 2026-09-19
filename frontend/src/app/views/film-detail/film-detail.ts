@@ -24,7 +24,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -219,7 +219,9 @@ function extractErrorMessage(error: unknown, fallback: string): string {
   // The Add Rating form's `watch_date` picker (phase 2, FR-RAT-03) needs a
   // date adapter; native `Date` is enough — no extra date library. Scoped
   // here (not app-wide) so it lands in this lazy chunk, not the initial bundle.
-  providers: [provideNativeDateAdapter()],
+  // Locale pinned to `en-GB` so the picker always reads/writes DD/MM/YYYY,
+  // independent of the browser's locale.
+  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'en-GB' }],
   templateUrl: './film-detail.html',
   styleUrl: './film-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
