@@ -13,6 +13,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MAT_NATIVE_DATE_FORMATS, provideNativeDateAdapter, type MatDateFormats } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -23,8 +24,10 @@ import { RouterLink } from '@angular/router';
 
 import { ScrollMemoryService } from '../../core/scroll-memory';
 import { RewatchFacade } from '../../domain/rewatch/facade';
+import type { RewatchCardVm } from '../../domain/rewatch/model';
 import { ScrollToTopFab } from '../../shared/scroll-to-top-fab/scroll-to-top-fab';
 import { TruncatedTooltipDirective } from '../../shared/truncated-tooltip';
+import { LetterboxdDialog } from './letterboxd-dialog';
 
 /** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
 const SCROLL_KEY = 'rewatch';
@@ -67,6 +70,7 @@ const TWENTY_FOUR_HOUR_FORMATS: MatDateFormats = {
 export class Rewatch {
   private readonly rewatch = inject(RewatchFacade);
   private readonly scrollMemory = inject(ScrollMemoryService);
+  private readonly dialog = inject(MatDialog);
   private hasRestoredScroll = false;
 
   protected readonly cards = this.rewatch.cards;
@@ -101,5 +105,14 @@ export class Rewatch {
 
   protected onDoneBeforeChange(cutoff: Date | null): void {
     if (cutoff !== null) this.rewatch.setDoneBefore(cutoff);
+  }
+
+  /** The title icon: an existing link opens Letterboxd, a missing one opens the add-link dialog (`LetterboxdDialog`). */
+  protected onLetterboxdClick(card: RewatchCardVm): void {
+    if (card.letterboxdUrl !== null) {
+      window.open(card.letterboxdUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    this.dialog.open(LetterboxdDialog, { data: { filmId: card.id } });
   }
 }

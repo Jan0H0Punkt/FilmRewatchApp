@@ -16,6 +16,7 @@ const HEAT: Film = {
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
   posterImage: null,
+  letterboxdUrl: null,
   averageRating: 4,
   isFavorite: true,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
@@ -31,6 +32,7 @@ const SEVEN: Film = {
   genres: ['Crime', 'Drama'],
   tags: [],
   posterImage: null,
+  letterboxdUrl: null,
   averageRating: null,
   isFavorite: false,
   titles: [

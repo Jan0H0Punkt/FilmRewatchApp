@@ -18,8 +18,8 @@ export function averageRatingOf(history: readonly RatingEntryDto[]): number | nu
 
 /**
  * Map the §7.3 projection to the domain list model, extracting only the subset
- * the library view renders. The backend guarantees exactly one primary title
- * per film (§5.2 partial unique index), ordered primary-first.
+ * the library and rewatch views render. The backend guarantees exactly one
+ * primary title per film (§5.2 partial unique index), ordered primary-first.
  */
 export function toFilm(dto: FilmDto): Film {
   return {
@@ -31,6 +31,7 @@ export function toFilm(dto: FilmDto): Film {
     genres: dto.genre,
     tags: dto.tags,
     posterImage: dto.poster_image,
+    letterboxdUrl: dto.letterboxd_url,
     averageRating: averageRatingOf(dto.rating_history),
     isFavorite: dto.is_favorite,
     titles: dto.titles.map((title) => ({
@@ -46,7 +47,6 @@ export function toFilmDetail(dto: FilmDto): FilmDetail {
   return {
     ...toFilm(dto),
     delayDays: dto.delay_days,
-    letterboxdUrl: dto.letterboxd_url,
     ratingHistory: dto.rating_history.map((entry) => ({
       id: entry.id,
       value: entry.value,

@@ -32,6 +32,7 @@ function film(id: string, title: string, rating: number | null = 4): Film {
     genres: [],
     tags: [],
     posterImage: null,
+    letterboxdUrl: null,
     averageRating: rating,
     isFavorite: false,
     titles: [{ value: title, isPrimary: true, isOriginal: true }],

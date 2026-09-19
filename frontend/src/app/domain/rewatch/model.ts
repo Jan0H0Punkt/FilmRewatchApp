@@ -22,4 +22,6 @@ export interface RewatchCardVm {
   readonly isFavorite: boolean;
   /** "Due now" or "Overdue by N days" (§7.1 Rewatch status). */
   readonly dueLabel: string;
+  /** `null` when never set — the title icon then opens the add-link dialog instead of the site. */
+  readonly letterboxdUrl: string | null;
 }

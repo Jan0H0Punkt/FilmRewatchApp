@@ -12,6 +12,7 @@ function film(id: string, ...titles: readonly string[]): Film {
     genres: [],
     tags: [],
     posterImage: null,
+    letterboxdUrl: null,
     averageRating: null,
     isFavorite: false,
     titles: titles.map((value, index) => ({ value, isPrimary: index === 0, isOriginal: index === 0 })),

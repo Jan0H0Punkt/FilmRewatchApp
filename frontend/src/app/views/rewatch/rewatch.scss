@@ -43,16 +43,20 @@
   padding: 0;
 }
 
+/* The stretched-link overlay (see rewatch.html) — covers the whole card so
+   anywhere on it navigates, while `.rewatch__letterboxd` (higher z-index)
+   stays independently clickable on top of it. */
 .rewatch__link {
-  color: inherit;
-  display: block;
-  text-decoration: none;
+  inset: 0;
+  position: absolute;
+  z-index: 1;
 }
 
 .rewatch__card {
   height: 100%;
   overflow: hidden;
   padding: 0;
+  position: relative;
 }
 
 .rewatch__poster {
@@ -95,12 +99,34 @@
   white-space: nowrap;
 }
 
+/* Always present (unlike film-detail's, gated on a link already being set) —
+   `position: relative` plus a higher `z-index` than `.rewatch__link` (above)
+   is what keeps it clickable despite the card-covering overlay link. */
+.rewatch__letterboxd {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  margin: 0 0 0 auto; /* pins it (and the favourite icon after it) to the far right of the title row */
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.rewatch__letterboxd mat-icon {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+
 .rewatch__favorite {
   color: var(--favorite-color);
   flex: none;
   font-size: 1rem;
   height: 1rem;
-  margin-left: auto; /* pins it to the far right of the title row */
   width: 1rem;
 }
 

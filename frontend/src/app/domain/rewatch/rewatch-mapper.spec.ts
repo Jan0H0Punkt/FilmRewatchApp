@@ -11,6 +11,7 @@ const HEAT: Film = {
   genres: ['Crime'],
   tags: ['heist'],
   posterImage: null,
+  letterboxdUrl: 'https://boxd.it/aaaa',
   averageRating: 4,
   isFavorite: true,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
@@ -72,6 +73,7 @@ describe('toRewatchCardVm', () => {
       ratingLabel: 'Average rating: 4.0 out of 5',
       isFavorite: true,
       dueLabel: 'Overdue by 5 days',
+      letterboxdUrl: 'https://boxd.it/aaaa',
     });
   });
 

@@ -15,6 +15,8 @@ export interface Film {
   readonly genres: readonly string[];
   readonly tags: readonly string[];
   readonly posterImage: string | null;
+  /** User-entered Letterboxd link (REQ §4.1), `null` when never set. Rewatch's card title icon reads this (§7.1). */
+  readonly letterboxdUrl: string | null;
   /**
    * Derived client-side from `ratingHistory` on every read, never sent by the
    * API and never stored (FR-RAT-09/10, DESIGN §7.3). `null` when every watch
@@ -55,8 +57,6 @@ export interface RatingHistoryEntry {
  */
 export interface FilmDetail extends Film {
   readonly delayDays: number;
-  /** User-entered Letterboxd link (REQ §4.1), `null` when never set. */
-  readonly letterboxdUrl: string | null;
   /** Newest first (FR-RAT-05/06), as the backend orders it. */
   readonly ratingHistory: readonly RatingHistoryEntry[];
   readonly createdAt: string;

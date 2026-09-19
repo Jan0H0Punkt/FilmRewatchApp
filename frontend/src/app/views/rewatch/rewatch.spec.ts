@@ -1,11 +1,18 @@
 /** The §7.1 card grid and its four states (FR-RW-06/07). */
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 
 import { RewatchFacade } from '../../domain/rewatch/facade';
 import type { RewatchCardVm } from '../../domain/rewatch/model';
+import { LetterboxdDialog } from './letterboxd-dialog';
 import { Rewatch } from './rewatch';
+
+/** Stands in for `MatDialog` — `Rewatch` never reads `open()`'s return value. */
+function stubMatDialog() {
+  return { open: vi.fn() };
+}
 
 const HEAT: RewatchCardVm = {
   id: 'f1',
@@ -16,12 +23,14 @@ const HEAT: RewatchCardVm = {
   ratingLabel: 'Average rating: 4.0 out of 5',
   isFavorite: true,
   dueLabel: 'Overdue by 5 days',
+  letterboxdUrl: null,
 };
 
 async function render(
   cards: readonly RewatchCardVm[],
   isLoading = false,
   error: unknown = undefined,
+  dialog: ReturnType<typeof stubMatDialog> = stubMatDialog(),
 ): Promise<HTMLElement> {
   // The favourite test renders twice; without the reset the second
   // `configureTestingModule` throws because a component already exists.
@@ -42,6 +51,7 @@ async function render(
           setDoneBefore: (): void => undefined,
         },
       },
+      { provide: MatDialog, useValue: dialog },
     ],
   });
   const fixture = TestBed.createComponent(Rewatch);
@@ -125,5 +135,35 @@ describe('Rewatch view', () => {
 
     expect(element.querySelector('[role="alert"]')).not.toBeNull();
     expect(element.querySelectorAll('.rewatch__card')).toHaveLength(1);
+  });
+
+  describe('Letterboxd title icon (§7.1)', () => {
+    it('is shown even when the film has no link yet', async () => {
+      const element = await render([HEAT]); // HEAT.letterboxdUrl is null
+
+      const icon = element.querySelector('.rewatch__letterboxd');
+      expect(icon).not.toBeNull();
+      // Not nested inside the card's stretched link (rewatch.html) — it stays
+      // independently clickable via CSS stacking, not event plumbing.
+      expect(element.querySelector('a')?.contains(icon)).toBe(false);
+    });
+
+    it('opens the link directly when one is saved', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const element = await render([{ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }]);
+
+      element.querySelector<HTMLButtonElement>('.rewatch__letterboxd')!.click();
+
+      expect(openSpy).toHaveBeenCalledWith('https://boxd.it/aaaa', '_blank', 'noopener,noreferrer');
+    });
+
+    it('opens the add-link dialog when none is saved', async () => {
+      const dialog = stubMatDialog();
+      const element = await render([HEAT], false, undefined, dialog);
+
+      element.querySelector<HTMLButtonElement>('.rewatch__letterboxd')!.click();
+
+      expect(dialog.open).toHaveBeenCalledWith(LetterboxdDialog, { data: { filmId: HEAT.id } });
+    });
   });
 });

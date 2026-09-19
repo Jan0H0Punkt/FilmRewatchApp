@@ -29,41 +29,55 @@
   <ul class="rewatch__grid">
     @for (card of cards(); track card.id) {
       <li>
-        <a class="rewatch__link" [routerLink]="['/film', card.id]">
-          <mat-card class="rewatch__card">
-            @if (card.posterImage) {
-              <img class="rewatch__poster" [src]="card.posterImage" [alt]="'Poster of ' + card.title" loading="lazy" />
-            } @else {
-              <div class="rewatch__poster rewatch__poster--empty" aria-hidden="true">
-                <mat-icon>movie</mat-icon>
-              </div>
-            }
-            <div class="rewatch__body">
-              <h3 class="rewatch__title">
-                <span class="rewatch__title-text" [matTooltip]="card.title" appTruncatedTooltip>{{ card.title }}</span>
-                @if (card.isFavorite) {
-                  <mat-icon class="rewatch__favorite" aria-label="Favourite">favorite</mat-icon>
-                }
-              </h3>
-              <div class="rewatch__meta">
-                <p class="rewatch__year">{{ card.year }}</p>
-                <p class="rewatch__rating" [attr.aria-label]="card.ratingLabel">
-                  @if (card.ratingStars) {
-                    @for (icon of card.ratingStars; track $index) {
-                      <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
-                    }
-                  } @else {
-                    <span aria-hidden="true">&mdash;</span>
+        <!-- `.rewatch__card` is `position: relative`; the link below is a full-card overlay
+             (a "stretched link" — `position: absolute; inset: 0`), so the title's Letterboxd
+             button can sit at a higher `z-index` and stay independently clickable instead of
+             being a `<button>` nested inside an `<a>`. -->
+        <mat-card class="rewatch__card">
+          <a class="rewatch__link" [routerLink]="['/film', card.id]" [attr.aria-label]="'Open ' + card.title"></a>
+          @if (card.posterImage) {
+            <img class="rewatch__poster" [src]="card.posterImage" [alt]="'Poster of ' + card.title" loading="lazy" />
+          } @else {
+            <div class="rewatch__poster rewatch__poster--empty" aria-hidden="true">
+              <mat-icon>movie</mat-icon>
+            </div>
+          }
+          <div class="rewatch__body">
+            <h3 class="rewatch__title">
+              <span class="rewatch__title-text" [matTooltip]="card.title" appTruncatedTooltip>{{ card.title }}</span>
+              <!-- Always shown (unlike film-detail's, which only appears once a link is set):
+                   an existing link opens Letterboxd, a missing one opens the add-link dialog. -->
+              <button
+                type="button"
+                class="rewatch__letterboxd"
+                [matTooltip]="card.letterboxdUrl ? 'See on Letterboxd' : 'Add a Letterboxd link'"
+                [attr.aria-label]="card.letterboxdUrl ? 'See on Letterboxd' : 'Add a Letterboxd link'"
+                (click)="onLetterboxdClick(card)"
+              >
+                <mat-icon aria-hidden="true">{{ card.letterboxdUrl ? 'open_in_new' : 'add_link' }}</mat-icon>
+              </button>
+              @if (card.isFavorite) {
+                <mat-icon class="rewatch__favorite" aria-label="Favourite">favorite</mat-icon>
+              }
+            </h3>
+            <div class="rewatch__meta">
+              <p class="rewatch__year">{{ card.year }}</p>
+              <p class="rewatch__rating" [attr.aria-label]="card.ratingLabel">
+                @if (card.ratingStars) {
+                  @for (icon of card.ratingStars; track $index) {
+                    <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
                   }
-                </p>
-              </div>
-              <p class="rewatch__due">
-                <mat-icon aria-hidden="true" inline>schedule</mat-icon>
-                {{ card.dueLabel }}
+                } @else {
+                  <span aria-hidden="true">&mdash;</span>
+                }
               </p>
             </div>
-          </mat-card>
-        </a>
+            <p class="rewatch__due">
+              <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+              {{ card.dueLabel }}
+            </p>
+          </div>
+        </mat-card>
       </li>
     }
   </ul>
