@@ -62,6 +62,13 @@ export interface FilmDto {
 export interface FilmUpdateDto {
   readonly is_favorite?: boolean;
   readonly delay_days?: number;
+  /** The full replacement title list (mirrors `FilmUpdate.titles`), revalidated by the backend against the REQ §4.1 rules. */
+  readonly titles?: readonly TitleCreateDto[];
+  readonly release_year?: number;
+  readonly director?: string;
+  readonly runtime_minutes?: number;
+  /** Absent means unchanged; an explicit `null` clears the poster (FR-LIB-15). */
+  readonly poster_image?: string | null;
   /** The full replacement tag list (FR-TAG-03), never a delta. */
   readonly tags?: readonly string[];
   /** The full replacement genre list. Singular on the wire, unlike `tags`. */

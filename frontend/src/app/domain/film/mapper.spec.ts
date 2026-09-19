@@ -50,6 +50,31 @@ describe('toFilmUpdateDto', () => {
     const patch: FilmPatch = {};
     expect(JSON.stringify(toFilmUpdateDto(patch))).not.toContain('letterboxd_url');
   });
+
+  it('maps the record fields the Edit form patches, title flags included', () => {
+    const patch: FilmPatch = {
+      titles: [
+        { value: 'Heat', isPrimary: true, isOriginal: false },
+        { value: 'ヒート', isPrimary: false, isOriginal: true },
+      ],
+      releaseYear: 1995,
+      director: 'Michael Mann',
+      runtimeMinutes: 170,
+      posterImage: null,
+    };
+
+    expect(toFilmUpdateDto(patch)).toMatchObject({
+      // An unset flag is left out, not sent as `false` — same rule as the create.
+      titles: [
+        { value: 'Heat', is_primary: true },
+        { value: 'ヒート', is_original: true },
+      ],
+      release_year: 1995,
+      director: 'Michael Mann',
+      runtime_minutes: 170,
+      poster_image: null,
+    });
+  });
 });
 
 function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput {

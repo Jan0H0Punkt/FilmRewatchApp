@@ -65,12 +65,20 @@ export interface FilmDetail extends Film {
 
 /**
  * The `PATCH /films/{id}` payload, write direction (FR-LIB-06). Every field
- * optional; the caller sets exactly one at a time so the DTO mapper sends
- * only what changed.
+ * optional, so the DTO mapper sends only what changed: the detail view's
+ * inline controls set exactly one, the Edit form sets the whole editable
+ * set at once (FR-LIB-07 keeps `id`/`createdAt` out of it).
  */
 export interface FilmPatch {
   readonly isFavorite?: boolean;
   readonly delayDays?: number;
+  /** The film's complete title list, not a delta — same full-replacement rule as `tags` (REQ §4.1). */
+  readonly titles?: readonly FilmTitleInput[];
+  readonly releaseYear?: number;
+  readonly director?: string;
+  readonly runtimeMinutes?: number;
+  /** Undefined means unchanged; an explicit `null` clears the poster (FR-LIB-15), as with `letterboxdUrl` below. */
+  readonly posterImage?: string | null;
   /**
    * The film's complete tag list, not a delta (FR-TAG-03): the backend
    * replaces what it stores with exactly these names, creating the new ones

@@ -1,6 +1,6 @@
 /** DTO ↔ domain mapping for films (DESIGN §6.1). Read direction: DTO → domain; write direction: domain → DTO. */
 import type { FilmCreateDto, FilmDto, FilmUpdateDto, RatingEntryDto, TitleCreateDto } from './api';
-import type { Film, FilmCreateInput, FilmDetail, FilmPatch } from './model';
+import type { Film, FilmCreateInput, FilmDetail, FilmPatch, FilmTitleInput } from './model';
 
 /**
  * Arithmetic mean of `history`'s *rated* entries (FR-RAT-09/10/11), one
@@ -59,6 +59,19 @@ export function toFilmDetail(dto: FilmDto): FilmDetail {
 }
 
 /**
+ * A flag is sent only when its row set it — an unflagged lone title is what
+ * the backend's `_titles_with_rules_applied` auto-designates primary, on both
+ * the create and the update path.
+ */
+function toTitleCreateDtos(titles: readonly FilmTitleInput[]): TitleCreateDto[] {
+  return titles.map((title) => ({
+    value: title.value,
+    ...(title.isPrimary ? { is_primary: true } : {}),
+    ...(title.isOriginal ? { is_original: true } : {}),
+  }));
+}
+
+/**
  * Maps a patch to the wire payload. `JSON.stringify` (what `HttpClient` uses
  * to serialize the body) drops `undefined`-valued keys, so whichever field
  * `patch` left unset never reaches the wire — `FilmUpdate` on the backend
@@ -68,25 +81,21 @@ export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
   return {
     is_favorite: patch.isFavorite,
     delay_days: patch.delayDays,
+    titles: patch.titles && toTitleCreateDtos(patch.titles),
+    release_year: patch.releaseYear,
+    director: patch.director,
+    runtime_minutes: patch.runtimeMinutes,
     tags: patch.tags,
     genre: patch.genres,
+    poster_image: patch.posterImage,
     letterboxd_url: patch.letterboxdUrl,
   };
 }
 
-/**
- * Maps a new-film input to the `POST /films` payload. A flag is sent only
- * when its row set it — an unflagged lone title is what `FilmCreate`'s
- * model validator auto-designates primary (`_titles_with_rules_applied`).
- */
+/** Maps a new-film input to the `POST /films` payload. */
 export function toFilmCreateDto(input: FilmCreateInput): FilmCreateDto {
-  const titles: TitleCreateDto[] = input.titles.map((title) => ({
-    value: title.value,
-    ...(title.isPrimary ? { is_primary: true } : {}),
-    ...(title.isOriginal ? { is_original: true } : {}),
-  }));
   return {
-    titles,
+    titles: toTitleCreateDtos(input.titles),
     release_year: input.releaseYear,
     director: input.director,
     runtime_minutes: input.runtimeMinutes,
