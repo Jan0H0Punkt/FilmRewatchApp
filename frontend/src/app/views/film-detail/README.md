@@ -5,5 +5,7 @@ a film — not a primary navigation destination (DESIGN §6.5). Read-only
 metadata, rating history actions, the favourite toggle, rewatch delay, Delete
 Film, and inline tag/genre editing are all built.
 
-The Edit form (`films/:id/edit`) is a separate plan item and is deliberately
-not built here — there is no Edit control on this view yet.
+Edits split by how often a field changes: tags, genres and the favourite flag
+are inline here; the film's fixed record (titles, year, director, runtime,
+poster, Letterboxd link) is edited in `views/film-form/`, which this view's
+Edit action opens at `film/:id/edit`.

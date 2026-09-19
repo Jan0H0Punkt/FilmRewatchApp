@@ -10,17 +10,35 @@
    layouts, only the CSS branches at the 900px breakpoint. Below it the two
    cards just stack (`.rating-history`'s own `margin-top` spaces them); at
    900px this becomes the two-column grid — facts left, activity right. */
-.film-detail-page {
-  /* Clears `.film-detail__quick-actions`' fixed bottom bar below, on top of
-     `.app-main`'s own 5rem reserved for the fixed nav bar underneath it. */
-  padding-bottom: 4rem;
-}
-
 .film-detail {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
+}
+
+// Always a row — content on the left, Edit pinned to its top-right — so the
+// breakpoint switch below only has to touch `.film-detail__content`'s own
+// direction, not this wrapper's. A separate flex context from `.film-detail`
+// so `.film-detail__footer` (a sibling, not nested in here) can span the
+// card's full width instead of just the text column's.
+.film-detail__main {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.film-detail__edit {
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+// Poster + text; mobile-first column, switches to a row at 900px below.
+.film-detail__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .film-detail__poster {
@@ -48,6 +66,21 @@
 .film-detail__title {
   font: var(--mat-sys-headline-small);
   margin: 0;
+}
+
+// Visits Letterboxd directly from the title, so the footer row below only
+// has to handle setting/changing the link, not also linking out to it.
+.film-detail__letterboxd-icon {
+  color: var(--mat-sys-on-surface-variant);
+  display: inline-flex;
+  margin-left: 0.375rem;
+  vertical-align: middle;
+}
+
+.film-detail__letterboxd-icon mat-icon {
+  font-size: 1.25rem;
+  height: 1.25rem;
+  width: 1.25rem;
 }
 
 .film-detail__alt-titles {
@@ -169,10 +202,21 @@
   --chips-label-color: var(--mat-sys-on-secondary-container);
 }
 
+// Timestamps on the left, controls clustered on the right (`.film-detail__actions`'
+// own `margin-left: auto`) — `.film-detail`'s `gap` spaces this from
+// `.film-detail__main` above; the desktop `margin-top: auto` (below) pins it
+// to the card's bottom edge instead of leaving it stranded near the top.
+.film-detail__footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+
 .film-detail__timestamps {
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);
-  margin: 0.75rem 0 0;
+  margin: 0;
 }
 
 // --- Section A controls (phase 3) ------------------------------------------
@@ -182,51 +226,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.film-detail__delay {
-  max-width: 10rem;
-}
-
-/* Favourite, the Add Rating jump link and Delete (§ "G" mobile layout): a
-   fixed bottom bar below 900px, clearing the fixed nav bar the same way
-   `scroll-to-top-fab` does; inline with the rest of the row from 900px up. */
-.film-detail__quick-actions {
-  align-items: center;
-  background: var(--mat-sys-surface-container);
-  border-top: 1px solid var(--mat-sys-outline-variant);
-  bottom: 5rem;
-  display: flex;
-  gap: 0.5rem;
-  justify-content: space-around;
-  left: 0;
-  padding: 0.5rem 1rem;
-  position: fixed;
-  right: 0;
-  z-index: 1;
+  margin-left: auto; // clustered at the footer row's right edge, opposite the timestamps
 }
 
 .film-detail__favorite {
   --mat-icon-button-icon-color: var(--favorite-color);
-}
-
-.film-detail__letterboxd {
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.film-detail__letterboxd-link {
-  align-items: center;
-  color: var(--mat-sys-primary);
-  display: inline-flex;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.film-detail__letterboxd-empty {
-  color: var(--mat-sys-on-surface-variant);
 }
 
 .film-detail__error {
@@ -238,8 +242,26 @@
 // --- Section B: rating history (phase 2) -----------------------------------
 
 .rating-history {
+  display: flex;
+  flex-direction: column;
   margin-top: 1rem;
+  // Lets the card shrink below its content height when the desktop grid
+  // stretches it to match the facts card (§ "Desktop" block below) — without
+  // this, a flex/grid item's default `min-height: auto` keeps it
+  // content-sized and `.rating-history__entries`' `overflow-y` never kicks in.
+  min-height: 0;
   padding: 1rem;
+}
+
+// The scrollable region: fixed above it (heading, Add rating form, divider),
+// flexible below. On mobile `.rating-history` has no imposed height, so this
+// just grows with its content and the page scrolls as a whole; at ≥900px
+// the card's height is fixed by the grid's `align-items: stretch`, so this
+// is what scrolls internally instead of blowing out the card/page.
+.rating-history__entries {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .rating-history__list {
@@ -384,18 +406,17 @@
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(22rem, 2fr) minmax(18rem, 1fr);
-    padding-bottom: 0; // the quick-actions bar isn't fixed at this width
   }
 
   // Poster beside the text instead of centered above it, so the card reads
   // as a compact sidebar rather than a tall stack.
-  .film-detail {
+  .film-detail__content {
     flex-direction: row;
   }
 
   .film-detail__poster {
     align-self: flex-start;
-    width: 8rem;
+    width: 10rem;
   }
 
   .film-detail__body {
@@ -403,17 +424,11 @@
     min-width: 0;
   }
 
-  .rating-history {
-    margin-top: 0; // the grid's own `gap` spaces the two cards now
+  .film-detail__footer {
+    margin-top: auto; // pinned to the card's bottom edge, using the stretch height instead of leaving it blank below
   }
 
-  .film-detail__quick-actions {
-    background: none;
-    border-top: none;
-    bottom: auto;
-    left: auto;
-    padding: 0;
-    position: static;
-    right: auto;
+  .rating-history {
+    margin-top: 0; // the grid's own `gap` spaces the two cards now
   }
 }

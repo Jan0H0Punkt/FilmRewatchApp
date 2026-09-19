@@ -17,181 +17,163 @@
        right one (repo owner's chosen "F" layout option). -->
   <div class="film-detail-page">
     <mat-card class="film-detail">
-      @if (film.posterImage) {
-        <img class="film-detail__poster" [src]="film.posterImage" [alt]="'Poster of ' + film.title" />
-      } @else {
-        <div class="film-detail__poster film-detail__poster--empty" aria-hidden="true">
-          <mat-icon>movie</mat-icon>
-        </div>
-      }
-      <div class="film-detail__body">
-        <h2 class="film-detail__title">{{ film.title }}</h2>
-        @if (film.alternativeTitles.length > 0) {
-          <ul class="film-detail__alt-titles">
-            @for (alt of film.alternativeTitles; track alt.value) {
-              <li>
-                {{ alt.value }}
-                @if (alt.isOriginal) {
-                  <span class="film-detail__original">(original)</span>
-                }
-              </li>
-            }
-          </ul>
-        }
-        <p class="film-detail__subtitle">{{ film.subtitle }}</p>
-        <p class="film-detail__end-time">
-          <mat-icon aria-hidden="true" inline>schedule</mat-icon>
-          Done by {{ film.endTime }}
-        </p>
-        <p class="film-detail__rating" [attr.aria-label]="film.ratingLabel">
-          @if (film.averageFillPercent !== null) {
-            <span class="film-detail__stars">
-              <!-- Outline row underneath, a full row clipped to the exact percentage on
-                 top — lets the fill land mid-glyph (e.g. 66% for 3.3), unlike the
-                 half-step rounding the Add Rating picker uses for input. -->
-              <span class="film-detail__stars-track" aria-hidden="true">
-                @for (position of starPositions; track position) {
-                  <mat-icon>star_border</mat-icon>
-                }
-              </span>
-              <span class="film-detail__stars-fill" aria-hidden="true" [style.width.%]="film.averageFillPercent">
-                @for (position of starPositions; track position) {
-                  <mat-icon>star</mat-icon>
-                }
-              </span>
-            </span>
-            <span class="film-detail__rating-text" aria-hidden="true">{{ film.averageRatingText }}</span>
+      <!-- `.film-detail__main` is always a row: content on the left, Edit
+         pinned to its top on the right — plain flex alignment, no
+         `position: absolute`. `.film-detail__content` carries the
+         poster/text layout that switches column↔row at 900px (unchanged),
+         so the desktop breakpoint only has to touch content's own
+         direction, not this wrapper's. A separate wrapper from the card
+         itself so `.film-detail__footer` below can be a sibling that spans
+         the card's full width, instead of being squeezed into just the text
+         column. -->
+      <div class="film-detail__main">
+        <div class="film-detail__content">
+          @if (film.posterImage) {
+            <img class="film-detail__poster" [src]="film.posterImage" [alt]="'Poster of ' + film.title" />
           } @else {
-            <span aria-hidden="true">&mdash;</span>
+            <div class="film-detail__poster film-detail__poster--empty" aria-hidden="true">
+              <mat-icon>movie</mat-icon>
+            </div>
           }
-        </p>
-        <!-- Genres and tags (FR-TAG-03/06, REQ §4.4). Both rows are the shared
-           editable chip row: read-only chips until its edit button swaps in
-           Material's chip grid + autocomplete. Each change emits the full
-           list, which goes straight out as a PATCH — no Save step. -->
-        <app-editable-chips
-          class="film-detail__genres"
-          label="Genres"
-          itemNoun="genre"
-          [values]="film.genres"
-          [suggestions]="genreNames()"
-          [orderable]="true"
-          (changed)="saveGenres($event)"
-        />
-        @if (genresError()) {
-          <p class="film-detail__error" role="alert">{{ genresError() }}</p>
-        }
-        <app-editable-chips
-          class="film-detail__tags"
-          label="Tags"
-          itemNoun="tag"
-          [values]="film.tags"
-          [suggestions]="tagNames()"
-          (changed)="saveTags($event)"
-        />
-        @if (tagsError()) {
-          <p class="film-detail__error" role="alert">{{ tagsError() }}</p>
-        }
-        <p class="film-detail__timestamps">Added {{ film.createdAt }} • Last updated {{ film.updatedAt }}</p>
-
-        <!-- Section A controls (phase 3, FR-LIB-06/10..12). Edit is not built
-           here (phase 4, out of scope) — there is deliberately no Edit button.
-           Favourite, the Add Rating jump link and Delete are grouped as
-           `.film-detail__quick-actions`: below 900px it becomes a fixed
-           bottom bar (mirrors the bottom nav's own breakpoint, clears it the
-           same way `scroll-to-top-fab` does) so the most-reached-for actions
-           stay in thumb range while the page scrolls; at 900px it's inline
-           like the rest of the row (repo owner's chosen "G" layout option). -->
-        <div class="film-detail__actions">
-          <div class="film-detail__quick-actions">
-            <button
-              class="film-detail__favorite"
-              matIconButton
-              type="button"
-              [attr.aria-pressed]="film.isFavorite"
-              [attr.aria-label]="film.isFavorite ? 'Remove from favourites' : 'Add to favourites'"
-              (click)="toggleFavorite()"
-            >
-              <!-- A heart, not a star: a star would collide with the rating stars above (plan's UI-components section). -->
-              <mat-icon>{{ film.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
-            </button>
-
-            <!-- Plain fragment link, no router involved: same page, native
-               in-page scroll to the Add Rating form below. -->
-            <a class="film-detail__jump-to-rating" matButton href="#rating-form">
-              <mat-icon aria-hidden="true">star_border</mat-icon>
-              Add rating
-            </a>
-
-            <button class="film-detail__delete destructive" matButton type="button" (click)="confirmDeleteFilm()">
-              <mat-icon>delete</mat-icon>
-              Delete film
-            </button>
-          </div>
-
-          <mat-form-field class="film-detail__delay" subscriptSizing="dynamic">
-            <mat-label>Rewatch delay (days)</mat-label>
-            <input matInput type="number" min="0" step="1" [value]="film.delayDays" (change)="onDelayChange($event)" />
-          </mat-form-field>
-
-          <div class="film-detail__letterboxd">
-            @if (letterboxdEditing()) {
-              <mat-form-field subscriptSizing="dynamic">
-                <mat-label>Letterboxd link</mat-label>
-                <input
-                  matInput
-                  type="url"
-                  #letterboxdInput
-                  [value]="film.letterboxdUrl ?? ''"
-                  (keydown.enter)="commitLetterboxdEdit(letterboxdInput.value)"
-                  (keydown.escape)="cancelLetterboxdEdit()"
-                />
-              </mat-form-field>
-              <button
-                matIconButton
-                type="button"
-                aria-label="Save the Letterboxd link"
-                (click)="commitLetterboxdEdit(letterboxdInput.value)"
-              >
-                <mat-icon>check</mat-icon>
-              </button>
-            } @else {
-              <!-- A fixed label rather than the URL: it names the destination
-                 instead of reading a path aloud, and cannot overflow the row.
-                 It also makes the separate "Letterboxd" caption redundant. -->
+          <div class="film-detail__body">
+            <h2 class="film-detail__title">
+              {{ film.title }}
               @if (film.letterboxdUrl) {
                 <a
-                  class="film-detail__letterboxd-link"
+                  class="film-detail__letterboxd-icon"
                   [href]="film.letterboxdUrl"
                   target="_blank"
                   rel="noopener noreferrer"
+                  matTooltip="See on Letterboxd"
+                  aria-label="See on Letterboxd"
                 >
-                  See on Letterboxd
+                  <mat-icon aria-hidden="true">open_in_new</mat-icon>
                 </a>
+              }
+            </h2>
+            @if (film.alternativeTitles.length > 0) {
+              <ul class="film-detail__alt-titles">
+                @for (alt of film.alternativeTitles; track alt.value) {
+                  <li>
+                    {{ alt.value }}
+                    @if (alt.isOriginal) {
+                      <span class="film-detail__original">(original)</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+            <p class="film-detail__subtitle">{{ film.subtitle }}</p>
+            <p class="film-detail__end-time">
+              <mat-icon aria-hidden="true" inline>schedule</mat-icon>
+              Done by {{ film.endTime }}
+            </p>
+            <p class="film-detail__rating" [attr.aria-label]="film.ratingLabel">
+              @if (film.averageFillPercent !== null) {
+                <span class="film-detail__stars">
+                  <!-- Outline row underneath, a full row clipped to the exact percentage on
+                   top — lets the fill land mid-glyph (e.g. 66% for 3.3), unlike the
+                   half-step rounding the Add Rating picker uses for input. -->
+                  <span class="film-detail__stars-track" aria-hidden="true">
+                    @for (position of starPositions; track position) {
+                      <mat-icon>star_border</mat-icon>
+                    }
+                  </span>
+                  <span class="film-detail__stars-fill" aria-hidden="true" [style.width.%]="film.averageFillPercent">
+                    @for (position of starPositions; track position) {
+                      <mat-icon>star</mat-icon>
+                    }
+                  </span>
+                </span>
+                <span class="film-detail__rating-text" aria-hidden="true">{{ film.averageRatingText }}</span>
               } @else {
-                <span class="film-detail__letterboxd-empty">No Letterboxd link</span>
+                <span class="film-detail__rating-dash" aria-hidden="true">&mdash;</span>
               }
               <button
+                class="film-detail__favorite"
                 matIconButton
                 type="button"
-                #letterboxdEditButton
-                aria-label="Edit the Letterboxd link"
-                (click)="startEditingLetterboxd()"
+                [attr.aria-pressed]="film.isFavorite"
+                [attr.aria-label]="film.isFavorite ? 'Remove from favourites' : 'Add to favourites'"
+                (click)="toggleFavorite()"
               >
-                <mat-icon>edit</mat-icon>
+                <!-- A heart, not a star: sits right beside the rating stars, so a distinct shape avoids reading as a 6th star. -->
+                <mat-icon>{{ film.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
               </button>
+            </p>
+            <!-- Genres and tags (FR-TAG-03/06, REQ §4.4). Both rows are the shared
+             editable chip row: read-only chips until its edit button swaps in
+             Material's chip grid + autocomplete. Each change emits the full
+             list, which goes straight out as a PATCH — no Save step. -->
+            <app-editable-chips
+              class="film-detail__genres"
+              label="Genres"
+              itemNoun="genre"
+              [values]="film.genres"
+              [suggestions]="genreNames()"
+              [orderable]="true"
+              (changed)="saveGenres($event)"
+            />
+            @if (genresError()) {
+              <p class="film-detail__error" role="alert">{{ genresError() }}</p>
+            }
+            <app-editable-chips
+              class="film-detail__tags"
+              label="Tags"
+              itemNoun="tag"
+              [values]="film.tags"
+              [suggestions]="tagNames()"
+              (changed)="saveTags($event)"
+            />
+            @if (tagsError()) {
+              <p class="film-detail__error" role="alert">{{ tagsError() }}</p>
             }
           </div>
+        </div>
+
+        <!-- The one edit affordance that opens the whole record, so it reads
+           as the card's primary action rather than grouped with Delete
+           below. A flex sibling of `.film-detail__content` above, aligned to
+           the top of the row — no `position: absolute`. -->
+        <a
+          class="film-detail__edit"
+          matIconButton
+          [routerLink]="['/film', id(), 'edit']"
+          matTooltip="Edit film"
+          aria-label="Edit film"
+        >
+          <mat-icon>edit</mat-icon>
+        </a>
+      </div>
+
+      <!-- A sibling of `.film-detail__main` above (not nested in the text
+         column), so it spans the whole card — timestamps on the left, Edit and
+         Delete pinned to the right. Also pinned to the card's bottom edge
+         (`margin-top: auto`) instead of stranded near the top with blank space
+         beneath it. -->
+      <div class="film-detail__footer">
+        <p class="film-detail__timestamps">Added {{ film.createdAt }} • Last updated {{ film.updatedAt }}</p>
+
+        <!-- Section A controls (phase 3, FR-LIB-06/10..12). Edit (top-right,
+           beside the poster above) opens the whole record in the film form
+           (phase 4); the Letterboxd link, which used to be edited inline
+           here, is one of its fields now. Favourite lives next to the rating
+           stars above instead of here. -->
+        <div class="film-detail__actions">
+          <button
+            class="film-detail__delete destructive"
+            matIconButton
+            type="button"
+            matTooltip="Delete film"
+            aria-label="Delete film"
+            (click)="confirmDeleteFilm()"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
         </div>
 
         @if (favoriteError()) {
           <p class="film-detail__error" role="alert">{{ favoriteError() }}</p>
-        }
-        @if (delayError()) {
-          <p class="film-detail__error" role="alert">{{ delayError() }}</p>
-        }
-        @if (letterboxdUrlError()) {
-          <p class="film-detail__error" role="alert">{{ letterboxdUrlError() }}</p>
         }
         @if (deleteFilmError()) {
           <p class="film-detail__error" role="alert">{{ deleteFilmError() }}</p>
@@ -207,48 +189,12 @@
         }
       </div>
 
-      @if (film.ratingHistory.length === 0) {
-        <p class="rating-history__empty">No ratings yet.</p>
-      } @else {
-        <ul class="rating-history__list">
-          @for (entry of film.ratingHistory; track entry.id) {
-            <li class="rating-history__item">
-              <div class="rating-history__body">
-                <span class="rating-history__value">
-                  @if (entry.stars) {
-                    @for (icon of entry.stars; track $index) {
-                      <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
-                    }
-                  } @else {
-                    Not rated
-                  }
-                </span>
-                <span class="rating-history__line">Watched {{ entry.watchDate }} • Logged {{ entry.createdAt }}</span>
-              </div>
-              <button
-                class="destructive"
-                matIconButton
-                type="button"
-                aria-label="Delete this rating entry"
-                (click)="deleteRating(entry.id)"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
-            </li>
-          }
-        </ul>
-      }
-
-      @if (deleteRatingError()) {
-        <p class="rating-history__error" role="alert">{{ deleteRatingError() }}</p>
-      }
-
-      <mat-divider class="rating-form__divider" />
-
       <!-- Plain `(submit)`, not `(ngSubmit)`: this form is not a `FormsModule`
-         template-driven form, just a submit button inside a native form.
-         `id` is the quick-actions "Add rating" link's scroll target above. -->
-      <form id="rating-form" class="rating-form" (submit)="onSubmitRating($event)">
+         template-driven form, just a submit button inside a native form. Sits
+         above the history list so it stays reachable without scrolling once
+         the list below grows past the card's (stretched, desktop-only)
+         height and scrolls internally instead. -->
+      <form class="rating-form" (submit)="onSubmitRating($event)">
         <h4 class="rating-form__heading">Add rating</h4>
 
         <div class="rating-form__stars" role="group" aria-label="Rating value" (mouseleave)="hoverValue.set(null)">
@@ -319,6 +265,46 @@
           Add rating
         </button>
       </form>
+
+      <mat-divider class="rating-form__divider" />
+
+      <div class="rating-history__entries">
+        @if (film.ratingHistory.length === 0) {
+          <p class="rating-history__empty">No ratings yet.</p>
+        } @else {
+          <ul class="rating-history__list">
+            @for (entry of film.ratingHistory; track entry.id) {
+              <li class="rating-history__item">
+                <div class="rating-history__body">
+                  <span class="rating-history__value">
+                    @if (entry.stars) {
+                      @for (icon of entry.stars; track $index) {
+                        <mat-icon aria-hidden="true" inline>{{ icon }}</mat-icon>
+                      }
+                    } @else {
+                      Not rated
+                    }
+                  </span>
+                  <span class="rating-history__line">Watched {{ entry.watchDate }} • Logged {{ entry.createdAt }}</span>
+                </div>
+                <button
+                  class="destructive"
+                  matIconButton
+                  type="button"
+                  aria-label="Delete this rating entry"
+                  (click)="deleteRating(entry.id)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (deleteRatingError()) {
+          <p class="rating-history__error" role="alert">{{ deleteRatingError() }}</p>
+        }
+      </div>
     </mat-card>
   </div>
 }

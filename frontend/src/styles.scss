@@ -88,6 +88,7 @@ body {
    effect depends on injection order rather than actually winning. */
 @media (min-width: 900px) {
   .app-shell .app-main:has(.film-detail-page) {
+    margin: 0; // `.app-main`'s own `margin: 0 auto` would otherwise center it, eating the width `max-width: none` just freed
     max-width: none;
   }
 

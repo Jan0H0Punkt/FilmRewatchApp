@@ -2,11 +2,14 @@
  * The Film Detail view (REQ §7.3) — phase 1 of
  * `open work/library-view/film-detail-view.md` (Section A, read-only
  * metadata), phase 2 (Section B, rating history actions), phase 3
- * (Section A's favourite toggle, rewatch delay, and Delete Film), and the
+ * (Section A's favourite toggle and Delete Film), and the
  * inline tag and genre editing that reversed that plan's deliberate cut #1.
  *
- * The Edit form (phase 4, `films/:id/edit`) is a separate plan item and is
- * not built here — there is deliberately no Edit control on this view yet.
+ * Which edits are inline here and which are not (repo owner's call): the ones
+ * that change often and are pure personal classification — tags, genres, the
+ * favourite flag — stay one click away. Everything else is a film's fixed
+ * record, so it is edited in the form behind the Edit action
+ * (`film/:id/edit`, phase 4), which `views/film-form/` serves in edit mode.
  */
 import { HttpErrorResponse } from '@angular/common/http';
 import {
@@ -14,14 +17,11 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   input,
   signal,
-  viewChild,
   type WritableSignal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -31,8 +31,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
-import { Subject, debounceTime } from 'rxjs';
 
 import { ClockService } from '../../core/clock';
 import { NavigationHistoryService } from '../../core/navigation-history';
@@ -90,7 +90,6 @@ interface FilmDetailVm {
   readonly lastWatchedLabel: string | null;
   /** Section A controls (phase 3, FR-LIB-06). */
   readonly isFavorite: boolean;
-  readonly delayDays: number;
   /** User-entered Letterboxd link (REQ §4.1), `null` when never set. */
   readonly letterboxdUrl: string | null;
 }
@@ -182,7 +181,6 @@ function toVm(film: FilmDetailModel, now: number): FilmDetailVm {
         ? `Last watched ${relativeDaysLabel(daysSince(film.ratingHistory[0].watchDate))}`
         : null,
     isFavorite: film.isFavorite,
-    delayDays: film.delayDays,
     letterboxdUrl: film.letterboxdUrl,
   };
 }
@@ -215,6 +213,7 @@ function extractErrorMessage(error: unknown, fallback: string): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatTooltipModule,
     RouterLink,
   ],
   // The Add Rating form's `watch_date` picker (phase 2, FR-RAT-03) needs a
@@ -246,32 +245,6 @@ export class FilmDetail {
     // Re-selects on every navigation between two `film/:id` routes — the
     // router reuses this component instance rather than recreating it.
     effect(() => this.films.select(this.id()));
-
-    // Debounces the rewatch delay input (below): a number input's spinner
-    // arrows fire a native `change` event per click, so five clicks would
-    // otherwise mean five PATCHes.
-    this.delayChange$.pipe(debounceTime(500), takeUntilDestroyed()).subscribe((value) => {
-      // Re-checks against the current value at delivery time, not at the
-      // time the user typed it — the debounce window may have collapsed a
-      // "raise, then lower back to the original" sequence into a no-op.
-      if (value === this.films.detail()?.delayDays) return;
-      this.patch({ delayDays: value }, this.delayError, 'The rewatch delay could not be updated.');
-    });
-
-    // Read/edit toggle for the Letterboxd field: focuses the input on entering
-    // edit mode, and returns focus to the edit button on leaving it (commit,
-    // cancel, or Escape) — `library.ts`'s `searchInput` focus effect, adapted
-    // for a two-way toggle via the `wasLetterboxdEditing` guard so the effect
-    // does nothing on initial render, only on an actual open/close.
-    effect(() => {
-      const editing = this.letterboxdEditing();
-      if (editing) {
-        this.letterboxdInput()?.nativeElement.focus();
-      } else if (this.wasLetterboxdEditing) {
-        this.letterboxdEditButton()?.nativeElement.focus();
-      }
-      this.wasLetterboxdEditing = editing;
-    });
   }
 
   protected readonly isLoading = this.films.detailIsLoading;
@@ -407,9 +380,7 @@ export class FilmDetail {
   // --- Section A controls (phase 3, FR-LIB-06/10..12) ----------------------
 
   protected readonly favoriteError = signal<string | null>(null);
-  protected readonly delayError = signal<string | null>(null);
   protected readonly deleteFilmError = signal<string | null>(null);
-  protected readonly letterboxdUrlError = signal<string | null>(null);
 
   private patch(patch: FilmPatch, errorSignal: WritableSignal<string | null>, fallback: string): void {
     this.films.update(this.id(), patch).subscribe({
@@ -423,50 +394,6 @@ export class FilmDetail {
     const film = this.films.detail();
     if (film === null) return;
     this.patch({ isFavorite: !film.isFavorite }, this.favoriteError, 'The favourite flag could not be updated.');
-  }
-
-  /** Debounce subject for the rewatch delay input — see the constructor's subscription. */
-  private readonly delayChange$ = new Subject<number>();
-
-  /**
-   * Native `change` event — fires once on blur/Enter for typed input, but
-   * also once per click of a number input's spinner arrows, hence the
-   * debounce (constructor) rather than patching straight away.
-   */
-  protected onDelayChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const value = Number(input.value);
-    const current = this.films.detail()?.delayDays ?? 0;
-    if (!Number.isInteger(value) || value < 0) {
-      input.value = String(current); // backend constraint is `ge=0` — reject client-side too
-      return;
-    }
-    this.delayChange$.next(value);
-  }
-
-  /** Read/edit toggle state for the Letterboxd row — see the constructor's focus effect. */
-  protected readonly letterboxdEditing = signal(false);
-  private readonly letterboxdInput = viewChild<ElementRef<HTMLInputElement>>('letterboxdInput');
-  private readonly letterboxdEditButton = viewChild<ElementRef<HTMLButtonElement>>('letterboxdEditButton');
-  /** Guards the focus effect against firing on initial render — only a genuine toggle should move focus. */
-  private wasLetterboxdEditing = false;
-
-  protected startEditingLetterboxd(): void {
-    this.letterboxdEditing.set(true);
-  }
-
-  /** Escape cancels without saving — the input is uncontrolled, so it simply unmounts with whatever was typed discarded. */
-  protected cancelLetterboxdEdit(): void {
-    this.letterboxdEditing.set(false);
-  }
-
-  /** Enter, or the confirm button, commits. Blank commits as `null` (clears the link, REQ §4.1); an unchanged value skips the PATCH. */
-  protected commitLetterboxdEdit(rawValue: string): void {
-    const trimmed = rawValue.trim();
-    const value = trimmed === '' ? null : trimmed;
-    this.letterboxdEditing.set(false);
-    if (value === (this.films.detail()?.letterboxdUrl ?? null)) return;
-    this.patch({ letterboxdUrl: value }, this.letterboxdUrlError, 'The Letterboxd link could not be updated.');
   }
 
   /** Confirm dialog (FR-LIB-11), then `DELETE /films/{id}`, then back to the Library. */

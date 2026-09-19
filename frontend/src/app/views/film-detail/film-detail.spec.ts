@@ -123,13 +123,6 @@ function pressEnter(input: HTMLInputElement): void {
   input.dispatchEvent(event);
 }
 
-/** Opens the Letterboxd row's edit mode and returns its text input. */
-async function startEditingLetterboxd(element: HTMLElement): Promise<HTMLInputElement> {
-  element.querySelector<HTMLButtonElement>('[aria-label="Edit the Letterboxd link"]')!.click();
-  await settle();
-  return element.querySelector<HTMLInputElement>('.film-detail__letterboxd input')!;
-}
-
 /** Puts one of the two chip rows into edit mode and returns its text input. */
 async function startEditing(element: HTMLElement, row: 'tags' | 'genres'): Promise<HTMLInputElement> {
   element.querySelector<HTMLButtonElement>(`.film-detail__${row} .editable-chips__toggle`)!.click();
@@ -203,8 +196,8 @@ describe('FilmDetail', () => {
     const element = await render(stubFilmFacade({ ...HEAT, averageRating: null }));
 
     const rating = element.querySelector('.film-detail__rating');
-    expect(rating?.querySelectorAll('mat-icon')).toHaveLength(0);
-    expect(rating?.textContent?.trim()).toBe('—');
+    expect(rating?.querySelectorAll('.film-detail__stars mat-icon')).toHaveLength(0);
+    expect(rating?.querySelector('.film-detail__rating-dash')?.textContent?.trim()).toBe('—');
     expect(rating?.getAttribute('aria-label')).toBe('Not rated');
   });
 
@@ -225,7 +218,7 @@ describe('FilmDetail', () => {
     const rating = element.querySelector('.film-detail__rating');
     const ratingText = rating?.querySelector('.film-detail__rating-text');
     expect(ratingText).toBeNull();
-    expect(rating?.textContent?.trim()).toBe('—');
+    expect(rating?.querySelector('.film-detail__rating-dash')?.textContent?.trim()).toBe('—');
   });
 
   it('fills the average stars to the exact percentage instead of rounding to a half star', async () => {
@@ -446,128 +439,42 @@ describe('FilmDetail', () => {
       expect(button?.getAttribute('aria-pressed')).toBe('true');
     });
 
-    it('debounces the rewatch delay input, sending only the final value once', async () => {
-      // A number input's spinner arrows fire a native `change` per click —
-      // two rapid changes must still yield exactly one PATCH.
-      const filmFacade = stubFilmFacade(HEAT);
-      const element = await render(filmFacade);
-      const input = element.querySelector<HTMLInputElement>('.film-detail__delay input')!;
-
-      vi.useFakeTimers();
-      input.value = '14';
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      input.value = '15';
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      expect(filmFacade.update).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(500);
-      vi.useRealTimers();
-
-      expect(filmFacade.update).toHaveBeenCalledOnce();
-      expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { delayDays: 15 });
-    });
-
-    it('does not send a request when the delay field is committed unchanged', async () => {
-      const filmFacade = stubFilmFacade(HEAT);
-      const element = await render(filmFacade);
-      const input = element.querySelector<HTMLInputElement>('.film-detail__delay input')!;
-
-      vi.useFakeTimers();
-      input.value = String(HEAT.delayDays);
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      vi.advanceTimersByTime(500);
-      vi.useRealTimers();
-
-      expect(filmFacade.update).not.toHaveBeenCalled();
-    });
-
-    describe('Letterboxd link (read/edit toggle)', () => {
-      it('renders read mode as an external link labelled by its destination', async () => {
+    describe('Letterboxd link (read-only — edited in the film form)', () => {
+      it('renders an external link icon next to the title, pointing at the URL', async () => {
         const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }));
 
-        const link = element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-link');
+        const link = element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-icon');
         expect(link?.getAttribute('href')).toBe('https://boxd.it/aaaa');
         expect(link?.getAttribute('target')).toBe('_blank');
         expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-        // The label names where the link goes; the URL itself is never shown.
-        expect(link?.textContent?.trim()).toBe('See on Letterboxd');
-        expect(link?.textContent).not.toContain('boxd.it');
       });
 
-      it('shows "No Letterboxd link" and no anchor when none is set', async () => {
+      it('shows no title icon when none is set', async () => {
         const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: null }));
 
-        expect(element.querySelector('.film-detail__letterboxd-empty')?.textContent).toBe('No Letterboxd link');
-        expect(element.querySelector('.film-detail__letterboxd-link')).toBeNull();
+        expect(element.querySelector('.film-detail__letterboxd-icon')).toBeNull();
       });
 
-      it('reveals an input pre-filled with the current URL when edit is clicked', async () => {
+      it('offers no inline editor for it — the Edit action owns that field now', async () => {
         const element = await render(stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' }));
 
-        const input = await startEditingLetterboxd(element);
-
-        expect(input.value).toBe('https://boxd.it/aaaa');
+        expect(element.querySelector('[aria-label="Edit the Letterboxd link"]')).toBeNull();
       });
+    });
 
-      it('commits a new value on Enter and returns to read mode', async () => {
-        const filmFacade = stubFilmFacade(HEAT); // HEAT.letterboxdUrl is null
-        const element = await render(filmFacade);
-        const input = await startEditingLetterboxd(element);
+    it('links to the film form in edit mode', async () => {
+      const element = await render(stubFilmFacade(HEAT));
 
-        input.value = '  https://boxd.it/bbbb  ';
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        await settle();
-
-        expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { letterboxdUrl: 'https://boxd.it/bbbb' });
-        expect(element.querySelector('.film-detail__letterboxd input')).toBeNull();
-      });
-
-      it('cancels on Escape without patching, leaving the original value in read mode', async () => {
-        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
-        const element = await render(filmFacade);
-        const input = await startEditingLetterboxd(element);
-
-        input.value = 'https://boxd.it/zzzz';
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-        await settle();
-
-        expect(filmFacade.update).not.toHaveBeenCalled();
-        expect(element.querySelector<HTMLAnchorElement>('.film-detail__letterboxd-link')?.getAttribute('href')).toBe(
-          'https://boxd.it/aaaa',
-        );
-      });
-
-      it('commits a blank value as null through the confirm button', async () => {
-        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
-        const element = await render(filmFacade);
-        const input = await startEditingLetterboxd(element);
-
-        input.value = '   ';
-        element.querySelector<HTMLButtonElement>('[aria-label="Save the Letterboxd link"]')!.click();
-        await settle();
-
-        expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { letterboxdUrl: null });
-      });
-
-      it('does not patch when the committed value is unchanged', async () => {
-        const filmFacade = stubFilmFacade({ ...HEAT, letterboxdUrl: 'https://boxd.it/aaaa' });
-        const element = await render(filmFacade);
-        const input = await startEditingLetterboxd(element);
-
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        await settle();
-
-        expect(filmFacade.update).not.toHaveBeenCalled();
-      });
+      expect(element.querySelector<HTMLAnchorElement>('.film-detail__edit')?.getAttribute('href')).toBe(
+        `/film/${HEAT.id}/edit`,
+      );
     });
 
     it('requires confirmation before deleting the film', async () => {
       const filmFacade = stubFilmFacade(HEAT);
       const element = await render(filmFacade, stubRatingFacade(), stubMatDialog(false));
 
-      const deleteButton = [...element.querySelectorAll<HTMLButtonElement>('.film-detail__body button')].find(
-        (button) => button.textContent?.includes('Delete film'),
-      );
+      const deleteButton = element.querySelector<HTMLButtonElement>('.film-detail__delete');
       deleteButton?.click();
 
       expect(filmFacade.remove).not.toHaveBeenCalled();
@@ -579,9 +486,7 @@ describe('FilmDetail', () => {
       const router = TestBed.inject(Router);
       const navigateSpy = vi.spyOn(router, 'navigateByUrl');
 
-      const deleteButton = [...element.querySelectorAll<HTMLButtonElement>('.film-detail__body button')].find(
-        (button) => button.textContent?.includes('Delete film'),
-      );
+      const deleteButton = element.querySelector<HTMLButtonElement>('.film-detail__delete');
       deleteButton?.click();
       await settle();
 
@@ -593,9 +498,7 @@ describe('FilmDetail', () => {
       const dialog = stubMatDialog(false);
       const element = await render(stubFilmFacade(HEAT), stubRatingFacade(), dialog);
 
-      const deleteButton = [...element.querySelectorAll<HTMLButtonElement>('.film-detail__body button')].find(
-        (button) => button.textContent?.includes('Delete film'),
-      );
+      const deleteButton = element.querySelector<HTMLButtonElement>('.film-detail__delete');
       deleteButton?.click();
 
       const data = dialog.open.mock.calls[0]?.[1]?.data as ConfirmDialogData;
