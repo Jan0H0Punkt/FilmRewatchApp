@@ -30,4 +30,10 @@ export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   { path: 'film/:id', title: 'Film', loadComponent: filmDetail },
   // Reached only from the Library's Add Film action (add-film-via-search.md), never from the navigation.
   { path: 'films/new', title: 'Add a film', loadComponent: filmForm },
+  // The same form in edit mode (`FilmForm.id`), reached from the detail view's
+  // Edit action — the film's fields are edited here rather than inline, so the
+  // title rows' Primary/Original rules live in one place (REQ §4.1). Under
+  // `film/:id` (not `films/`) because it edits that one film, the way
+  // `films/new` sits under the collection it adds to.
+  { path: 'film/:id/edit', title: 'Edit film', loadComponent: filmForm },
 ];

@@ -1,5 +1,18 @@
-/* Add Film form. Colours come from Material's M3 system variables, which
-   resolve per `color-scheme` — light/dark needs no rule of its own. */
+/* The film form, create and edit alike. Colours come from Material's M3 system
+   variables, which resolve per `color-scheme` — light/dark needs no rule of
+   its own. */
+
+/* Edit mode's pre-form states (loading, not found) — same shape as
+   `film-detail.scss`'s `.film-detail__state`, which is scoped to that
+   component and so cannot be shared. */
+.film-form__state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
 
 /* `mat-card` pads only its own `mat-card-content`/`mat-card-header` sub-elements,
    not arbitrary projected content — same reason `film-detail.scss`'s `.film-detail`
@@ -44,6 +57,13 @@
 
 .film-form__title-add {
   align-self: flex-start;
+}
+
+/* Submit plus, in edit mode, Cancel — side by side, left-aligned like the rest of the form. */
+.film-form__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .film-form__error {

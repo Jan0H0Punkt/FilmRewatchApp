@@ -1,8 +1,10 @@
 /**
- * The Add Film form (`open work/library-view/add-film-via-search.md`,
- * work item 2): the `?title=` prefill, required-field validation gating
- * submit, a valid submit calling `FilmFacade.create` and navigating to the
- * Library, and the 409 duplicate backstop.
+ * The film form in both its modes. Create
+ * (`open work/library-view/add-film-via-search.md`, work item 2): the
+ * `?title=` prefill, required-field validation gating submit, a valid submit
+ * calling `FilmFacade.create` and navigating to the Library, and the 409
+ * duplicate backstop. Edit (`film/:id/edit`): prefilling from the film,
+ * patching it, and the create-only rating block staying out of the way.
  */
 import { ENTER } from '@angular/cdk/keycodes';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -14,7 +16,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
 import { FilmFacade } from '../../domain/film/facade';
-import type { Film, FilmCreateInput } from '../../domain/film/model';
+import type { Film, FilmCreateInput, FilmDetail, FilmPatch } from '../../domain/film/model';
 import { GenreFacade } from '../../domain/genre/facade';
 import { TagFacade } from '../../domain/tag/facade';
 import { FilmForm } from './film-form';
@@ -37,9 +39,39 @@ const CREATED: Film = {
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],
 };
 
-/** Stands in for `FilmFacade` — the facade under test is `FilmForm`, not this one. */
-function stubFilmFacade() {
-  return { create: vi.fn().mockReturnValue(of(CREATED)) };
+/** The film edit mode loads. Two titles and a Letterboxd link, so the prefill has something to get wrong. */
+const STORED: FilmDetail = {
+  id: 'f1',
+  primaryTitle: 'Heat',
+  releaseYear: 1995,
+  director: 'Michael Mann',
+  runtimeMinutes: 170,
+  genres: ['Crime', 'Thriller'],
+  tags: ['heist'],
+  posterImage: 'https://example.test/heat.jpg',
+  letterboxdUrl: 'https://boxd.it/aaaa',
+  averageRating: 4,
+  isFavorite: true,
+  titles: [
+    { value: 'Heat', isPrimary: true, isOriginal: false },
+    { value: 'ヒート', isPrimary: false, isOriginal: true },
+  ],
+  delayDays: 0,
+  ratingHistory: [],
+  createdAt: '2024-01-01T10:00:00Z',
+  updatedAt: '2024-01-02T10:00:00Z',
+};
+
+/** Stands in for `FilmFacade` — the facade under test is `FilmForm`, not this one. `detail` starts empty, as it does before the fetch lands. */
+function stubFilmFacade(detail: FilmDetail | null = null) {
+  return {
+    create: vi.fn().mockReturnValue(of(CREATED)),
+    update: vi.fn().mockReturnValue(of(undefined)),
+    select: vi.fn(),
+    detail: signal(detail),
+    detailNotFound: signal(false),
+    detailError: signal<unknown>(undefined),
+  };
 }
 
 /** Stands in for `TagFacade`/`GenreFacade` so the autocompletes have a vocabulary without HTTP. */
@@ -49,14 +81,19 @@ function stubLabelFacade(names: readonly string[]) {
 
 let currentFixture: ComponentFixture<FilmForm>;
 
+/** `id` set puts the form in edit mode, exactly as the `film/:id/edit` route param does. */
 async function render(
   filmFacade: ReturnType<typeof stubFilmFacade> = stubFilmFacade(),
   title = '',
+  id: string | undefined = undefined,
 ): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [FilmForm],
     providers: [
-      provideRouter([{ path: 'library', component: BlankComponent }]),
+      provideRouter([
+        { path: 'library', component: BlankComponent },
+        { path: 'film/:id', component: BlankComponent },
+      ]),
       provideNativeDateAdapter(),
       { provide: FilmFacade, useValue: filmFacade },
       { provide: TagFacade, useValue: stubLabelFacade(['heist', 'neo-noir']) },
@@ -65,6 +102,7 @@ async function render(
   });
   currentFixture = TestBed.createComponent(FilmForm);
   currentFixture.componentRef.setInput('title', title);
+  if (id !== undefined) currentFixture.componentRef.setInput('id', id);
   await currentFixture.whenStable();
   return currentFixture.nativeElement as HTMLElement;
 }
@@ -384,6 +422,94 @@ describe('FilmForm', () => {
           ],
         }),
       );
+    });
+  });
+
+  describe('edit mode (`film/:id/edit`)', () => {
+    it('holds the form back until the film is in hand, so nothing is edited against blank fields', async () => {
+      const filmFacade = stubFilmFacade(null);
+      const element = await render(filmFacade, '', STORED.id);
+
+      expect(element.querySelector('.film-form__state')?.textContent).toContain('Loading the film…');
+      expect(element.querySelector('.film-form__form')).toBeNull();
+
+      filmFacade.detail.set(STORED);
+      await settle();
+
+      expect(element.querySelector('.film-form__form')).not.toBeNull();
+    });
+
+    it('prefills every field from the film, titles and their flags included', async () => {
+      const element = await render(stubFilmFacade(STORED), '', STORED.id);
+
+      expect(titleValueInput(element, 0).value).toBe('Heat');
+      expect(titleValueInput(element, 1).value).toBe('ヒート');
+      expect(originalCheckbox(element, 1).checked).toBe(true);
+      expect(element.querySelector<HTMLInputElement>('.film-form__year input')?.value).toBe('1995');
+      expect(element.querySelector<HTMLInputElement>('.film-form__director input')?.value).toBe('Michael Mann');
+      expect(element.querySelector<HTMLInputElement>('.film-form__runtime input')?.value).toBe('170');
+      expect(element.querySelector<HTMLInputElement>('.film-form__poster input')?.value).toBe(
+        'https://example.test/heat.jpg',
+      );
+      expect(element.querySelector<HTMLInputElement>('.film-form__letterboxd input')?.value).toBe(
+        'https://boxd.it/aaaa',
+      );
+    });
+
+    it('drops the create-only rating block — an edit logs no watch', async () => {
+      const element = await render(stubFilmFacade(STORED), '', STORED.id);
+
+      expect(element.querySelector('.film-form__date')).toBeNull();
+      expect(element.querySelector('.film-form__rating')).toBeNull();
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent?.trim()).toBe(
+        'Save changes',
+      );
+      // Nothing was filled in by this test, yet the film's own values are valid.
+      expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+    });
+
+    it('patches the edited fields and navigates back to the film', async () => {
+      const filmFacade = stubFilmFacade(STORED);
+      const element = await render(filmFacade, '', STORED.id);
+      const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+      setValue(element, '.film-form__director input', 'M. Mann');
+      setValue(element, '.film-form__letterboxd input', '');
+      await settle();
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await settle();
+
+      expect(filmFacade.create).not.toHaveBeenCalled();
+      expect(filmFacade.update).toHaveBeenCalledWith(STORED.id, {
+        titles: [
+          { value: 'Heat', isPrimary: true, isOriginal: false },
+          { value: 'ヒート', isPrimary: false, isOriginal: true },
+        ],
+        releaseYear: 1995,
+        director: 'M. Mann',
+        runtimeMinutes: 170,
+        genres: ['Crime', 'Thriller'],
+        tags: ['heist'],
+        posterImage: 'https://example.test/heat.jpg',
+        // Cleared rather than left alone — a blank URL field means "remove it" (REQ §4.1).
+        letterboxdUrl: null,
+      } satisfies FilmPatch);
+      expect(navigateSpy).toHaveBeenCalledWith(`/film/${STORED.id}`);
+    });
+
+    it('surfaces a failed save and stays on the form', async () => {
+      const filmFacade = stubFilmFacade(STORED);
+      filmFacade.update.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, error: { error: { message: 'DUPLICATE_FILM' } } })),
+      );
+      const element = await render(filmFacade, '', STORED.id);
+      const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await settle();
+
+      expect(element.querySelector('.film-form__error')?.textContent).toContain('DUPLICATE_FILM');
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 });
