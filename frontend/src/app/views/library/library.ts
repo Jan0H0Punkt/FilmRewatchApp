@@ -1,7 +1,7 @@
 /**
  * The Library view (REQ §7.2) — the whole film library as a result list,
  * narrowable by a title search (FR-SF-01), plus the Add Film action
- * (`open work/library-view/add-film-via-search.md`): the search field
+ * (FR-LIB-05): the search field
  * doubles as the add entry point (labelled "Search or Add Film") and only
  * ever routes to `films/new` when a search yields no match — never opens a
  * form itself, so there is exactly one path into the create flow. Per §6.1

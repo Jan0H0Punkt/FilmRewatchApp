@@ -4,8 +4,9 @@
  *
  * - `films/new`: creates a film together with its mandatory first rating in
  *   one `POST /films` (FR-LIB-01..03), reached through the Library's search
- *   (`?title=` prefill) or its Add Film button
- *   (`open work/library-view/add-film-via-search.md`, work item 2).
+ *   (`?title=` prefill). Creating always runs through that search, so the user
+ *   has seen every existing match first — duplicates are avoided by
+ *   construction rather than caught afterwards (FR-LIB-05).
  * - `film/:id/edit`: edits every field of an existing film in one
  *   `PATCH /films/{id}` (FR-LIB-06/07), reached from the detail view's Edit
  *   action. The rating block is create-only — an existing film's ratings are
@@ -30,7 +31,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -107,7 +108,9 @@ function extractErrorMessage(error: unknown, fallback: string): string {
   ],
   // The Watched-on picker needs a date adapter, same as film-detail's Add
   // Rating form; scoped here (not app-wide) so it lands in this lazy chunk.
-  providers: [provideNativeDateAdapter()],
+  // Locale pinned to `en-GB` so the picker always reads/writes DD/MM/YYYY,
+  // independent of the browser's locale.
+  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'en-GB' }],
   templateUrl: './film-form.html',
   styleUrl: './film-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

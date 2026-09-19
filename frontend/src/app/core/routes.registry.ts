@@ -28,7 +28,7 @@ export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   { path: 'library', title: 'Library', loadComponent: library, navIcon: 'video_library', navLabel: 'Library' },
   // Reached by selecting a film, never from the navigation (§6.5).
   { path: 'film/:id', title: 'Film', loadComponent: filmDetail },
-  // Reached only from the Library's Add Film action (add-film-via-search.md), never from the navigation.
+  // Reached only from the Library's "Add new film" action (FR-LIB-05), never from the navigation.
   { path: 'films/new', title: 'Add a film', loadComponent: filmForm },
   // The same form in edit mode (`FilmForm.id`), reached from the detail view's
   // Edit action — the film's fields are edited here rather than inline, so the

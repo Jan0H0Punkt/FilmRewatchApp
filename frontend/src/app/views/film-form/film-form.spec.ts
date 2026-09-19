@@ -1,6 +1,5 @@
 /**
- * The film form in both its modes. Create
- * (`open work/library-view/add-film-via-search.md`, work item 2): the
+ * The film form in both its modes. Create (`films/new`, FR-LIB-01..05): the
  * `?title=` prefill, required-field validation gating submit, a valid submit
  * calling `FilmFacade.create` and navigating to the Library, and the 409
  * duplicate backstop. Edit (`film/:id/edit`): prefilling from the film,
@@ -34,6 +33,7 @@ const CREATED: Film = {
   genres: ['Crime'],
   tags: ['heist'],
   posterImage: null,
+  letterboxdUrl: null,
   averageRating: 4,
   isFavorite: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],

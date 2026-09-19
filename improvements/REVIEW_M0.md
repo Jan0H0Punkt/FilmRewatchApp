@@ -102,7 +102,7 @@ Current state is mostly correct (verified: `.env`s, `.pytest_cache/`, `node_modu
 |------|---------|
 | `.DS_Store` | ✅ **Done 2026-07-12** — added to the root `.gitignore`. (Was only ignored under `frontend/`; on macOS these appear everywhere.) |
 | Root `.env` | ✅ **Done 2026-07-12** — root `.env.example` added (DB credentials, `CORS_ALLOWED_ORIGINS`, incl. the LAN-origin example) and the README's quick-start now explains the Compose-reads-it mechanism and the difference from `backend/.env`. |
-| `.claude/*` | Blanket-ignores `.claude/skills/implement-pr/SKILL.md`, which `CLAUDE_IMPROVEMENTS.md` itself flags as worth sharing. Add `!.claude/skills/` if the skill should survive a re-clone; as-is it exists only on this machine. |
+| `.claude/*` | ✅ **Moot 2026-09-19** — the `implement-pr` skill this flagged was deleted and `.claude/skills/` is now empty. The blanket ignore still swallows the whole directory, so add `!.claude/skills/` if a future skill should survive a re-clone. |
 | `scripts/` | Ignored at root, but no such directory exists and nothing explains it (it's a local-scratch convention). Either add a comment in `.gitignore` or rename the convention to something self-explanatory (`scratch/`). Ignoring a plausibly-committable name like `scripts/` will eventually surprise someone who tries to commit a real script. |
 | `backend/.gitignore` | Fine. ✅ `.ruff_cache/` added 2026-07-12 together with Ruff (see §4). |
 
@@ -170,7 +170,7 @@ Short answer: yes — M0 contains remarkably little fat. The empty stubs are all
 | Item | Assessment |
 |------|-----------|
 | `backend/migrations/.gitkeep`, `backend/tests/.gitkeep` | Obsolete — both directories have real tracked files now. Delete. |
-| `frontend/README.md` | Stock `ng new` boilerplate; even documents `ng e2e`, which isn't configured. Either trim to a pointer at the root README or delete. |
+| `frontend/README.md` | ✅ **Done 2026-09-19** — deleted. It was stock `ng new` boilerplate (it even documented `ng e2e`, which isn't configured); the root README's "Local development (frontend)" section and `frontend/CLAUDE.md` already cover it. |
 | `CLAUDE_IMPROVEMENTS.md` at repo root | ✅ **Addressed 2026-07-12** — moved to `improvements/` (together with this review). |
 | `frontend/src/app/core/route-registry.ts` vs `routes.registry.ts` | Both needed (infrastructure vs. append-only data) — but the names differ by one transposed word and a separator style. A future contributor *will* open the wrong one. Suggest `route-registry.ts` + `route-registry.data.ts` (or fold the empty array into the infra file until M3 needs it). |
 | Missing: `app/adapters/` | ✅ **Resolved 2026-07-12** — decided the *other* way: no stub folder; adapters are future-if-ever, and the layering (core never imports an adapter) is what keeps them hook-in-able. DESIGN §4 tree + §5.6 note, milestone §3 + PR1 scope, and `backend/CLAUDE.md` all annotated accordingly. |

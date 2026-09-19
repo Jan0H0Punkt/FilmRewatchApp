@@ -38,11 +38,10 @@ Little to fix in the `CLAUDE.md` files themselves; the static context footprint 
 - **Not needed yet** — current files are small; reach for this when a `CLAUDE.md` approaches the 200-line limit.
 - **Effort:** S–M.
 
-### 3. Skill for the repeatable PR workflow — ✅ _done_
-- [x] Encode the "implement PR N from `docs/milestones/MILESTONE_M0_V1.md`" loop as a `.claude/skills/<name>/SKILL.md`.
+### 3. Skill for the repeatable PR workflow — _dropped_
+- [ ] Encode the "implement PR N from `docs/milestones/MILESTONE_M0_V1.md`" loop as a `.claude/skills/<name>/SKILL.md`.
 - **Why:** skills load **on-demand**, keeping the workflow out of the always-loaded `CLAUDE.md`; invokable as `/skill-name`.
-- **Status:** Created `.claude/skills/implement-pr/SKILL.md` (`disable-model-invocation: true`, invoke as `/implement-pr <PR-number>`). It captures the full loop: read the work item + design refs, respect out-of-scope, study conventions, implement per the layered architecture, run the `make typecheck`/`make test` gate (venv-activated, `python3.14`), and update the milestone doc with the same ✅/annotation formatting as the completed PRs.
-- **⚠ Sharing:** currently git-ignored (`.claude/skills` is caught by `.claude/*`), so it works locally but isn't committed/shared. To team-share it, add a `.gitignore` negation like `!.claude/skills/` (see item in Housekeeping).
+- **Status:** An `implement-pr` skill existed for a while and was **deleted on 2026-09-19**; `.claude/skills/` is now empty. It was never committed (git-ignored via `.claude/*`), so nothing was shared. Revisit only if the per-PR loop becomes repetitive again.
 - **Effort:** M.
 
 ### 4. Behavioral habits — _free, no setup_
