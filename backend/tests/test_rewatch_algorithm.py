@@ -14,7 +14,6 @@ from decimal import Decimal
 
 from app.rewatch.algorithm import (
     BASE_INTERVAL_DAYS,
-    MAX_INTERVAL_DAYS,
     RewatchInput,
     interval_days,
     suggest,
@@ -58,9 +57,9 @@ def test_a_lower_rating_pushes_a_film_quadratically_further_out() -> None:
     assert interval_days(_input(average_rating=Decimal("2.5"))) == BASE_INTERVAL_DAYS + 1020
 
 
-def test_the_worst_rating_is_capped_at_reverse_rating_nine() -> None:
-    # A short runtime keeps the result under the ceiling, which is the only
-    # place the cap is observable — see the clamp test below.
+def test_the_worst_rating_scores_reverse_rating_nine() -> None:
+    # 0.5 stars scales to 1, the lowest a real rating reaches, leaving nine
+    # steps of 90 + 30 days.
     assert (
         interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
         == BASE_INTERVAL_DAYS + 10 * 120
@@ -76,18 +75,11 @@ def test_half_stars_survive_the_scale_conversion() -> None:
 
 def test_an_unrated_film_waits_longer_than_the_worst_rated_one() -> None:
     # A null average (FR-RAT-11/12) scores past the bottom of the 1..10 scale,
-    # so it outlasts every rated film. Short runtimes again, to stay under the
-    # ceiling that would otherwise hide the difference.
-    unrated = interval_days(_input(average_rating=None, runtime_minutes=30))
-    assert unrated > interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=30))
-    assert unrated > interval_days(_input(average_rating=Decimal("2.5"), runtime_minutes=30))
-
-
-def test_a_feature_length_film_clamps_whether_rated_worst_or_not_at_all() -> None:
-    # The consequence of the ceiling: across real runtimes an unrated film and a
-    # half-star one are indistinguishable, both waiting the maximum.
-    assert interval_days(_input(average_rating=None)) == MAX_INTERVAL_DAYS
-    assert interval_days(_input(average_rating=Decimal("0.5"))) == MAX_INTERVAL_DAYS
+    # so it outlasts every rated film — at any runtime, nothing clamps the two
+    # onto one value.
+    unrated = interval_days(_input(average_rating=None))
+    assert unrated > interval_days(_input(average_rating=Decimal("0.5")))
+    assert unrated > interval_days(_input(average_rating=Decimal("2.5")))
 
 
 def test_every_prior_watch_adds_one_step() -> None:
@@ -98,22 +90,44 @@ def test_a_longer_runtime_widens_every_step() -> None:
     assert interval_days(_input(runtime_minutes=180)) == BASE_INTERVAL_DAYS + 2 * 190
 
 
-def test_a_favourite_halves_the_spacing() -> None:
-    assert interval_days(_input(is_favorite=True)) == BASE_INTERVAL_DAYS + 130
+def test_a_favourite_halves_the_whole_interval() -> None:
+    # The base is halved along with the spacing, not just the spacing.
+    assert interval_days(_input(is_favorite=True)) == REFERENCE_INTERVAL_DAYS // 2
+
+
+def test_a_favourite_rounds_its_halved_interval_up() -> None:
+    # An odd total must not round down into a shorter wait than the scoring
+    # asked for. 730 + 3 * 131 = 1123, which halves to 561.5.
+    assert interval_days(_input(is_favorite=True, watch_count=2, runtime_minutes=121)) == 562
 
 
 def test_the_base_interval_is_a_floor_even_for_the_best_possible_film() -> None:
-    # A year between rewatches holds for everyone: favourite, top-rated,
-    # never rewatched, no runtime at all.
-    best = _input(average_rating=Decimal("5.0"), watch_count=0, is_favorite=True, runtime_minutes=0)
+    # Top-rated, never rewatched, no runtime at all — the shortest the scoring
+    # can go. A favourite floors at the halved base instead, which is why
+    # doubling the base is what keeps every film past a year
+    # (OPEN_DECISIONS_V1 "M4 — Rewatch engine").
+    best = _input(average_rating=Decimal("5.0"), watch_count=0, runtime_minutes=0)
     assert interval_days(best) >= BASE_INTERVAL_DAYS
 
-
-def test_the_interval_is_clamped_to_the_ceiling() -> None:
-    assert (
-        interval_days(_input(average_rating=Decimal("0.5"), watch_count=100, runtime_minutes=180))
-        == MAX_INTERVAL_DAYS
+    best_favourite = _input(
+        average_rating=Decimal("5.0"), watch_count=0, is_favorite=True, runtime_minutes=0
     )
+    assert interval_days(best_favourite) >= BASE_INTERVAL_DAYS // 2
+    assert interval_days(best_favourite) >= 365
+
+
+def test_the_interval_has_no_upper_bound() -> None:
+    # Nothing clamps the scoring, so a film the user keeps disliking keeps
+    # moving further out instead of piling up on a shared ceiling date.
+    intervals = [
+        interval_days(_input(average_rating=Decimal("0.5"), runtime_minutes=180, watch_count=n))
+        for n in (1, 10, 100)
+    ]
+    assert intervals == [
+        BASE_INTERVAL_DAYS + 2700,
+        BASE_INTERVAL_DAYS + 5130,
+        BASE_INTERVAL_DAYS + 29430,
+    ]
 
 
 def test_a_film_watched_exactly_one_interval_ago_is_due_today() -> None:
@@ -140,16 +154,17 @@ def test_delay_days_shortens_how_overdue_a_film_counts_as() -> None:
     assert [item.days_until_next_rewatch for item in result] == [-20]
 
 
-def test_delay_days_still_defers_a_film_already_at_the_ceiling() -> None:
-    # The clamp bounds the scoring, not the user's own deferral.
-    capped = _input(
+def test_delay_days_still_defers_a_film_with_a_long_scored_interval() -> None:
+    # A deferral applies on top of the scoring however large that already is.
+    scored = _input(average_rating=Decimal("0.5"), watch_count=100, runtime_minutes=180)
+    due_today = _input(
         average_rating=Decimal("0.5"),
         watch_count=100,
         runtime_minutes=180,
-        days_since_watch=MAX_INTERVAL_DAYS,
+        days_since_watch=interval_days(scored),
         delay_days=10,
     )
-    assert suggest([capped], TODAY) == []
+    assert suggest([due_today], TODAY) == []
 
 
 def test_the_most_overdue_film_comes_first() -> None:

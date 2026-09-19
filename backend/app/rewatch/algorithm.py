@@ -11,6 +11,7 @@ the output is :class:`DueFilm`, because ``RewatchSuggestion`` is taken by the OR
 row in ``models.py`` that stores it.
 """
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -19,12 +20,7 @@ from uuid import UUID
 
 # The floor every film shares: nothing is suggested within a year of its last
 # watch, however loved (OPEN_DECISIONS_V1 "M4 — Rewatch engine").
-BASE_INTERVAL_DAYS = 365
-
-# ponytail: a flat ceiling rather than a taper. Without it the quadratic term in
-# :func:`interval_days` sends a long, badly-rated, often-watched film past 20
-# years, which is indistinguishable from "never" but harder to reason about.
-MAX_INTERVAL_DAYS = BASE_INTERVAL_DAYS * 5
+BASE_INTERVAL_DAYS = 365 * 2
 
 # Ratings run 0.5..5.0 in half steps (``ratings.schemas``), while the scoring
 # below is defined over 1..10 — doubling maps one onto the other exactly, with
@@ -33,9 +29,7 @@ RATING_SCALE_FACTOR = 2
 
 # Where an unrated film sits on that 1..10 scale. A null average means no watch
 # was rated (FR-RAT-11/12); scoring it below the lowest real rating — 0.5 stars
-# scales to 1 — makes an unrated film wait longer than any rated one. The two
-# only differ on short runtimes: at feature length both already clamp to
-# :data:`MAX_INTERVAL_DAYS`.
+# scales to 1 — makes an unrated film wait longer than any rated one.
 UNRATED_SCALED_RATING = 0
 
 
@@ -75,8 +69,14 @@ def interval_days(item: RewatchInput) -> int:
     adds one step on top, and the runtime widens every step — a three-hour film
     is a bigger ask than a ninety-minute one at the same rating.
 
-    Being a favourite halves the variable part but not ``BASE_INTERVAL_DAYS``,
-    so the floor holds for every film.
+    Being a favourite halves the finished interval, base included, so a
+    favourite's own floor is half :data:`BASE_INTERVAL_DAYS` — still a year,
+    which is what the base is doubled to buy.
+
+    The result is deliberately unbounded above. A ceiling would collapse the
+    bottom of the rating scale onto one value — every film at or below it due on
+    the same day — and the growth is self-limiting anyway, because the step a
+    watch adds only compounds for a film watched often enough to earn it.
     """
     scaled_rating = (
         UNRATED_SCALED_RATING
@@ -88,18 +88,13 @@ def interval_days(item: RewatchInput) -> int:
     step_count = item.watch_count + reverse_rating
     step_days = 10 * reverse_rating + item.runtime_minutes
     spacing = step_count * step_days
-    if item.is_favorite:
-        spacing //= 2
 
-    return min(BASE_INTERVAL_DAYS + spacing, MAX_INTERVAL_DAYS)
+    total = BASE_INTERVAL_DAYS + spacing
+    return math.ceil(total / 2) if item.is_favorite else total
 
 
 def suggest(inputs: Sequence[RewatchInput], today: date) -> list[DueFilm]:
     """Return the currently-due films, most overdue first (FR-RW-03/04).
-
-    ``delay_days`` is added outside the :data:`MAX_INTERVAL_DAYS` clamp: the
-    ceiling bounds what the scoring may invent, while a deferral is the user's
-    own explicit instruction and must always push the film further out.
 
     Films that are not yet due are omitted rather than returned with a positive
     value. Ties are broken by film id so two runs over unchanged data produce

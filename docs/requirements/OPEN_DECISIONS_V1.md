@@ -42,11 +42,17 @@ due. Each is tagged:
   (10 * reverse_rating + runtime_minutes)`, where `reverse_rating` is the
   average rating doubled onto a 1..10 scale and subtracted from 10. The rating
   therefore drives the interval quadratically; each prior watch adds one step;
-  a longer film widens every step. Favourites halve the spacing but not the
-  base, so **no film is ever suggested within a year of its last watch** — the
-  point of the base being a floor rather than a target. `MAX_INTERVAL_DAYS`
-  caps the result; `delay_days` is added outside that cap, because a deferral
-  is the user's instruction rather than something the scoring invented.
+  a longer film widens every step. Favourites halve the finished interval,
+  base included, rounded up (**revised 2026-09-19:** was half the spacing only;
+  `BASE_INTERVAL_DAYS` doubled to two years in the same change, which leaves a
+  favourite's own floor at one year). So **no film is ever suggested within a
+  year of its last watch** — the point of the base being a floor rather than a
+  target. The result is unbounded
+  above (**revised 2026-09-19:** `MAX_INTERVAL_DAYS` removed — a ceiling
+  collapsed the bottom of the rating scale onto a single due date, and measured
+  against the real library it never bound anything else). `delay_days` is added
+  on top of the scored interval, because a deferral is the user's instruction
+  rather than something the scoring invented.
   Scoring is a pure function of the input row — no clock, no randomness — so a
   film cannot be due one run and gone the next. FR-RW-02 gained
   `runtime_minutes`; the output contract is unchanged. (DESIGN §5.8.)
