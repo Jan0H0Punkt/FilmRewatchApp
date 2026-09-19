@@ -86,7 +86,7 @@ body {
    `[_ngcontent-*]` attribute makes `app.scss`'s own `.app-main` rule exactly
    as specific as a bare `.app-main:has(...)` here, so without it this rule's
    effect depends on injection order rather than actually winning. */
-@media (min-width: 900px) {
+@media (min-width: 1100px) {
   .app-shell .app-main:has(.film-detail-page) {
     margin: 0; // `.app-main`'s own `margin: 0 auto` would otherwise center it, eating the width `max-width: none` just freed
     max-width: none;
