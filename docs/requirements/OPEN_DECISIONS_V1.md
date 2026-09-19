@@ -30,12 +30,15 @@ due. Each is tagged:
 
 ## M4 — Rewatch engine
 
-- **[impl] Scheduler mechanism (daily rewatch job)** — **Decided (2026-09-14):**
-  an in-process `asyncio` task owned by the FastAPI lifespan
-  (`app/rewatch/scheduler.py`). The deployment target is a single laptop
-  running one container (§1.3), where a scheduler that lives and dies with the
-  app is the whole requirement — and every start recomputes, so a restart costs
-  nothing. (DESIGN §5.8, §8.1.)
+- **[impl] Scheduler mechanism (daily rewatch job)** — **Decided (2026-09-19):**
+  none. `GET /rewatch-suggestions` recomputes when the stored projection's
+  `computed_at` predates today, so the day's first read triggers the run
+  (`RewatchService.list_suggestions`). Measured, the algorithm costs ~2 ms over
+  5 000 films, which makes a timer — and the in-process `asyncio` task that
+  held this slot until 2026-09-19 — machinery in service of nothing. A library
+  with nothing due recomputes on every read, since the stamp lives on the
+  stored rows; that is cheaper than a second table holding one timestamp.
+  (DESIGN §5.8, §8.1.)
 - **[design] Rewatch algorithm internals** — **Decided (2026-09-14):** the
   repo owner's formula, in `algorithm.interval_days`. A film waits a
   rating-derived floor plus a spacing of `(watch_count + reverse_rating) *

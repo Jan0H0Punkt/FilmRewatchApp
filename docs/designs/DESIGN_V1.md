@@ -105,13 +105,12 @@ flowchart LR
         P2[Presentation<br/>API routers]
         BL2[Business logic<br/>services]
         RA[Rewatch algorithm<br/>isolated module]
-        SCHED[/Daily scheduler/]
         DAL[Data access<br/>repositories]
         DB[(PostgreSQL)]
         P2 --> BL2
         BL2 --> DAL
         DAL --> DB
-        SCHED --> RA
+        BL2 --> RA
         RA --> DAL
     end
 
@@ -150,7 +149,7 @@ FilmRewatchApp/
 │   │   ├── ratings/         # same shape — add/delete, average computation
 │   │   ├── tags/            # same shape — autocomplete, orphan cleanup
 │   │   ├── genres/          # same shape — autocomplete, orphan cleanup
-│   │   ├── rewatch/         # isolated algorithm module (§3.3) + daily scheduler + router
+│   │   ├── rewatch/         # isolated algorithm module (§3.3) + router (recompute on the day's first read)
 │   │   ├── adapters/        # FUTURE, if ever — external integrations (e.g. TMDB), §3.4/§5.6; no folder until one lands
 │   │   ├── core/            # Config, DB session, error schema, idempotency, shared deps
 │   │   └── main.py          # App factory, CORS, wires each module's router
@@ -394,15 +393,21 @@ passes it to the pure algorithm, and persists the result. Replacing the algorith
   each entry `{ film_id, days_until_rewatch }` with `days_until_rewatch <= 0` (0 = due today, negative =
   overdue), sorted ascending so the **most overdue appears first**. Films not yet due are omitted. This is a
   deliberate deviation from the written requirements (see §11).
-- **Trigger — a once-daily scheduled job.** The algorithm runs once per day; its result is **persisted** (a
-  `rewatch_suggestions` projection) and served verbatim by `GET /api/v1/rewatch-suggestions`. Because it
-  recomputes daily, the result reflects the data as of the last run — so a film that becomes **newly due** by the
-  passage of time first surfaces at the next run (an accepted ~24h lag, even online). The reverse — a watched film
-  leaving the list — is handled immediately by the client (§6.3), so it does not wait for the next run. The daily
-  cadence also removes any need for per-request computation or client-side time-decay correction. (Offline
-  staleness on top of this is the general cache behaviour of §6.2, not specific to this feature.)
-- **Scheduler.** Implemented as a scheduled task (e.g. a container/cron job or in-process scheduler invoking the
-  module) — see §8.1. The scheduler is infrastructure; the algorithm module itself stays pure and unaware of it.
+- **Trigger — the first read of the day.** The algorithm runs at most once per day; its result is **persisted**
+  (a `rewatch_suggestions` projection) and served verbatim by `GET /api/v1/rewatch-suggestions`. The endpoint
+  recomputes when the stored projection's `computed_at` predates today, so the first request of the day pays for
+  the run and every later one is a plain select. A film that becomes **newly due** purely by the passage of time
+  therefore surfaces on the next day's first read, with no lag beyond it.
+- **Invalidation — every film write.** A write that can move a film in or out of the list (a new watch, a deleted
+  rating, a runtime/delay/favourite edit, a film deletion) stamps the projection stale inside its own transaction,
+  so the next read recomputes. Writes never run the algorithm themselves: a burst — an import, a rapid sequence of
+  edits — then costs one cheap `UPDATE` each and a single run at the next read. A watched film therefore leaves
+  the list on the server too, not only in the client's local patch (§6.3). (Offline staleness on top of this is
+  the general cache behaviour of §6.2, not specific to this feature.)
+- **No scheduler.** There is no timer, job, or cron: the read drives the run. The projection survives as the
+  store of the algorithm's *order* (FR-RW-04) and to keep the repeat reads cheap, not because the computation is
+  expensive — it is milliseconds over a personal library. The algorithm module itself stays pure and unaware of
+  what triggers it.
 
 ---
 
@@ -580,10 +585,9 @@ How the application is packaged and run, distinct from the building blocks in §
   Compose stack on the laptop (`docker compose up`).
 - **Frontend** is built to static assets (Angular production build) and served on the laptop; its API base URL is
   hard-coded in the build (§8 wiring).
-- **Scheduler.** A scheduled task runs the once-daily rewatch recompute (§5.8).
 - **Checks** — tests (§9) and the strict type checks (§5.7) run locally (editor + a `make`/script target).
 
-Remaining infrastructure choices (e.g. the scheduler mechanism) are tracked in
+Remaining infrastructure choices are tracked in
 [OPEN_DECISIONS](../requirements/OPEN_DECISIONS_V1.md).
 
 > Infrastructure/tooling is *how the app runs*, not a building block it is written with — hence it is not in the §2
@@ -626,7 +630,7 @@ This table is a **rough overview only** — detailed per-milestone definitions l
 | M1  | Core domain (backend)      | Film + Rating + Tag + Genre modules; watched-only create flow, validation, duplicate detection, averages, cascade/orphan cleanup; tests | FR-LIB-01..16, FR-RAT-*, FR-TAG-*, §5.2, §5.3, NFR-INT/MAINT |
 | M2  | Search (backend)           | Title + director search via the extensible filter registry                                                                              | FR-SF-01..05, FR-EXT-05                                      |
 | M3  | Angular shell (online)     | Three views + adaptive nav + shared components, wired online-only                                                                       | §7.1-7.4, FR-EXT-01..03                                      |
-| M4  | Rewatch engine             | Backend rewatch module + daily scheduler + endpoint; Rewatch view renders the due-list                                                  | FR-RW-01..07, §5.8, §7.1                                     |
+| M4  | Rewatch engine             | Backend rewatch module + endpoint (recompute on the day's first read); Rewatch view renders the due-list                                 | FR-RW-01..07, §5.8, §7.1                                     |
 | M5  | Cache & PWA                | IndexedDB cache, service worker, installable PWA (Lighthouse ≥ 90)                                                                      | FR-OFF-01..04, NFR-OFF-01/02                                 |
 | M6  | Offline writes & sync      | Durable write queue, auto-drain, idempotency, LWW conflicts                                                                             | FR-OFF-05..15, NFR-OFF-04/05                                 |
 | M7  | Merge, edit polish, extras | Film merge, inline edit, optional search dimensions, a11y pass                                                                          | FR-LIB-17..21, FR-SF-06..11                                  |
@@ -641,7 +645,7 @@ Deferred work and undecided items are tracked in two dedicated, living documents
 - **[Future Work & Deferred Items](../requirements/FUTURE_WORK_V1.md)** — "maybe later" work intentionally out of scope for
   this version: global tag/genre delete (FR-TAG-05), Rewatch list filtering, CI/CD automation.
 - **[Open Decisions](../requirements/OPEN_DECISIONS_V1.md)** — choices still to make: M0 confirmations (database engine,
-  frontend→backend wiring, scheduler mechanism, IndexedDB wrapper), design points the requirements left open
+  frontend→backend wiring, IndexedDB wrapper), design points the requirements left open
   (search/filter UX, breakpoints, performance targets, rewatch algorithm internals), and requirement deviations
   to reconcile with REQUIREMENTS_V1.md (rewatch contract, genre-as-entity, watched-only library, single
   deployment target, desktop drawer).
