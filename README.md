@@ -12,9 +12,7 @@ installable on a phone over the LAN.
 > ([REQUIREMENTS §4](docs/requirements/REQUIREMENTS_V1.md#4-data-model)) enforced server-side —
 > plus the daily rewatch-suggestions computation and its `GET /rewatch-suggestions` route, and an
 > Angular client covering both. The open item is the real rewatch scoring algorithm — see
-> [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md);
-> [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md) is the most recent
-> milestone document.
+> [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md).
 
 ## Quick start (Docker)
 
@@ -186,14 +184,11 @@ excluded).
 
 ## Documentation
 
-Development is **design-doc-driven and milestone-sequenced**; code and commits reference design
-sections (`§5.7`) and requirement IDs (`NFR-MAINT-03`) throughout.
+Development is **design-doc-driven**; code and commits reference design sections (`§5.7`) and
+requirement IDs (`NFR-MAINT-03`) throughout.
 
 - [docs/designs/DESIGN_V1.md](docs/designs/DESIGN_V1.md) — the authoritative technical design
   (stack, architecture, API contract, delivery plan).
-- [docs/milestones/MILESTONE_M1_V1.md](docs/milestones/MILESTONE_M1_V1.md) — the current milestone,
-  broken into per-PR work items with acceptance criteria
-  ([MILESTONE_M0_V1.md](docs/milestones/MILESTONE_M0_V1.md) is its complete predecessor).
 - [docs/requirements/REQUIREMENTS_V1.md](docs/requirements/REQUIREMENTS_V1.md) — functional and
   non-functional requirements, with
   [OPEN_DECISIONS_V1.md](docs/requirements/OPEN_DECISIONS_V1.md) and
