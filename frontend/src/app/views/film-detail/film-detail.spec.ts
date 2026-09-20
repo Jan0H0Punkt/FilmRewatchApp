@@ -31,6 +31,7 @@ const HEAT: FilmDetailModel = {
   letterboxdUrl: null,
   averageRating: 4,
   isFavorite: true,
+  owned: false,
   titles: [
     { value: 'Heat', isPrimary: true, isOriginal: false },
     { value: 'ヒート', isPrimary: false, isOriginal: true },
@@ -430,6 +431,15 @@ describe('FilmDetail', () => {
       element.querySelector<HTMLButtonElement>('[aria-label="Remove from favourites"]')?.click();
 
       expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { isFavorite: false });
+    });
+
+    it('sends only `owned` when the disc toggle is clicked', async () => {
+      const filmFacade = stubFilmFacade(HEAT);
+      const element = await render(filmFacade);
+
+      element.querySelector<HTMLButtonElement>('[aria-label="Owned on disc"]')?.click();
+
+      expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { owned: true });
     });
 
     it('reflects the current favourite state as `aria-pressed`', async () => {

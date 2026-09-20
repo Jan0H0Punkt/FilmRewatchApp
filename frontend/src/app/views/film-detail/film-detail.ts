@@ -90,6 +90,7 @@ interface FilmDetailVm {
   readonly lastWatchedLabel: string | null;
   /** Section A controls (phase 3, FR-LIB-06). */
   readonly isFavorite: boolean;
+  readonly owned: boolean;
   /** User-entered Letterboxd link (REQ §4.1), `null` when never set. */
   readonly letterboxdUrl: string | null;
 }
@@ -192,6 +193,7 @@ function toVm(film: FilmDetailModel, now: number): FilmDetailVm {
     ratingHistory: film.ratingHistory.map(toRatingHistoryVm),
     lastWatchedLabel: lastWatchedLabelFor(film.ratingHistory),
     isFavorite: film.isFavorite,
+    owned: film.owned,
     letterboxdUrl: film.letterboxdUrl,
   };
 }
@@ -410,6 +412,7 @@ export class FilmDetail {
   // --- Section A controls (phase 3, FR-LIB-06/10..12) ----------------------
 
   protected readonly favoriteError = signal<string | null>(null);
+  protected readonly ownedError = signal<string | null>(null);
   protected readonly deleteFilmError = signal<string | null>(null);
 
   private patch(patch: FilmPatch, errorSignal: WritableSignal<string | null>, fallback: string): void {
@@ -424,6 +427,13 @@ export class FilmDetail {
     const film = this.films.detail();
     if (film === null) return;
     this.patch({ isFavorite: !film.isFavorite }, this.favoriteError, 'The favourite flag could not be updated.');
+  }
+
+  /** `PATCH /films/{id}` with only `owned` — the disc beside the heart. */
+  protected toggleOwned(): void {
+    const film = this.films.detail();
+    if (film === null) return;
+    this.patch({ owned: !film.owned }, this.ownedError, 'The owned flag could not be updated.');
   }
 
   /** Confirm dialog (FR-LIB-11), then `DELETE /films/{id}`, then back to the Library. */

@@ -100,6 +100,20 @@
                 <!-- A heart, not a star: sits right beside the rating stars, so a distinct shape avoids reading as a 6th star. -->
                 <mat-icon>{{ film.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
               </button>
+              <!-- Material Icons has no outlined `album`, so this toggle shows
+                 one icon throughout and carries its state in the colour (and in
+                 `aria-pressed` for anyone not seeing it). -->
+              <button
+                class="film-detail__owned"
+                [class.film-detail__owned--on]="film.owned"
+                matIconButton
+                type="button"
+                [attr.aria-pressed]="film.owned"
+                [attr.aria-label]="film.owned ? 'Not owned on disc' : 'Owned on disc'"
+                (click)="toggleOwned()"
+              >
+                <mat-icon>album</mat-icon>
+              </button>
             </p>
             <!-- Genres and tags (FR-TAG-03/06, REQ §4.4). Both rows are the shared
              editable chip row: read-only chips until its edit button swaps in
@@ -174,6 +188,9 @@
 
         @if (favoriteError()) {
           <p class="film-detail__error" role="alert">{{ favoriteError() }}</p>
+        }
+        @if (ownedError()) {
+          <p class="film-detail__error" role="alert">{{ ownedError() }}</p>
         }
         @if (deleteFilmError()) {
           <p class="film-detail__error" role="alert">{{ deleteFilmError() }}</p>

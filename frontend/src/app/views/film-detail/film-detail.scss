@@ -229,6 +229,10 @@
   margin-left: auto; // clustered at the footer row's right edge, opposite the timestamps
 }
 
+.film-detail__owned--on {
+  --mat-icon-button-icon-color: var(--owned-color);
+}
+
 .film-detail__favorite {
   --mat-icon-button-icon-color: var(--favorite-color);
 }

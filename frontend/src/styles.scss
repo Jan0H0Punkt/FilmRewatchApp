@@ -42,6 +42,9 @@ html {
      error token: M3's error hue is red by convention regardless of the
      primary/tertiary palette chosen, so it stays red across light/dark. */
   --favorite-color: var(--mat-sys-error);
+  /* The disc marker sits next to the favourite heart in every list, so it
+     needs its own hue to stay tellable apart at icon size. */
+  --owned-color: var(--mat-sys-primary);
   --rating-star-color: #ffb300;
 }
 
