@@ -58,7 +58,10 @@ def list_films(
         "genres in one atomic operation (FR-LIB-01..03) — the library only holds "
         "watched films. A film duplicating an existing one (same primary title, "
         "release year, and director — case/whitespace-insensitive) is rejected "
-        "with the `DUPLICATE_FILM` error identifying the existing film (FR-LIB-05)."
+        "with the `DUPLICATE_FILM` error identifying the existing film (FR-LIB-05). "
+        "`watched_before` records one extra undated, unrated watch alongside the "
+        "first rating, for a film the user had already seen at some forgotten "
+        "point (FR-RAT-04/12)."
     ),
     responses=error_responses({422: ["VALIDATION_ERROR"], 409: ["DUPLICATE_FILM"]}),
 )

@@ -145,6 +145,11 @@ class FilmCreate(StrictSchema):
     poster_image: str | None = Field(default=None, max_length=2048)
     letterboxd_url: str | None = Field(default=None, max_length=2048)
     first_rating: FirstRatingCreate
+    # "I had already seen this before the watch I am logging" (FR-RAT-04/12):
+    # records one extra undated, unrated watch alongside ``first_rating``, so
+    # the rewatch engine counts two watches rather than one. Defaults to false
+    # — the common create logs a single watch.
+    watched_before: bool = False
 
     @field_validator("release_year")
     @classmethod

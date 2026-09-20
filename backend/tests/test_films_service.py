@@ -38,7 +38,7 @@ from app.films.service import (
 )
 from app.genres.models import Genre
 from app.ratings.models import RatingEntry
-from app.ratings.service import FutureWatchDateError, RatingNotFoundError
+from app.ratings.service import EARLIER_WATCH_DATE, FutureWatchDateError, RatingNotFoundError
 from app.tags.models import Tag
 
 # --------------------------------------------------------------------------- #
@@ -423,6 +423,21 @@ def test_create_persists_everything_in_one_commit_and_returns_the_projection() -
     assert detail.is_favorite is False and detail.delay_days == 0  # FR-LIB-02 defaults
     # FR-LIB-04: the derived key is absent from the projection.
     assert "natural_key" not in detail.model_dump()
+
+
+def test_create_with_watched_before_logs_a_second_undated_unrated_watch() -> None:
+    # FR-RAT-04/12: "I had seen this before" is one extra rating entry, so the
+    # rewatch engine's watch_count (COUNT of entries) sees two watches. It is
+    # unrated, so it cannot move the average, and dated at the sentinel, so it
+    # cannot outrank the real watch in MAX(watch_date).
+    service, _, _, ratings = make_service()
+    detail = service.create(payload(watched_before=True))
+
+    entries = ratings.by_film[detail.id]
+    assert len(entries) == 2
+    prior = next(entry for entry in entries if entry.watch_date == EARLIER_WATCH_DATE)
+    assert prior.value is None
+    assert max(entry.watch_date for entry in entries) != EARLIER_WATCH_DATE
 
 
 def test_create_keeps_genres_in_payload_order_not_alphabetical() -> None:

@@ -29,6 +29,7 @@ from app.films.service.protocols import (
     TagAssignmentProtocol,
 )
 from app.ratings.schemas import RatingDeletionResult, RatingEntryRead
+from app.ratings.service import EARLIER_WATCH_DATE
 
 
 class FilmService:
@@ -64,7 +65,8 @@ class FilmService:
     def create(self, data: FilmCreate) -> FilmDetailRead:
         """The atomic "log a watched film" flow (FR-LIB-01..05).
 
-        Film + titles + first rating + tag/genre links join one unit of work,
+        Film + titles + first rating (plus the ``watched_before`` prior watch,
+        when asked for) + tag/genre links join one unit of work,
         sealed by a single commit — a failure at any step (e.g. an invalid
         label name) leaves no partial rows. Returns the full §7.3 projection
         of the created film.
@@ -100,6 +102,11 @@ class FilmService:
                 )
             )
         self._ratings.add_entry(film.id, data.first_rating.value, data.first_rating.watch_date)
+        if data.watched_before:
+            # One extra undated, unrated watch for "I had seen this before"
+            # (FR-RAT-04/12) — see ``EARLIER_WATCH_DATE`` for why a sentinel
+            # date rather than a nullable column.
+            self._ratings.add_entry(film.id, None, EARLIER_WATCH_DATE)
         for name in deduplicated(data.tags):
             tag = self._tags.get_or_create(name)
             self._tags.assign(film.id, tag.id)

@@ -25,6 +25,17 @@ from fastapi import status
 from app.core.errors import AppError
 from app.ratings.models import RatingEntry
 
+# The stand-in ``watch_date`` for "I have seen this before, I don't know when"
+# (FR-RAT-04/12). A watch the user cannot date still has to count: ``watch_count``
+# is ``COUNT(rating_entries)``, so one more unrated row is exactly the extra
+# rewatch step such a watch earns. The date has to be *some* date — the column is
+# not nullable, and making it so would leave a film whose only watches are
+# undated with no ``last_watched_date`` for the algorithm to anchor on (§5.8).
+# 1888 is the year of the first film ever made, the same floor ``release_year``
+# uses, so the sentinel can never outrank a real watch in ``MAX(watch_date)``
+# and the client can recognise it by value alone.
+EARLIER_WATCH_DATE = date(1888, 1, 1)
+
 
 class FutureWatchDateError(AppError):
     """A ``watch_date`` in the future (FR-RAT-03) — its own stable code, not
