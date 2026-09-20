@@ -214,6 +214,13 @@
             Don't rate this
           </button>
         </div>
+
+        <!-- The watch above is the one being logged now; this adds a second,
+           undated one for a film the user had already seen at some forgotten
+           point (FR-RAT-04/12), so the rewatch engine counts both. -->
+        <mat-checkbox [checked]="watchedBefore()" (change)="watchedBefore.set($event.checked)">
+          I had seen this before
+        </mat-checkbox>
       }
 
       @if (submitError()) {

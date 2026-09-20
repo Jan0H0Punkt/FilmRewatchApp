@@ -271,6 +271,13 @@ export class FilmForm {
   protected readonly letterboxdUrl = linkedSignal(() => this.film()?.letterboxdUrl ?? '');
   protected readonly today = new Date();
   protected readonly watchDate = signal<Date | null>(this.today);
+  /**
+   * "I had already seen this before" — a plain `signal`, not a `linkedSignal`
+   * like the fields above: it has nothing to prefill from, since it is
+   * create-only (an existing film's prior watches are the detail view's
+   * Watched before action).
+   */
+  protected readonly watchedBefore = signal(false);
 
   protected readonly tagNames = inject(TagFacade).names;
   protected readonly genreNames = inject(GenreFacade).names;
@@ -393,6 +400,7 @@ export class FilmForm {
       ...fields,
       watchDate: toIsoDate(watchDate),
       rating: selectedValue === 'unrated' ? null : selectedValue,
+      watchedBefore: this.watchedBefore(),
     };
     this.send(this.films.create(payload), '/library', 'The film could not be created.');
   }
