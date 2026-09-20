@@ -90,6 +90,7 @@ class FilmService:
             runtime_minutes=data.runtime_minutes,
             poster_image=data.poster_image,
             letterboxd_url=data.letterboxd_url,
+            owned=data.owned,
         )
         self._repository.add_film(film)
         for title in data.titles:
@@ -148,6 +149,7 @@ class FilmService:
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
             poster_image=film.poster_image,
             letterboxd_url=film.letterboxd_url,
+            owned=film.owned,
             is_favorite=film.is_favorite,
             delay_days=film.delay_days,
             rating_history=[RatingEntryRead.model_validate(entry) for entry in history],
@@ -222,6 +224,8 @@ class FilmService:
             film.poster_image = data.poster_image
         if "letterboxd_url" in data.model_fields_set:
             film.letterboxd_url = data.letterboxd_url
+        if data.owned is not None:
+            film.owned = data.owned
         if data.is_favorite is not None:
             film.is_favorite = data.is_favorite
         if data.delay_days is not None:

@@ -113,6 +113,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "tags",
         "poster_image",
         "letterboxd_url",
+        "owned",
         "is_favorite",
         "delay_days",
         "rating_history",
@@ -122,6 +123,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
     assert body["genre"] == ["Crime", "Thriller"]
     assert body["tags"] == ["heist", "la"]
     assert body["is_favorite"] is False and body["delay_days"] == 0  # FR-LIB-02
+    assert body["owned"] is False  # not asked for by this payload, defaults off
     assert body["created_at"] is not None and body["updated_at"] is not None
 
     titles = cast(list[dict[str, object]], body["titles"])
@@ -550,6 +552,24 @@ def test_letterboxd_url_round_trips_through_create_and_edit_and_clears_on_null(
 
     still_absent = client.patch(f"/api/v1/films/{film_id}", json={"is_favorite": False})
     assert cast(dict[str, object], still_absent.json())["letterboxd_url"] is None
+
+
+def test_owned_round_trips_through_create_and_edit(db_session: Session) -> None:
+    client = _client_over(db_session)
+    created = cast(
+        dict[str, object], client.post("/api/v1/films", json=_payload(owned=True)).json()
+    )
+    film_id = created["id"]
+    assert created["owned"] is True
+
+    # Unlike the nullable fields, ``null`` here means "unchanged", not "clear".
+    unchanged = client.patch(f"/api/v1/films/{film_id}", json={"owned": None})
+    assert cast(dict[str, object], unchanged.json())["owned"] is True
+
+    cleared = client.patch(f"/api/v1/films/{film_id}", json={"owned": False})
+    assert cleared.status_code == 200
+    assert cast(dict[str, object], cleared.json())["owned"] is False
+    assert cast(dict[str, object], client.get(f"/api/v1/films/{film_id}").json())["owned"] is False
 
 
 def test_edit_rejects_immutable_and_unknown_fields(db_session: Session) -> None:

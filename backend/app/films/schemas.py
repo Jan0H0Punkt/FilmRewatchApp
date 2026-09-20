@@ -133,6 +133,8 @@ class FilmCreate(StrictSchema):
     generated when absent). ``is_favorite``/``delay_days`` are deliberately
     **absent** — the system defaults them at create (FR-LIB-02) — as is
     ``natural_key`` (FR-LIB-04); the strict base rejects them as unknown fields.
+    ``owned`` *is* accepted: FR-LIB-02 defaults the rewatch-engine inputs, and
+    owning a disc is neither.
     """
 
     id: JsonUUID | None = None
@@ -144,6 +146,7 @@ class FilmCreate(StrictSchema):
     tags: list[str] = Field(min_length=1)
     poster_image: str | None = Field(default=None, max_length=2048)
     letterboxd_url: str | None = Field(default=None, max_length=2048)
+    owned: bool = False
     first_rating: FirstRatingCreate
     # "I had already seen this before the watch I am logging" (FR-RAT-04/12):
     # records one extra undated, unrated watch alongside ``first_rating``, so
@@ -202,6 +205,7 @@ class FilmUpdate(StrictSchema):
     tags: list[str] | None = Field(default=None, min_length=1)
     poster_image: str | None = Field(default=None, max_length=2048)
     letterboxd_url: str | None = Field(default=None, max_length=2048)
+    owned: bool | None = None
     is_favorite: bool | None = None
     delay_days: int | None = Field(default=None, ge=0)
 
@@ -299,6 +303,7 @@ class FilmDetailRead(StrictSchema):
     tags: list[str]
     poster_image: str | None
     letterboxd_url: str | None
+    owned: bool
     is_favorite: bool
     delay_days: int
     rating_history: list[RatingEntryRead]

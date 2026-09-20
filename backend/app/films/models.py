@@ -41,6 +41,9 @@ class Film(Base):
     poster_image: Mapped[str | None] = mapped_column(String(2048))
     # User-entered Letterboxd link, same optionality/nullability as poster_image.
     letterboxd_url: Mapped[str | None] = mapped_column(String(2048))
+    # "I own this film on disc" (REQ §4.1) — plain metadata the views mark with
+    # an icon; no rewatch-engine input, unlike the two below.
+    owned: Mapped[bool] = mapped_column(Boolean, default=False)
     # Rewatch-engine inputs (REQ §4.1).
     is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
     delay_days: Mapped[int] = mapped_column(Integer, default=0)
