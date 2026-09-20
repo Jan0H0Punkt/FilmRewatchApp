@@ -269,6 +269,7 @@ export class FilmForm {
   protected readonly selectedTags = linkedSignal<readonly string[]>(() => this.film()?.tags ?? []);
   protected readonly posterImage = linkedSignal(() => this.film()?.posterImage ?? '');
   protected readonly letterboxdUrl = linkedSignal(() => this.film()?.letterboxdUrl ?? '');
+  protected readonly owned = linkedSignal(() => this.film()?.owned ?? false);
   protected readonly today = new Date();
   protected readonly watchDate = signal<Date | null>(this.today);
   /**
@@ -383,6 +384,7 @@ export class FilmForm {
       tags: this.selectedTags(),
       posterImage: posterImage === '' ? null : posterImage,
       letterboxdUrl: letterboxdUrl === '' ? null : letterboxdUrl,
+      owned: this.owned(),
     };
 
     const id = this.filmId();

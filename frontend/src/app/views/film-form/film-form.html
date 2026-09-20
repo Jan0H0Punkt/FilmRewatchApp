@@ -154,6 +154,10 @@
         <p class="film-form__error" role="alert">The Letterboxd link must be a well-formed http(s) URL.</p>
       }
 
+      <!-- Record metadata, not part of the watch being logged — so it sits
+         outside the create-only block below and shows in edit mode too. -->
+      <mat-checkbox [checked]="owned()" (change)="owned.set($event.checked)"> I own this on disc </mat-checkbox>
+
       <!-- Create only: `POST /films` carries the mandatory first watch
          (FR-LIB-03). An existing film's watches are the detail view's rating
          history — editing its fields must not log another one. -->

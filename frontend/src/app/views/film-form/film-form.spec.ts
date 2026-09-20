@@ -36,6 +36,7 @@ const CREATED: Film = {
   letterboxdUrl: null,
   averageRating: 4,
   isFavorite: false,
+  owned: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],
 };
 
@@ -52,6 +53,7 @@ const STORED: FilmDetail = {
   letterboxdUrl: 'https://boxd.it/aaaa',
   averageRating: 4,
   isFavorite: true,
+  owned: false,
   titles: [
     { value: 'Heat', isPrimary: true, isOriginal: false },
     { value: 'ヒート', isPrimary: false, isOriginal: true },
@@ -493,6 +495,7 @@ describe('FilmForm', () => {
         posterImage: 'https://example.test/heat.jpg',
         // Cleared rather than left alone — a blank URL field means "remove it" (REQ §4.1).
         letterboxdUrl: null,
+        owned: false,
       } satisfies FilmPatch);
       expect(navigateSpy).toHaveBeenCalledWith(`/film/${STORED.id}`);
     });
