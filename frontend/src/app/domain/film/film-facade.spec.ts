@@ -295,6 +295,7 @@ describe('FilmFacade', () => {
       letterboxdUrl: null,
       watchDate: '2024-01-01',
       rating: 4,
+      watchedBefore: false,
     };
 
     it('POSTs the mapped payload and resolves to the created film', async () => {

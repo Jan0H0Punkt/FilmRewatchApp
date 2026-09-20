@@ -89,6 +89,7 @@ function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput 
     letterboxdUrl: null,
     watchDate: '2024-01-01',
     rating: 4,
+    watchedBefore: false,
     ...overrides,
   };
 }

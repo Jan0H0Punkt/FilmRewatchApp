@@ -128,4 +128,10 @@ export interface FilmCreateInput {
   readonly watchDate: string;
   /** `null` for a watch the user explicitly chose not to rate (FR-RAT-12). */
   readonly rating: number | null;
+  /**
+   * "I had already seen this before" — records one extra undated, unrated
+   * watch alongside the first rating (FR-RAT-04/12), so the rewatch engine
+   * counts two watches rather than one.
+   */
+  readonly watchedBefore: boolean;
 }

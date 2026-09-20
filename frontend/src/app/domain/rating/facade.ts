@@ -15,7 +15,7 @@ import { FilmFacade } from '../film/facade';
 import { RewatchFacade } from '../rewatch/facade';
 import { RatingApi } from './api';
 import { toRatingCreateDto, toRatingDeletionResult } from './mapper';
-import type { RatingDeletionResult, RatingDraft } from './model';
+import { EARLIER_WATCH_DATE, type RatingDeletionResult, type RatingDraft } from './model';
 
 @Injectable({ providedIn: 'root' })
 export class RatingFacade {
@@ -32,7 +32,11 @@ export class RatingFacade {
         // for a while, so it leaves the rewatch grid now rather than at the
         // next daily run. Self-correcting — tomorrow's fetch restores it if
         // the algorithm disagrees.
-        this.rewatch.removeFilm(filmId);
+        //
+        // A prior watch is exempt: it happened at some forgotten point in the
+        // past and leaves `last_watched_date` untouched, so a film that was
+        // due before it stays due after it.
+        if (draft.watchDate !== EARLIER_WATCH_DATE) this.rewatch.removeFilm(filmId);
       }),
       map(() => undefined),
     );

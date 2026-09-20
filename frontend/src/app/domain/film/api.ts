@@ -98,6 +98,8 @@ export interface FilmCreateDto {
     readonly value: number | null;
     readonly watch_date: string;
   };
+  /** Records one extra undated, unrated watch for "I had seen this before" (FR-RAT-04/12). */
+  readonly watched_before: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

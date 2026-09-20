@@ -7,6 +7,7 @@ import type { RatingEntryDto } from '../film/api';
 import { FilmFacade } from '../film/facade';
 import { RewatchFacade } from '../rewatch/facade';
 import { RatingFacade } from './facade';
+import { EARLIER_WATCH_DATE } from './model';
 
 /** Stands in for `HttpClient` so the facade is tested without a real backend. */
 function stubHttp() {
@@ -98,6 +99,25 @@ describe('RatingFacade', () => {
     });
 
     expect(rewatch.removeFilm).toHaveBeenCalledWith('f1');
+  });
+
+  it('keeps a film in the due-list when the logged watch is a prior one', async () => {
+    // A prior watch happened at some forgotten point in the past and leaves
+    // `last_watched_date` alone, so it cannot make a due film un-due — the
+    // §6.3 optimistic removal would wrongly hide it until the next fetch.
+    const http = stubHttp();
+    const rewatch = stubRewatchFacade();
+    const facade = setUp(http, stubFilmFacade(), rewatch);
+
+    await new Promise<void>((resolve) => {
+      facade.add('f1', { value: null, watchDate: EARLIER_WATCH_DATE }).subscribe(() => resolve());
+    });
+
+    expect(http.post).toHaveBeenCalledWith(expect.stringContaining('/films/f1/ratings'), {
+      value: null,
+      watch_date: EARLIER_WATCH_DATE,
+    });
+    expect(rewatch.removeFilm).not.toHaveBeenCalled();
   });
 
   it('does not touch the due-list when the watch fails to save', async () => {

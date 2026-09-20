@@ -205,6 +205,7 @@ describe('FilmApi.create', () => {
       poster_image: null,
       letterboxd_url: null,
       first_rating: { value: 4, watch_date: '2024-01-01' },
+      watched_before: false,
     };
     let created: FilmDto | undefined;
     api.create(payload).subscribe((film) => (created = film));
