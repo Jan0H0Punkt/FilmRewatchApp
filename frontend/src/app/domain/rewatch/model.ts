@@ -20,6 +20,7 @@ export interface RewatchCardVm {
   readonly ratingStars: readonly string[] | null;
   readonly ratingLabel: string;
   readonly isFavorite: boolean;
+  readonly owned: boolean;
   /** "Due now" or "Overdue by N days" (§7.1 Rewatch status). */
   readonly dueLabel: string;
   /** `null` when never set — the title icon then opens the add-link dialog instead of the site. */

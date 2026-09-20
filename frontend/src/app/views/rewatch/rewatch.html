@@ -59,6 +59,9 @@
               @if (card.isFavorite) {
                 <mat-icon class="rewatch__favorite" aria-label="Favourite">favorite</mat-icon>
               }
+              @if (card.owned) {
+                <mat-icon class="rewatch__owned" aria-label="Owned on disc">album</mat-icon>
+              }
             </h3>
             <div class="rewatch__meta">
               <p class="rewatch__year">{{ card.year }}</p>

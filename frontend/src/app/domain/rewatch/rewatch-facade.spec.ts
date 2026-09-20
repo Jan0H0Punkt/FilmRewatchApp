@@ -35,6 +35,7 @@ function film(id: string, title: string, rating: number | null = 4): Film {
     letterboxdUrl: null,
     averageRating: rating,
     isFavorite: false,
+    owned: false,
     titles: [{ value: title, isPrimary: true, isOriginal: true }],
   };
 }

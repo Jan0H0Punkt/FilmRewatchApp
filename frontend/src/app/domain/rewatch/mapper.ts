@@ -39,6 +39,7 @@ export function toRewatchCardVm(film: Film, suggestion: RewatchSuggestion): Rewa
     ratingStars: ratingStarsFor(film.averageRating),
     ratingLabel: ratingLabelFor(film.averageRating),
     isFavorite: film.isFavorite,
+    owned: film.owned,
     dueLabel: dueLabelFor(suggestion.daysUntilNextRewatch),
     letterboxdUrl: film.letterboxdUrl,
   };

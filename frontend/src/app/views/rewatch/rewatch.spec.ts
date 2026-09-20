@@ -22,6 +22,7 @@ const HEAT: RewatchCardVm = {
   ratingStars: ['star', 'star', 'star', 'star', 'star_border'],
   ratingLabel: 'Average rating: 4.0 out of 5',
   isFavorite: true,
+  owned: true,
   dueLabel: 'Overdue by 5 days',
   letterboxdUrl: null,
 };
@@ -81,6 +82,14 @@ describe('Rewatch view', () => {
 
     const plain = await render([{ ...HEAT, isFavorite: false }]);
     expect(plain.querySelector('.rewatch__favorite')).toBeNull();
+  });
+
+  it('marks a film owned on disc and leaves an unowned one unmarked', async () => {
+    const owned = await render([HEAT]);
+    expect(owned.querySelector('.rewatch__owned')).not.toBeNull();
+
+    const plain = await render([{ ...HEAT, owned: false }]);
+    expect(plain.querySelector('.rewatch__owned')).toBeNull();
   });
 
   it('shows a dash rather than empty stars for an unrated film', async () => {

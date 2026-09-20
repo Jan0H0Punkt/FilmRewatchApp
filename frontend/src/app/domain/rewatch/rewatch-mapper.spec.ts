@@ -14,6 +14,7 @@ const HEAT: Film = {
   letterboxdUrl: 'https://boxd.it/aaaa',
   averageRating: 4,
   isFavorite: true,
+  owned: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
 };
 
@@ -72,6 +73,7 @@ describe('toRewatchCardVm', () => {
       ratingStars: ['star', 'star', 'star', 'star', 'star_border'],
       ratingLabel: 'Average rating: 4.0 out of 5',
       isFavorite: true,
+      owned: false,
       dueLabel: 'Overdue by 5 days',
       letterboxdUrl: 'https://boxd.it/aaaa',
     });
