@@ -181,6 +181,7 @@ same film can only exist once in the library).
 | `poster_image`   | URL                 | No                 | Valid URL; max 2048 characters             | URL pointing to a poster image; entered by the user                                                      |
 | `letterboxd_url` | URL                 | No                 | Valid http(s) URL; max 2048 characters     | Link to the film's Letterboxd page; entered by the user; cleared by sending an explicit `null` on PATCH   |
 | `tags`           | List\<Tag\>         | Yes                | 1–∞ tags                                   | User-defined tags assigned to this film; at least one is required                                        |
+| `owned`          | Boolean             | Yes                | Default `false`                            | Whether the user owns this film on disc; settable at create, unlike `is_favorite`/`delay_days`            |
 | `is_favorite`    | Boolean             | Yes                | Default `false`                            | Whether the user has marked this film as a favourite                                                     |
 | `delay_days`     | Integer             | Yes                | ≥ 0; default `0`                           | User-set delay (in days) to defer the next rewatch suggestion; passed as a hint to the rewatch algorithm |
 | `rating_history` | List\<RatingEntry\> | Yes (≥ 1)          | At least one entry                         | Ordered list of all ratings given to this film; never empty (every film has been watched at least once)  |
@@ -309,7 +310,7 @@ Film  1..*   ──── 1..*   Genre
 #### 5.1.2 Edit Film
 
 - **FR-LIB-06:** The user shall be able to edit any user-editable field of a film record (`titles`, `release_year`, `director`,
-  `runtime_minutes`, `genre`, `poster_image`, `tags`, `is_favorite`, `delay_days`). Editing `titles` includes adding/removing titles and changing which title is marked
+  `runtime_minutes`, `genre`, `poster_image`, `tags`, `owned`, `is_favorite`, `delay_days`). Editing `titles` includes adding/removing titles and changing which title is marked
   primary or original, subject to the Title rules in Section 4.1.
 - **FR-LIB-07:** `id` and `created_at` shall never be editable.
 - **FR-LIB-08:** Upon any successful edit, `updated_at` shall be updated to the current UTC timestamp. If the primary title (its `value` or
@@ -629,6 +630,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Average rating      | Film.average_rating                       | Displayed as a star or numeric representation                 |
 | Rewatch status      | RewatchSuggestion.days_until_next_rewatch | "Due now" when `0`; "Overdue by N days" when negative (only due/overdue films are shown) |
 | Favourite indicator | Film.is_favorite                          | Visual marker (e.g. star/heart icon) shown only when `true`   |
+| Owned indicator     | Film.owned                                | Visual marker (disc icon) shown only when `true`              |
 
 **Interactions:**
 
@@ -704,6 +706,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 | Genre                        | Displayed as a list (a film may have multiple genres)                                                                                                                                                                              |
 | Tags                         | Displayed as chips; add/remove tags directly from this view                                                                                                                                                                        |
 | Favourite                    | Toggle reflecting `Film.is_favorite`; user can switch it directly from this view or via the Edit form                                                                                                                              |
+| Owned on disc                | Toggle reflecting `Film.owned`; user can switch it directly from this view or via the Edit form                                                                                                                                    |
 | Rewatch delay                | Reflects `Film.delay_days` (days the next rewatch suggestion is deferred; `0` means none). Editable inline or via the Edit form                                                                                                    |
 | Average rating               | **Read-only** display. Computed from `rating_history` (see FR-RAT-09 / FR-RAT-10); cannot be edited directly — to change it, add or delete rating entries in Section B. Visually distinguished (e.g. large star rating component). Shows the FR-RAT-13 placeholder when there is no average. |
 | Created / updated timestamps | **Read-only** display (system-managed); shown in a subdued style                                                                                                                                                                   |
@@ -830,6 +833,7 @@ normal use.
 | 1.0     | 2026-05-15 | Initial requirements (Draft).                                                                                                           |
 | 1.2     | 2026-09-13 | Unrated watches. `RatingEntry.value` is now nullable: the user can log a watch without scoring it, for films they do not wish to rate (FR-RAT-12). `average_rating` is the mean of the *rated* entries and is `null` when none are rated (FR-RAT-09/11), displayed as an em-dash placeholder rather than zero stars (FR-RAT-13). Choosing not to rate is explicit at both the API (the `value` key is required, its value may be `null`) and the UI (§7.3 Section B). Unchanged: every film still has ≥ 1 RatingEntry, the first is still mandatory at create, and deleting the last one still deletes the film (FR-LIB-03, FR-RAT-07). Reverses part of the 1.1 "no not-yet-rated state" decision — see FR-RW-02, whose `average_rating` input can now be null. |
 | 1.1     | 2026-06-05 | Reconciled with DESIGN_V1 and approved. Genre is now a first-class entity (§4.4, modelled like Tag). Watched-only library: every film must have ≥ 1 rating — first rating mandatory at create, deleting the last rating deletes the film, no "not yet rated" state (FR-LIB-03, FR-RAT-07/11, §4.1, §4.5, §7.3). Rewatch engine is a once-daily backend job returning only due/overdue films, most-overdue first; no manual refresh (FR-RW-02/03/04/05, §7.1). Navigation is a desktop drawer + mobile bottom bar (§7, §7.4). Deployment narrowed to a single local-laptop target; multi-topology / deployment-agnostic dropped (§1.3, §3.6, FR-EXT-13, NFR-OFF-06). Global tag/genre delete deferred (FR-TAG-05). |
+| 1.4     | 2026-09-20 | Added `owned` (§4.1): a boolean marking a film the user owns on disc, defaulting to `false`. Plain metadata — no rewatch-engine input, so unlike `is_favorite`/`delay_days` it *is* accepted at create. Shown as a disc icon on the Library rows and Rewatch cards, toggled on the Film Detail view and editable in the film form. |
 | 1.3     | 2026-09-15 | Added `letterboxd_url` (§4.1): an optional, user-entered link to the film's Letterboxd page, nullable like `poster_image`. Edited on the Film Detail view only; an explicit `null` on PATCH clears it, an absent field leaves it unchanged. No `letterboxd.com` host restriction — Letterboxd's own share button produces `boxd.it` short links. |
 
 ---
