@@ -19,6 +19,7 @@ const HEAT: Film = {
   letterboxdUrl: null,
   averageRating: 4,
   isFavorite: true,
+  owned: true,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
 };
 
@@ -35,6 +36,7 @@ const SEVEN: Film = {
   letterboxdUrl: null,
   averageRating: null,
   isFavorite: false,
+  owned: false,
   titles: [
     { value: 'Se7en', isPrimary: true, isOriginal: true },
     { value: 'Seven', isPrimary: false, isOriginal: false },
@@ -85,6 +87,7 @@ describe('Library', () => {
     expect(rating?.querySelectorAll('mat-icon')).toHaveLength(5);
     expect(rating?.getAttribute('aria-label')).toBe('Average rating: 4.0 out of 5');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
+    expect(element.querySelector('.film__owned')).not.toBeNull();
   });
 
   it('links each row to its film detail route', async () => {

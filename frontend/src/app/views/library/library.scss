@@ -91,12 +91,20 @@
   gap: 1.25rem;
 }
 
-.film__favorite {
-  color: var(--favorite-color);
+.film__favorite,
+.film__owned {
   flex: none;
   font-size: 1rem;
   height: 1rem;
   width: 1rem;
+}
+
+.film__favorite {
+  color: var(--favorite-color);
+}
+
+.film__owned {
+  color: var(--owned-color);
 }
 
 .film__subtitle {

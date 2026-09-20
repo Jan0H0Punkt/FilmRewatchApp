@@ -58,6 +58,7 @@ interface FilmRowVm {
   readonly ratingStars: readonly string[] | null;
   readonly ratingLabel: string;
   readonly isFavorite: boolean;
+  readonly owned: boolean;
   /** Rough clock time the film would end if watching started now, rounded up to the next quarter hour. */
   readonly endTime: string;
 }
@@ -172,6 +173,7 @@ export class Library {
       ratingStars: ratingStarsFor(film.averageRating),
       ratingLabel: ratingLabelFor(film.averageRating),
       isFavorite: film.isFavorite,
+      owned: film.owned,
       endTime: endTimeFrom(now, film.runtimeMinutes),
     }));
   });

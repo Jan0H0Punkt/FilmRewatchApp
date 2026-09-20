@@ -15,6 +15,7 @@ function film(id: string, ...titles: readonly string[]): Film {
     letterboxdUrl: null,
     averageRating: null,
     isFavorite: false,
+    owned: false,
     titles: titles.map((value, index) => ({ value, isPrimary: index === 0, isOriginal: index === 0 })),
   };
 }

@@ -89,6 +89,9 @@
                     @if (row.isFavorite) {
                       <mat-icon class="film__favorite" aria-label="Favourite">favorite</mat-icon>
                     }
+                    @if (row.owned) {
+                      <mat-icon class="film__owned" aria-label="Owned on disc">album</mat-icon>
+                    }
                     <p class="film__rating" [attr.aria-label]="row.ratingLabel">
                       @if (row.ratingStars) {
                         @for (icon of row.ratingStars; track $index) {
