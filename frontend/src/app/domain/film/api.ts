@@ -46,6 +46,7 @@ export interface FilmDto {
   readonly tags: readonly string[];
   readonly poster_image: string | null;
   readonly letterboxd_url: string | null;
+  readonly owned: boolean;
   readonly is_favorite: boolean;
   readonly delay_days: number;
   readonly rating_history: readonly RatingEntryDto[];
@@ -60,6 +61,7 @@ export interface FilmDto {
  * here when the edit form needs them.
  */
 export interface FilmUpdateDto {
+  readonly owned?: boolean;
   readonly is_favorite?: boolean;
   readonly delay_days?: number;
   /** The full replacement title list (mirrors `FilmUpdate.titles`), revalidated by the backend against the REQ §4.1 rules. */
@@ -94,6 +96,7 @@ export interface FilmCreateDto {
   readonly tags: readonly string[];
   readonly poster_image: string | null;
   readonly letterboxd_url: string | null;
+  readonly owned: boolean;
   readonly first_rating: {
     readonly value: number | null;
     readonly watch_date: string;

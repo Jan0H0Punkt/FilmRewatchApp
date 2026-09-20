@@ -131,13 +131,20 @@ export class FilmFacade {
    */
   update(id: string, patch: FilmPatch): Observable<void> {
     const film = this.findFilm(id);
-    const previous: Pick<FilmDto, 'is_favorite' | 'delay_days' | 'tags' | 'genre'> | undefined = film
-      ? { is_favorite: film.is_favorite, delay_days: film.delay_days, tags: film.tags, genre: film.genre }
+    const previous: Pick<FilmDto, 'is_favorite' | 'owned' | 'delay_days' | 'tags' | 'genre'> | undefined = film
+      ? {
+          is_favorite: film.is_favorite,
+          owned: film.owned,
+          delay_days: film.delay_days,
+          tags: film.tags,
+          genre: film.genre,
+        }
       : undefined;
 
     this.updateFilm(id, (current) => ({
       ...current,
       ...(patch.isFavorite !== undefined ? { is_favorite: patch.isFavorite } : {}),
+      ...(patch.owned !== undefined ? { owned: patch.owned } : {}),
       ...(patch.delayDays !== undefined ? { delay_days: patch.delayDays } : {}),
       ...(patch.tags !== undefined ? { tags: patch.tags } : {}),
       ...(patch.genres !== undefined ? { genre: patch.genres } : {}),

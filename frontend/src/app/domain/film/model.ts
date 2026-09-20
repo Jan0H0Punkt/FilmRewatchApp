@@ -26,6 +26,8 @@ export interface Film {
    */
   readonly averageRating: number | null;
   readonly isFavorite: boolean;
+  /** "I own this film on disc" (REQ §4.1) — every list marks it with a disc icon. */
+  readonly owned: boolean;
   /**
    * Every title the film has, primary first. The list prints `primaryTitle`
    * alone, but the Library's title search matches against all of them
@@ -71,6 +73,7 @@ export interface FilmDetail extends Film {
  */
 export interface FilmPatch {
   readonly isFavorite?: boolean;
+  readonly owned?: boolean;
   readonly delayDays?: number;
   /** The film's complete title list, not a delta — same full-replacement rule as `tags` (REQ §4.1). */
   readonly titles?: readonly FilmTitleInput[];
@@ -124,6 +127,8 @@ export interface FilmCreateInput {
   readonly posterImage: string | null;
   /** User-entered Letterboxd link (REQ §4.1), same optionality as `posterImage`. */
   readonly letterboxdUrl: string | null;
+  /** Unlike `isFavorite`/`delayDays`, this one *is* accepted at create — it is no rewatch-engine input. */
+  readonly owned: boolean;
   /** ISO `yyyy-MM-dd`, never in the future (FR-RAT-03). */
   readonly watchDate: string;
   /** `null` for a watch the user explicitly chose not to rate (FR-RAT-12). */

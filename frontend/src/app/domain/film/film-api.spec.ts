@@ -24,6 +24,7 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     poster_image: null,
     letterboxd_url: null,
     is_favorite: false,
+    owned: false,
     delay_days: 0,
     rating_history: [],
     created_at: '2024-01-01T00:00:00Z',
@@ -206,6 +207,7 @@ describe('FilmApi.create', () => {
       letterboxd_url: null,
       first_rating: { value: 4, watch_date: '2024-01-01' },
       watched_before: false,
+      owned: false,
     };
     let created: FilmDto | undefined;
     api.create(payload).subscribe((film) => (created = film));

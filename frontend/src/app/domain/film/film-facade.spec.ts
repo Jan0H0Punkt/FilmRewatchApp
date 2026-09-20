@@ -29,6 +29,7 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     poster_image: null,
     letterboxd_url: null,
     is_favorite: false,
+    owned: false,
     delay_days: 0,
     rating_history: [{ id: 'r1', value: 4, watch_date: '2024-01-01', created_at: '2024-01-01T00:00:00Z' }],
     created_at: '2024-01-01T00:00:00Z',
@@ -296,6 +297,7 @@ describe('FilmFacade', () => {
       watchDate: '2024-01-01',
       rating: 4,
       watchedBefore: false,
+      owned: false,
     };
 
     it('POSTs the mapped payload and resolves to the created film', async () => {

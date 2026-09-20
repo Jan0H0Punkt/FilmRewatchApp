@@ -15,6 +15,7 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     poster_image: null,
     letterboxd_url: null,
     is_favorite: false,
+    owned: false,
     delay_days: 0,
     rating_history: [],
     created_at: '2024-01-01T00:00:00Z',
@@ -90,6 +91,7 @@ function createInput(overrides: Partial<FilmCreateInput> = {}): FilmCreateInput 
     watchDate: '2024-01-01',
     rating: 4,
     watchedBefore: false,
+    owned: false,
     ...overrides,
   };
 }

@@ -34,6 +34,7 @@ export function toFilm(dto: FilmDto): Film {
     letterboxdUrl: dto.letterboxd_url,
     averageRating: averageRatingOf(dto.rating_history),
     isFavorite: dto.is_favorite,
+    owned: dto.owned,
     titles: dto.titles.map((title) => ({
       value: title.value,
       isPrimary: title.is_primary,
@@ -80,6 +81,7 @@ function toTitleCreateDtos(titles: readonly FilmTitleInput[]): TitleCreateDto[] 
 export function toFilmUpdateDto(patch: FilmPatch): FilmUpdateDto {
   return {
     is_favorite: patch.isFavorite,
+    owned: patch.owned,
     delay_days: patch.delayDays,
     titles: patch.titles && toTitleCreateDtos(patch.titles),
     release_year: patch.releaseYear,
@@ -103,6 +105,7 @@ export function toFilmCreateDto(input: FilmCreateInput): FilmCreateDto {
     tags: input.tags,
     poster_image: input.posterImage,
     letterboxd_url: input.letterboxdUrl,
+    owned: input.owned,
     first_rating: { value: input.rating, watch_date: input.watchDate },
     watched_before: input.watchedBefore,
   };
