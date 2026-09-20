@@ -264,6 +264,13 @@
         >
           Add rating
         </button>
+
+        <!-- Not part of the form above: it logs a watch of its own — undated
+           and unrated — for a film the user had already seen at some forgotten
+           point (FR-RAT-04/12), so neither the picker nor the date applies. -->
+        <button matButton type="button" [disabled]="isSubmittingRating()" (click)="addEarlierWatch()">
+          I had seen this before
+        </button>
       </form>
 
       <mat-divider class="rating-form__divider" />

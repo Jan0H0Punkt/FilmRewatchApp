@@ -40,7 +40,7 @@ import { FilmFacade } from '../../domain/film/facade';
 import { GenreFacade } from '../../domain/genre/facade';
 import type { FilmDetail as FilmDetailModel, FilmPatch, RatingHistoryEntry } from '../../domain/film/model';
 import { RatingFacade } from '../../domain/rating/facade';
-import type { RatingDraft } from '../../domain/rating/model';
+import { EARLIER_WATCH_DATE, type RatingDraft } from '../../domain/rating/model';
 import { TagFacade } from '../../domain/tag/facade';
 import { ConfirmDialog, type ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { EditableChips } from '../../shared/editable-chips/editable-chips';
@@ -151,9 +151,23 @@ function toRatingHistoryVm(entry: RatingHistoryEntry): RatingHistoryVm {
   return {
     id: entry.id,
     stars: ratingStars(entry.value),
-    watchDate: dateFormat.format(new Date(entry.watchDate)),
+    // The FR-RAT-04/12 prior watch carries a sentinel date, not a real one —
+    // formatting it would claim the user watched the film in 1888.
+    watchDate: entry.watchDate === EARLIER_WATCH_DATE ? 'earlier' : dateFormat.format(new Date(entry.watchDate)),
     createdAt: timestampFormat.format(new Date(entry.createdAt)),
   };
+}
+
+/**
+ * "Last watched N days ago", from the newest watch that carries a real date.
+ *
+ * History is watch-date descending, so that is the first entry — unless the
+ * film's only watches are undated prior ones (FR-RAT-04/12), whose sentinel
+ * date would otherwise report it as last watched well over a century ago.
+ */
+function lastWatchedLabelFor(history: readonly RatingHistoryEntry[]): string | null {
+  const dated = history.find((entry) => entry.watchDate !== EARLIER_WATCH_DATE);
+  return dated === undefined ? null : `Last watched ${relativeDaysLabel(daysSince(dated.watchDate))}`;
 }
 
 function toVm(film: FilmDetailModel, now: number): FilmDetailVm {
@@ -176,10 +190,7 @@ function toVm(film: FilmDetailModel, now: number): FilmDetailVm {
     createdAt: timestampFormat.format(new Date(film.createdAt)),
     updatedAt: timestampFormat.format(new Date(film.updatedAt)),
     ratingHistory: film.ratingHistory.map(toRatingHistoryVm),
-    lastWatchedLabel:
-      film.ratingHistory.length > 0
-        ? `Last watched ${relativeDaysLabel(daysSince(film.ratingHistory[0].watchDate))}`
-        : null,
+    lastWatchedLabel: lastWatchedLabelFor(film.ratingHistory),
     isFavorite: film.isFavorite,
     letterboxdUrl: film.letterboxdUrl,
   };
@@ -327,13 +338,30 @@ export class FilmDetail {
 
     // FR-RAT-12: the API's `value` key is required even for "Don't rate this".
     const draft: RatingDraft = { value: selected === 'unrated' ? null : selected, watchDate: toIsoDate(watchDate) };
+    this.logWatch(draft, () => {
+      this.selectedValue.set(null);
+      this.watchDate.set(this.today);
+    });
+  }
+
+  /**
+   * "I had seen this before" — logs one undated, unrated watch
+   * (FR-RAT-04/12), so the rewatch engine counts it without the user having
+   * to invent a date they no longer remember.
+   */
+  protected addEarlierWatch(): void {
+    if (this.isSubmittingRating()) return;
+    this.logWatch({ value: null, watchDate: EARLIER_WATCH_DATE });
+  }
+
+  /** The shared tail of both watch actions: hold the buttons, then reset on success or surface the failure. */
+  private logWatch(draft: RatingDraft, onLogged?: () => void): void {
     this.isSubmittingRating.set(true);
     this.ratings.add(this.id(), draft).subscribe({
       next: () => {
         this.isSubmittingRating.set(false);
         this.addRatingError.set(null);
-        this.selectedValue.set(null);
-        this.watchDate.set(this.today);
+        onLogged?.();
       },
       error: (error: unknown) => {
         this.isSubmittingRating.set(false);
