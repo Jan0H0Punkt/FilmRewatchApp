@@ -109,7 +109,8 @@
                 matIconButton
                 type="button"
                 [attr.aria-pressed]="film.owned"
-                [attr.aria-label]="film.owned ? 'Not owned on disc' : 'Owned on disc'"
+                [matTooltip]="film.owned ? 'Mark as not owned' : 'Mark as owned on disc'"
+                [attr.aria-label]="film.owned ? 'Mark as not owned' : 'Mark as owned on disc'"
                 (click)="toggleOwned()"
               >
                 <mat-icon>album</mat-icon>

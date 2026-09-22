@@ -437,7 +437,7 @@ describe('FilmDetail', () => {
       const filmFacade = stubFilmFacade(HEAT);
       const element = await render(filmFacade);
 
-      element.querySelector<HTMLButtonElement>('[aria-label="Owned on disc"]')?.click();
+      element.querySelector<HTMLButtonElement>('[aria-label="Mark as owned on disc"]')?.click();
 
       expect(filmFacade.update).toHaveBeenCalledWith(HEAT.id, { owned: true });
     });
