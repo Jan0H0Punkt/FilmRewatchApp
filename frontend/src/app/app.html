@@ -1,5 +1,5 @@
 <nav class="app-nav" aria-label="Primary">
-  <p class="app-nav__brand">{{ appName }}</p>
+  <img class="app-nav__brand" src="logo.svg" [alt]="appName" />
   @for (destination of destinations; track destination.path) {
     <a
       class="app-nav__link"

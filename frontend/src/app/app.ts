@@ -42,7 +42,7 @@ const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  /** App branding, shown in the sidebar — the app bar itself carries the current page's title instead. */
+  /** Alt text of the sidebar logo — the app bar itself carries the current page's title instead. */
   protected readonly appName = 'Film Rewatch';
 
   private readonly router = inject(Router);

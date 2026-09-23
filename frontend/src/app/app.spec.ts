@@ -19,8 +19,8 @@ async function render(routes: Parameters<typeof provideRouter>[0] = []): Promise
 class StubView {}
 
 describe('App', () => {
-  it('renders the app name as the sidebar branding', async () => {
-    expect((await render()).querySelector('.app-nav__brand')?.textContent).toContain('Film Rewatch');
+  it('renders the logo as the sidebar branding, named by the app name', async () => {
+    expect((await render()).querySelector('img.app-nav__brand')?.getAttribute('alt')).toBe('Film Rewatch');
   });
 
   it("shows the active route's title in the app bar, not the app name", async () => {
