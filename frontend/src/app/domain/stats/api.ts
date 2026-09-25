@@ -23,6 +23,7 @@ export interface StatsBlockDto {
   readonly rating_distribution: readonly { readonly value: number; readonly count: number }[];
   readonly top_genres: readonly TopNameDto[];
   readonly top_directors: readonly TopNameDto[];
+  readonly top_tags: readonly TopNameDto[];
   readonly top_films: readonly {
     readonly film_id: string;
     readonly title: string;

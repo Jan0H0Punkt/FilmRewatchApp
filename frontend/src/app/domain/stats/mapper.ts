@@ -25,6 +25,7 @@ function toBlock(dto: StatsBlockDto, bucketLabel: (label: string) => string): St
     ratingDistribution: dto.rating_distribution,
     topGenres: toTopName(dto.top_genres),
     topDirectors: toTopName(dto.top_directors),
+    topTags: toTopName(dto.top_tags),
     topFilms: dto.top_films.map((f) => ({
       filmId: f.film_id,
       title: f.title,

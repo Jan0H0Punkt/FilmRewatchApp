@@ -38,6 +38,7 @@ export interface StatsBlock {
   readonly ratingDistribution: readonly RatingCount[];
   readonly topGenres: readonly TopName[];
   readonly topDirectors: readonly TopName[];
+  readonly topTags: readonly TopName[];
   readonly topFilms: readonly TopFilm[];
   readonly buckets: readonly Bucket[];
 }
