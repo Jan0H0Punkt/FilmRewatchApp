@@ -23,6 +23,7 @@ from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
 from app.rewatch.router import router as rewatch_router
+from app.settings.router import router as settings_router
 from app.stats.router import router as stats_router
 from app.tags.router import router as tags_router
 
@@ -37,9 +38,10 @@ def health() -> dict[str, str]:
 def build_api_router() -> APIRouter:
     """Assemble the versioned ``/api/v1`` router from each feature module.
 
-    Films, ratings, tags, and genres carry the core-domain surface, and rewatch
-    serves the M4 due-list (§5.8) — the §5.1 wiring holds throughout: a
-    router never imports a repository.
+    Films, ratings, tags, and genres carry the core-domain surface, rewatch
+    serves the M4 due-list (§5.8), and settings serves the rewatch-share
+    setting (FR-RW-08) — the §5.1 wiring holds throughout: a router never
+    imports a repository.
     """
     api = APIRouter(prefix=API_V1_PREFIX)
     api.add_api_route("/health", health, methods=["GET"], tags=["health"], summary="Liveness probe")
@@ -50,6 +52,7 @@ def build_api_router() -> APIRouter:
     api.include_router(genres_router, prefix="/genres", tags=["genres"])
     api.include_router(rewatch_router, prefix="/rewatch-suggestions", tags=["rewatch"])
     api.include_router(stats_router, prefix="/stats", tags=["stats"])
+    api.include_router(settings_router, prefix="/settings", tags=["settings"])
     # There is no ``app/adapters`` module — the adapter pattern (§5.6) is future
     # work, if ever. Were one built, it would be an internal integration
     # surface, not a public API namespace, so nothing would be mounted here.

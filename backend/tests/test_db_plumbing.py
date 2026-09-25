@@ -8,13 +8,17 @@ from app.films.models import Film, Title
 from app.genres.models import FilmGenre, Genre
 from app.ratings.models import RatingEntry
 from app.rewatch.models import RewatchSuggestion
+from app.settings.models import Settings
 from app.tags.models import FilmTag, Tag
 
 
-def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection() -> None:
+def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection_and_settings() -> (
+    None
+):
     # One table per entity/join (REQ §4.1-4.5), plus the M4 rewatch projection
-    # (§5.8) — and nothing else: a stray model would silently widen the schema.
-    # Importing the classes is what registers them on ``Base.metadata``.
+    # (§5.8) and the M4 settings table (FR-RW-08) — and nothing else: a stray
+    # model would silently widen the schema. Importing the classes is what
+    # registers them on ``Base.metadata``.
     domain_models = (Film, Title, RatingEntry, Tag, FilmTag, Genre, FilmGenre)
     assert {model.__tablename__ for model in domain_models} == {
         "films",
@@ -26,7 +30,8 @@ def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection() 
         "film_genres",
     }
     assert set(Base.metadata.tables) == {model.__tablename__ for model in domain_models} | {
-        RewatchSuggestion.__tablename__
+        RewatchSuggestion.__tablename__,
+        Settings.__tablename__,
     }
 
 

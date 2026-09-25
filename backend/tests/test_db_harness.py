@@ -28,7 +28,9 @@ def _make_film(natural_key: str) -> Film:
     )
 
 
-def test_migrated_schema_has_the_domain_tables_and_the_projection(db_engine: Engine) -> None:
+def test_migrated_schema_has_the_domain_tables_and_the_projection_and_settings(
+    db_engine: Engine,
+) -> None:
     # The fixture ran the real Alembic chain, not create_all.
     assert set(inspect(db_engine).get_table_names()) == {
         "films",
@@ -39,6 +41,7 @@ def test_migrated_schema_has_the_domain_tables_and_the_projection(db_engine: Eng
         "genres",
         "film_genres",
         "rewatch_suggestions",
+        "settings",
         "alembic_version",
     }
 

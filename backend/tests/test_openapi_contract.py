@@ -47,6 +47,9 @@ _EXPECTED_ROUTES = {
     ("GET", "/api/v1/rewatch-suggestions"),
     # The statistics view (2026-09-25-statistics-design.md).
     ("GET", "/api/v1/stats"),
+    # The rewatch-share setting (2026-09-25-rewatch-share-design.md, FR-RW-08).
+    ("GET", "/api/v1/settings"),
+    ("PUT", "/api/v1/settings"),
 }
 
 # The framework-level codes core/errors.py's handlers can emit without a
