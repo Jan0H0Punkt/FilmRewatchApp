@@ -1,0 +1,164 @@
+"""The statistics computation (docs/superpowers/specs/2026-09-25-statistics-design.md).
+
+Pure and dependency-free, like ``app.rewatch.algorithm``: it takes every watch
+as a flat :class:`Watch` and returns the whole payload, so every definition is
+testable without a database. An undated watch ("seen before, date unknown",
+FR-RAT-04/12) arrives with ``watch_date=None``; it counts in the all-time block
+only, and makes every dated watch of its film a rewatch.
+"""
+
+from collections import Counter
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from uuid import UUID
+
+TOP_N = 5
+# 0.5-5.0 in half steps (REQ §5.4) — every bucket is reported, zeros included.
+RATING_VALUES = [n / 2 for n in range(1, 11)]
+
+
+@dataclass(frozen=True, slots=True)
+class Watch:
+    """One rating entry joined with the film data the statistics read."""
+
+    film_id: UUID
+    title: str
+    release_year: int
+    director: str
+    runtime_minutes: int
+    genres: tuple[str, ...]
+    watch_date: date | None
+    value: Decimal | None
+
+
+@dataclass(frozen=True, slots=True)
+class NamedCount:
+    name: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class FilmCount:
+    film_id: UUID
+    title: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class RatingCount:
+    value: float
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class Bucket:
+    """A month (``"1"``-``"12"``) in a year block, a year in the all-time block."""
+
+    label: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class StatsBlock:
+    watches: int
+    first_watches: int
+    rewatches: int
+    # ``None`` in the all-time block, where "released that year" has no year.
+    films_released_that_year: int | None
+    distinct_films: int
+    minutes_watched: int
+    average_rating: float | None
+    rating_distribution: list[RatingCount]
+    top_genres: list[NamedCount]
+    top_directors: list[NamedCount]
+    top_films: list[FilmCount]
+    buckets: list[Bucket]
+
+
+@dataclass(frozen=True, slots=True)
+class YearStats:
+    year: int
+    block: StatsBlock
+
+
+@dataclass(frozen=True, slots=True)
+class Stats:
+    total: StatsBlock
+    years: list[YearStats]
+
+
+def compute(watches: Sequence[Watch], today: date) -> Stats:
+    """All-time block plus one block per year, newest year first."""
+    undated_films = {w.film_id for w in watches if w.watch_date is None}
+    dated = [(w, w.watch_date) for w in watches if w.watch_date is not None]
+
+    # A film's first watch is its earliest dated entry — unless an undated
+    # entry says it was seen before, in which case it has none.
+    first_seen: dict[UUID, date] = {}
+    for watch, watched in dated:
+        if watch.film_id not in undated_films:
+            first_seen[watch.film_id] = min(first_seen.get(watch.film_id, watched), watched)
+    first_per_year = Counter(d.year for d in first_seen.values())
+
+    per_year = Counter(watched.year for _, watched in dated)
+    years = range(min(per_year), max(today.year, *per_year) + 1) if per_year else range(0)
+
+    total = _block(
+        watches,
+        first_watches=len(first_seen),
+        films_released_that_year=None,
+        buckets=[Bucket(str(y), per_year[y]) for y in years],
+    )
+    return Stats(total=total, years=[_year(y, dated, first_per_year[y]) for y in reversed(years)])
+
+
+def _year(year: int, dated: list[tuple[Watch, date]], first_watches: int) -> YearStats:
+    in_year = [(w, d) for w, d in dated if d.year == year]
+    months = Counter(d.month for _, d in in_year)
+    watches = [w for w, _ in in_year]
+    return YearStats(
+        year=year,
+        block=_block(
+            watches,
+            first_watches=first_watches,
+            films_released_that_year=len({w.film_id for w in watches if w.release_year == year}),
+            buckets=[Bucket(str(m), months[m]) for m in range(1, 13)],
+        ),
+    )
+
+
+def _block(
+    watches: Sequence[Watch],
+    *,
+    first_watches: int,
+    films_released_that_year: int | None,
+    buckets: list[Bucket],
+) -> StatsBlock:
+    rated = [float(w.value) for w in watches if w.value is not None]
+    ratings = Counter(rated)
+    titles = {w.film_id: w.title for w in watches}
+    return StatsBlock(
+        watches=len(watches),
+        first_watches=first_watches,
+        rewatches=len(watches) - first_watches,
+        films_released_that_year=films_released_that_year,
+        distinct_films=len(titles),
+        minutes_watched=sum(w.runtime_minutes for w in watches),
+        average_rating=round(sum(rated) / len(rated), 2) if rated else None,
+        rating_distribution=[RatingCount(v, ratings[v]) for v in RATING_VALUES],
+        top_genres=[NamedCount(n, c) for n, c in _top((g for w in watches for g in w.genres), str)],
+        top_directors=[NamedCount(n, c) for n, c in _top((w.director for w in watches), str)],
+        top_films=[
+            FilmCount(f, titles[f], c)
+            for f, c in _top((w.film_id for w in watches), titles.__getitem__)
+        ],
+        buckets=buckets,
+    )
+
+
+def _top[K: Hashable](keys: Iterable[K], name: Callable[[K], str]) -> list[tuple[K, int]]:
+    """The ``TOP_N`` most frequent keys; a tie sorts alphabetically by ``name``."""
+    counts = Counter(keys)
+    return sorted(counts.items(), key=lambda item: (-item[1], name(item[0])))[:TOP_N]
