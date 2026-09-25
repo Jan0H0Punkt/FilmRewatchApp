@@ -112,7 +112,8 @@
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
                 <a class="stats__name" [routerLink]="['/film', f.filmId]">{{ f.title }}</a>
-                <span class="stats__count">{{ f.watches }}× · {{ f.averageRating | number: '1.1-2' }}★</span>
+                <span class="stats__watches">{{ f.watches }}×</span>
+                <span class="stats__rating">{{ f.averageRating | number: '1.1-1' }}★</span>
               </li>
             }
           </ol>
@@ -133,7 +134,8 @@
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
                 <span class="stats__name">{{ d.name }}</span>
-                <span class="stats__count">{{ d.watches }}× · {{ d.averageRating | number: '1.1-2' }}★</span>
+                <span class="stats__watches">{{ d.watches }}×</span>
+                <span class="stats__rating">{{ d.averageRating | number: '1.1-1' }}★</span>
               </li>
             }
           </ol>
@@ -154,7 +156,8 @@
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
                 <span class="stats__name">{{ g.name }}</span>
-                <span class="stats__count">{{ g.watches }}× · {{ g.averageRating | number: '1.1-2' }}★</span>
+                <span class="stats__watches">{{ g.watches }}×</span>
+                <span class="stats__rating">{{ g.averageRating | number: '1.1-1' }}★</span>
               </li>
             }
           </ol>

@@ -63,7 +63,8 @@ describe('Stats view', () => {
     expect(el.textContent).toContain('Heat');
     expect(el.textContent).toContain('Michael Mann');
     expect(el.textContent).toContain('Crime');
-    expect(el.textContent).toContain('2× · 4.0★');
+    expect(el.textContent).toContain('2×');
+    expect(el.textContent).toContain('4.0★');
   });
 
   it('shows the empty state for a year without watches', () => {

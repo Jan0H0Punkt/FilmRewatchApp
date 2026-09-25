@@ -101,9 +101,9 @@
   }
 
   ol {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    row-gap: 4px;
     padding: 0;
     margin: 0;
     list-style: none;
@@ -111,8 +111,9 @@
 
   li {
     position: relative;
+    grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: subgrid;
     align-items: center;
     gap: 8px;
     min-block-size: 36px;
@@ -161,11 +162,16 @@ a.stats__name {
   }
 }
 
-.stats__count {
+.stats__watches,
+.stats__rating {
   position: relative;
   z-index: 1;
-  text-align: right;
+  text-align: end;
   font: var(--mat-sys-label-large);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.stats__rating {
+  color: var(--mat-sys-on-surface-variant);
 }
