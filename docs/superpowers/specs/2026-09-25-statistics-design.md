@@ -29,14 +29,14 @@ A **watch** is one rating entry, rated or not (FR-RAT-12). Entries dated `EARLIE
 | `minutes_watched` | Σ film runtime over the year's watches | Σ over all watches, incl. undated |
 | `average_rating` | Mean of non-null values in Y; `null` if none | Mean of all non-null values |
 | `rating_distribution` | Count per value 0.5…5.0 (10 buckets, zeros included), non-null only | same, all time |
-| `top_genres` | Top 5 genres by watch count | same, all time |
-| `top_directors` | Top 5 directors by watch count | same, all time |
-| `top_films` | Top 5 films by `score = watches × average_rating` of the film's rated watches (id + primary title + watches + average_rating + score); unrated watches count in `watches` but are never imputed a rating value, so a film with no rated watch in the block has no score and is excluded | same, all time |
+| `top_genres` | Top 5 genres by `score = watches × average_rating` of the genre's rated watches (name + watches + average_rating + score); a watch counts once per genre of its film. Unrated watches count in `watches` but are never imputed a rating value, so a genre with no rated watch in the block has no score and is excluded | same, all time |
+| `top_directors` | Same rule as `top_genres`, keyed by director | same, all time |
+| `top_films` | Same rule, keyed by film (id + primary title + watches + average_rating + score) | same, all time |
 | `buckets` | 12 month buckets (Jan–Dec) with watch counts | One bucket per tracked year |
 
 Rules:
 
-- Top-list ties break alphabetically (by name / title) so output is deterministic.
+- Top lists order by score desc, then average_rating desc, then name/title asc, so output is deterministic.
 - The year list runs from the earliest **dated** watch's year through the current year, **newest first**. Years with no watches are included (all counts zero, averages `null`, lists empty).
 - With no dated watches at all, `years` is empty.
 - Undated entries count only in all-time metrics, never in any year.
@@ -52,7 +52,7 @@ Rules:
 }
 ```
 
-`StatsBlock`: `watches`, `first_watches`, `rewatches`, `films_released_that_year`, `distinct_films`, `minutes_watched`, `average_rating`, `rating_distribution` (`[{value, count}]`), `top_genres` / `top_directors` (`[{name, count}]`), `top_films` (`[{film_id, title, watches, average_rating, score}]`), `buckets` (`[{label, count}]` — `"1"`…`"12"` for months, `"2025"` for years).
+`StatsBlock`: `watches`, `first_watches`, `rewatches`, `films_released_that_year`, `distinct_films`, `minutes_watched`, `average_rating`, `rating_distribution` (`[{value, count}]`), `top_genres` / `top_directors` (`[{name, watches, average_rating, score}]`), `top_films` (`[{film_id, title, watches, average_rating, score}]`), `buckets` (`[{label, count}]` — `"1"`…`"12"` for months, `"2025"` for years).
 
 ## Frontend
 
