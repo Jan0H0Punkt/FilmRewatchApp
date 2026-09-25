@@ -26,6 +26,10 @@ function block(watches: number): StatsBlock {
   };
 }
 
+function totalBlockWithYearBucket(): StatsBlock {
+  return { ...block(5), buckets: [{ label: '2005', count: 3 }] };
+}
+
 function render(stats: Stats): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StatsView],
@@ -70,5 +74,13 @@ describe('Stats view', () => {
 
     expect(el.querySelector('[aria-checked="true"]')?.textContent).toContain('All time');
     expect(el.textContent).not.toContain('No watches this year');
+  });
+
+  it('shortens the all-time chart year labels but keeps the full year in aria-label', () => {
+    const el = render({ total: totalBlockWithYearBucket(), years: [] });
+
+    const bar = el.querySelector('.stats__bars li');
+    expect(bar?.getAttribute('aria-label')).toBe('2005: 3');
+    expect(bar?.querySelector('.stats__bar-label')?.textContent).toBe("'05");
   });
 });

@@ -60,4 +60,14 @@ export class Stats {
   protected percent(count: number, all: readonly { readonly count: number }[]): number {
     return (count / Math.max(1, ...all.map((item) => item.count))) * 100;
   }
+
+  /**
+   * The all-time chart's buckets are 4-digit years, which overlap at phone
+   * width once ~12+ years are tracked; the year scope's month labels ("1"…
+   * "12") are short enough already. `aria-label` on the bar still carries
+   * the full label.
+   */
+  protected barLabel(label: string): string {
+    return this.scope() === 'all' ? `'${label.slice(-2)}` : label;
+  }
 }

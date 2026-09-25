@@ -47,7 +47,7 @@
         @if (b.filmsReleasedThatYear !== null) {
           <li>
             <mat-card
-              ><strong>{{ b.filmsReleasedThatYear }}</strong> released this year</mat-card
+              ><strong>{{ b.filmsReleasedThatYear }}</strong> released that year</mat-card
             >
           </li>
         }
@@ -70,7 +70,7 @@
             <li [attr.aria-label]="bucket.label + ': ' + bucket.count">
               <span class="stats__bar-count" aria-hidden="true">{{ bucket.count || '' }}</span>
               <span class="stats__bar" [style.height.%]="percent(bucket.count, b.buckets)" aria-hidden="true"></span>
-              <span class="stats__bar-label" aria-hidden="true">{{ bucket.label }}</span>
+              <span class="stats__bar-label" aria-hidden="true">{{ barLabel(bucket.label) }}</span>
             </li>
           }
         </ol>
