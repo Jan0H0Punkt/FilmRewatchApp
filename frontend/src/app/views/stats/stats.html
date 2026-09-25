@@ -111,7 +111,14 @@
                   [style.width.%]="percent(f.score, scores(b.topFilms))"
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
-                <a class="stats__name" [routerLink]="['/film', f.filmId]">{{ f.title }}</a>
+                <a
+                  class="stats__name"
+                  [routerLink]="['/film', f.filmId]"
+                  [matTooltip]="f.title"
+                  matTooltipPosition="above"
+                  appTruncatedTooltip
+                  >{{ f.title }}</a
+                >
                 <span class="stats__watches">{{ f.watches }}×</span>
                 <span class="stats__rating">{{ f.averageRating | number: '1.1-1' }}★</span>
               </li>
@@ -133,7 +140,9 @@
                   [style.width.%]="percent(d.score, scores(b.topDirectors))"
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
-                <span class="stats__name">{{ d.name }}</span>
+                <span class="stats__name" [matTooltip]="d.name" matTooltipPosition="above" appTruncatedTooltip>{{
+                  d.name
+                }}</span>
                 <span class="stats__watches">{{ d.watches }}×</span>
                 <span class="stats__rating">{{ d.averageRating | number: '1.1-1' }}★</span>
               </li>
@@ -155,7 +164,9 @@
                   [style.width.%]="percent(g.score, scores(b.topGenres))"
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
-                <span class="stats__name">{{ g.name }}</span>
+                <span class="stats__name" [matTooltip]="g.name" matTooltipPosition="above" appTruncatedTooltip>{{
+                  g.name
+                }}</span>
                 <span class="stats__watches">{{ g.watches }}×</span>
                 <span class="stats__rating">{{ g.averageRating | number: '1.1-1' }}★</span>
               </li>
