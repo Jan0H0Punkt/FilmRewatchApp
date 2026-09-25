@@ -13,7 +13,11 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 
 import { StatsFacade } from '../../domain/stats/facade';
-import type { StatsBlock } from '../../domain/stats/model';
+import type { StatsBlock, TopFilm } from '../../domain/stats/model';
+
+interface Counted {
+  readonly count: number;
+}
 
 type Scope = number | 'all';
 
@@ -56,9 +60,17 @@ export class Stats {
     this.facade.reload();
   }
 
-  /** Bar height in percent of the tallest bar in the same chart. */
-  protected percent(count: number, all: readonly { readonly count: number }[]): number {
-    return (count / Math.max(1, ...all.map((item) => item.count))) * 100;
+  /** Bar size in percent of the tallest value in the same chart. */
+  protected percent(value: number, all: readonly number[]): number {
+    return (value / Math.max(1, ...all)) * 100;
+  }
+
+  protected counts(items: readonly Counted[]): number[] {
+    return items.map((item) => item.count);
+  }
+
+  protected scores(films: readonly TopFilm[]): number[] {
+    return films.map((f) => f.score);
   }
 
   /**
