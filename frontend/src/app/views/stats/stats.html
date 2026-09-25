@@ -121,15 +121,19 @@
           <h2>Top directors</h2>
           <ol>
             @for (d of b.topDirectors; track d.name; let i = $index) {
-              <li>
+              <li
+                [attr.aria-label]="
+                  d.name + ', ' + d.watches + ' watches, average ' + (d.averageRating | number: '1.1-2')
+                "
+              >
                 <span
                   class="stats__rank-bar"
                   aria-hidden="true"
-                  [style.width.%]="percent(d.count, counts(b.topDirectors))"
+                  [style.width.%]="percent(d.score, scores(b.topDirectors))"
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
                 <span class="stats__name">{{ d.name }}</span>
-                <span class="stats__count">{{ d.count }}</span>
+                <span class="stats__count">{{ d.watches }}× · {{ d.averageRating | number: '1.1-2' }}★</span>
               </li>
             }
           </ol>
@@ -138,15 +142,19 @@
           <h2>Top genres</h2>
           <ol>
             @for (g of b.topGenres; track g.name; let i = $index) {
-              <li>
+              <li
+                [attr.aria-label]="
+                  g.name + ', ' + g.watches + ' watches, average ' + (g.averageRating | number: '1.1-2')
+                "
+              >
                 <span
                   class="stats__rank-bar"
                   aria-hidden="true"
-                  [style.width.%]="percent(g.count, counts(b.topGenres))"
+                  [style.width.%]="percent(g.score, scores(b.topGenres))"
                 ></span>
                 <span class="stats__rank">{{ i + 1 }}</span>
                 <span class="stats__name">{{ g.name }}</span>
-                <span class="stats__count">{{ g.count }}</span>
+                <span class="stats__count">{{ g.watches }}× · {{ g.averageRating | number: '1.1-2' }}★</span>
               </li>
             }
           </ol>

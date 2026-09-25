@@ -13,10 +13,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 
 import { StatsFacade } from '../../domain/stats/facade';
-import type { StatsBlock, TopFilm } from '../../domain/stats/model';
+import type { StatsBlock } from '../../domain/stats/model';
 
 interface Counted {
   readonly count: number;
+}
+
+interface Scored {
+  readonly score: number;
 }
 
 type Scope = number | 'all';
@@ -69,8 +73,8 @@ export class Stats {
     return items.map((item) => item.count);
   }
 
-  protected scores(films: readonly TopFilm[]): number[] {
-    return films.map((f) => f.score);
+  protected scores(items: readonly Scored[]): number[] {
+    return items.map((item) => item.score);
   }
 
   /**

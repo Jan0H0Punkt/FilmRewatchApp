@@ -19,8 +19,8 @@ function block(watches: number): StatsBlock {
     minutesWatched: watches * 120,
     averageRating: watches ? 4 : null,
     ratingDistribution: [],
-    topGenres: [],
-    topDirectors: [],
+    topGenres: watches ? [{ name: 'Crime', watches, averageRating: 4, score: watches * 4 }] : [],
+    topDirectors: watches ? [{ name: 'Michael Mann', watches, averageRating: 4, score: watches * 4 }] : [],
     topFilms: watches ? [{ filmId: 'f1', title: 'Heat', watches, averageRating: 4, score: watches * 4 }] : [],
     buckets: [],
   };
@@ -61,6 +61,8 @@ describe('Stats view', () => {
     // there is no `[selectable]` guard that can blank the attribute out.
     expect(el.querySelector('[aria-checked="true"]')?.textContent).toContain(String(THIS_YEAR));
     expect(el.textContent).toContain('Heat');
+    expect(el.textContent).toContain('Michael Mann');
+    expect(el.textContent).toContain('Crime');
     expect(el.textContent).toContain('2× · 4.0★');
   });
 
