@@ -8,13 +8,17 @@
 }
 
 .stats__scopes {
-  // Overrides the group's own `display: inline-flex; overflow: hidden;` (button-toggle.scss):
-  // a year per toggle can outgrow one row at phone width, and `overflow: hidden` would clip
-  // any wrapped row rather than showing it.
-  display: flex;
-  flex-wrap: wrap;
-  overflow: visible;
+  // A year per toggle can outgrow one row at phone width. Material's own group is
+  // `inline-flex; overflow: hidden` so its rounded pill clips the selected highlight
+  // correctly — wrapping it onto multiple rows would break that shape, so instead this
+  // wrapper scrolls the (non-shrinking) group horizontally rather than reflowing it.
+  overflow-x: auto;
+  max-inline-size: 100%;
   margin-block-end: 16px;
+
+  mat-button-toggle-group {
+    flex-shrink: 0;
+  }
 }
 
 .stats__tiles {
@@ -71,4 +75,78 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+
+  mat-card {
+    padding: 16px;
+  }
+
+  h2 {
+    font: var(--mat-sys-title-medium);
+    margin: 0 0 8px;
+  }
+
+  ol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    min-block-size: 36px;
+    padding-inline: 8px;
+  }
+}
+
+.stats__rank-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  background: var(--mat-sys-secondary-container);
+  border-radius: var(--mat-sys-corner-small, 8px);
+}
+
+.stats__rank {
+  position: relative;
+  z-index: 1;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__name {
+  position: relative;
+  z-index: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.stats__name {
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+
+  &:visited {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.stats__count {
+  position: relative;
+  z-index: 1;
+  text-align: right;
+  font: var(--mat-sys-label-large);
+  font-variant-numeric: tabular-nums;
 }

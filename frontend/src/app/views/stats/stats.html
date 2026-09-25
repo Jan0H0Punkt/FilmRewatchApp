@@ -11,18 +11,19 @@
 }
 
 @if (stats(); as stats) {
-  <mat-button-toggle-group
-    class="stats__scopes"
-    aria-label="Period"
-    hideSingleSelectionIndicator
-    [value]="scope()"
-    (change)="select($event.value)"
-  >
-    <mat-button-toggle value="all">All time</mat-button-toggle>
-    @for (y of stats.years; track y.year) {
-      <mat-button-toggle [value]="y.year">{{ y.year }}</mat-button-toggle>
-    }
-  </mat-button-toggle-group>
+  <div class="stats__scopes">
+    <mat-button-toggle-group
+      aria-label="Period"
+      hideSingleSelectionIndicator
+      [value]="scope()"
+      (change)="select($event.value)"
+    >
+      <mat-button-toggle value="all">All time</mat-button-toggle>
+      @for (y of stats.years; track y.year) {
+        <mat-button-toggle [value]="y.year">{{ y.year }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </div>
 
   @if (block(); as b) {
     @if (b.watches === 0 && scope() !== 'all') {
@@ -95,32 +96,49 @@
       </section>
 
       <div class="stats__tops">
-        <section>
+        <mat-card>
           <h2>Top films</h2>
           <ol>
-            @for (f of b.topFilms; track f.filmId) {
+            @for (f of b.topFilms; track f.filmId; let i = $index) {
               <li>
-                <a [routerLink]="['/film', f.filmId]">{{ f.title }}</a> · {{ f.count }}
+                <span class="stats__rank-bar" aria-hidden="true" [style.width.%]="percent(f.count, b.topFilms)"></span>
+                <span class="stats__rank">{{ i + 1 }}</span>
+                <a class="stats__name" [routerLink]="['/film', f.filmId]">{{ f.title }}</a>
+                <span class="stats__count">{{ f.count }}</span>
               </li>
             }
           </ol>
-        </section>
-        <section>
+        </mat-card>
+        <mat-card>
           <h2>Top directors</h2>
           <ol>
-            @for (d of b.topDirectors; track d.name) {
-              <li>{{ d.name }} · {{ d.count }}</li>
+            @for (d of b.topDirectors; track d.name; let i = $index) {
+              <li>
+                <span
+                  class="stats__rank-bar"
+                  aria-hidden="true"
+                  [style.width.%]="percent(d.count, b.topDirectors)"
+                ></span>
+                <span class="stats__rank">{{ i + 1 }}</span>
+                <span class="stats__name">{{ d.name }}</span>
+                <span class="stats__count">{{ d.count }}</span>
+              </li>
             }
           </ol>
-        </section>
-        <section>
+        </mat-card>
+        <mat-card>
           <h2>Top genres</h2>
           <ol>
-            @for (g of b.topGenres; track g.name) {
-              <li>{{ g.name }} · {{ g.count }}</li>
+            @for (g of b.topGenres; track g.name; let i = $index) {
+              <li>
+                <span class="stats__rank-bar" aria-hidden="true" [style.width.%]="percent(g.count, b.topGenres)"></span>
+                <span class="stats__rank">{{ i + 1 }}</span>
+                <span class="stats__name">{{ g.name }}</span>
+                <span class="stats__count">{{ g.count }}</span>
+              </li>
             }
           </ol>
-        </section>
+        </mat-card>
       </div>
     }
   }
