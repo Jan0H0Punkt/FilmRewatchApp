@@ -131,7 +131,10 @@
 .stats__rank {
   position: relative;
   z-index: 1;
+  min-inline-size: 2ch;
+  text-align: end;
   color: var(--mat-sys-on-surface-variant);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -163,5 +166,6 @@ a.stats__name {
   z-index: 1;
   text-align: right;
   font: var(--mat-sys-label-large);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
