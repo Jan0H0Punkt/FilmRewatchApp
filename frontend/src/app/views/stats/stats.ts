@@ -7,8 +7,8 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 
@@ -19,7 +19,7 @@ type Scope = number | 'all';
 
 @Component({
   selector: 'app-stats',
-  imports: [DecimalPipe, MatButtonModule, MatCardModule, MatChipsModule, MatProgressBarModule, RouterLink],
+  imports: [DecimalPipe, MatButtonModule, MatButtonToggleModule, MatCardModule, MatProgressBarModule, RouterLink],
   templateUrl: './stats.html',
   styleUrl: './stats.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

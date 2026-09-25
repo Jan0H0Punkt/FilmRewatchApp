@@ -11,22 +11,18 @@
 }
 
 @if (stats(); as stats) {
-  <!-- `[selectable]` is off on the selected chip so a second click cannot
-       deselect it and leave no scope chosen. -->
-  <mat-chip-listbox class="stats__scopes" aria-label="Period">
-    <mat-chip-option [selected]="scope() === 'all'" [selectable]="scope() !== 'all'" (selectionChange)="select('all')">
-      All time
-    </mat-chip-option>
+  <mat-button-toggle-group
+    class="stats__scopes"
+    aria-label="Period"
+    hideSingleSelectionIndicator
+    [value]="scope()"
+    (change)="select($event.value)"
+  >
+    <mat-button-toggle value="all">All time</mat-button-toggle>
     @for (y of stats.years; track y.year) {
-      <mat-chip-option
-        [selected]="scope() === y.year"
-        [selectable]="scope() !== y.year"
-        (selectionChange)="select(y.year)"
-      >
-        {{ y.year }}
-      </mat-chip-option>
+      <mat-button-toggle [value]="y.year">{{ y.year }}</mat-button-toggle>
     }
-  </mat-chip-listbox>
+  </mat-button-toggle-group>
 
   @if (block(); as b) {
     @if (b.watches === 0 && scope() !== 'all') {

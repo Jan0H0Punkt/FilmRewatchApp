@@ -8,7 +8,12 @@
 }
 
 .stats__scopes {
-  display: block;
+  // Overrides the group's own `display: inline-flex; overflow: hidden;` (button-toggle.scss):
+  // a year per toggle can outgrow one row at phone width, and `overflow: hidden` would clip
+  // any wrapped row rather than showing it.
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
   margin-block-end: 16px;
 }
 

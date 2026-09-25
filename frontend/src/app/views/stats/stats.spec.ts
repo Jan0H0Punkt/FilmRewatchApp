@@ -52,11 +52,10 @@ describe('Stats view', () => {
   it('preselects the current year', () => {
     const el = render({ total: block(5), years: [{ year: THIS_YEAR, ...block(2) }] });
 
-    // Not `[aria-selected="true"]`: the selected chip has `[selectable]="false"` (see the
-    // template comment), so Material's `ariaSelected` getter returns `null` for it and the
-    // attribute is omitted entirely. `.mat-mdc-chip-selected` is the class Material puts on
-    // the selected `mat-chip-option` host regardless of `selectable`.
-    expect(el.querySelector('.mat-mdc-chip-selected')?.textContent).toContain(String(THIS_YEAR));
+    // `mat-button-toggle-group` is single-select, so each toggle renders `role="radio"` with
+    // `[attr.aria-checked]` bound straight to `checked` — unlike the chip listbox this replaced,
+    // there is no `[selectable]` guard that can blank the attribute out.
+    expect(el.querySelector('[aria-checked="true"]')?.textContent).toContain(String(THIS_YEAR));
     expect(el.textContent).toContain('Heat');
   });
 
@@ -69,7 +68,7 @@ describe('Stats view', () => {
   it('shows all time when there are no years', () => {
     const el = render({ total: block(0), years: [] });
 
-    expect(el.querySelector('.mat-mdc-chip-selected')?.textContent).toContain('All time');
+    expect(el.querySelector('[aria-checked="true"]')?.textContent).toContain('All time');
     expect(el.textContent).not.toContain('No watches this year');
   });
 });
