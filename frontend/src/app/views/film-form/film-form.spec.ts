@@ -50,6 +50,7 @@ const STORED: FilmDetail = {
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
   posterImage: 'https://example.test/heat.jpg',
+  posterPalette: null,
   letterboxdUrl: 'https://boxd.it/aaaa',
   averageRating: 4,
   isFavorite: true,

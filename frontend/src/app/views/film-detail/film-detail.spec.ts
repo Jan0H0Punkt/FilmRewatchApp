@@ -28,6 +28,7 @@ const HEAT: FilmDetailModel = {
   genres: ['Crime', 'Thriller'],
   tags: ['heist'],
   posterImage: null,
+  posterPalette: null,
   letterboxdUrl: null,
   averageRating: 4,
   isFavorite: true,
@@ -597,6 +598,32 @@ describe('FilmDetail', () => {
       expect(element.querySelector('.film-detail__error[role="alert"]')?.textContent).toContain(
         'The tags could not be updated.',
       );
+    });
+  });
+
+  describe('poster theme', () => {
+    it('sets --mat-sys-primary on document.documentElement when the film has a poster palette', async () => {
+      await render(stubFilmFacade({ ...HEAT, posterPalette: ['#8a2be2'] }));
+
+      expect(document.documentElement.style.getPropertyValue('--mat-sys-primary')).toMatch(/^light-dark\(/);
+    });
+
+    it('leaves document.documentElement untouched when the film has no poster palette', async () => {
+      await render(stubFilmFacade(HEAT));
+
+      expect(document.documentElement.style.getPropertyValue('--mat-sys-primary')).toBe('');
+    });
+
+    it('keeps the theme after the view is destroyed, until the next detail view replaces it', async () => {
+      await render(stubFilmFacade({ ...HEAT, posterPalette: ['#8a2be2'] }));
+      currentFixture.destroy();
+      TestBed.resetTestingModule();
+
+      expect(document.documentElement.style.getPropertyValue('--mat-sys-primary')).toMatch(/^light-dark\(/);
+
+      await render(stubFilmFacade(HEAT));
+
+      expect(document.documentElement.style.getPropertyValue('--mat-sys-primary')).toBe('');
     });
   });
 });

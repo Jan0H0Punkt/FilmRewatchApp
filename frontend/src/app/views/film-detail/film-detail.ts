@@ -11,6 +11,7 @@
  * record, so it is edited in the form behind the Edit action
  * (`film/:id/edit`, phase 4), which `views/film-form/` serves in edit mode.
  */
+import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -44,6 +45,15 @@ import { EARLIER_WATCH_DATE, type RatingDraft } from '../../domain/rating/model'
 import { TagFacade } from '../../domain/tag/facade';
 import { ConfirmDialog, type ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { EditableChips } from '../../shared/editable-chips/editable-chips';
+import { posterThemeStyles } from '../../shared/poster-theme';
+
+/**
+ * The `--mat-sys-*` property names the last poster theme set on
+ * `document.documentElement`. Module-level, not per instance: the theme
+ * outlives the view that set it, so the next instance must know what to
+ * remove.
+ */
+let appliedThemeProperties: readonly string[] = [];
 
 /** One alternative title beneath the primary one (REQ §4.1 Title object). */
 interface AlternativeTitleVm {
@@ -248,6 +258,7 @@ export class FilmDetail {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly navigationHistory = inject(NavigationHistoryService);
+  private readonly document = inject(DOCUMENT);
 
   /** Where the not-found state's own "Back to Library" link goes — the app bar's back icon (§6.5) uses the same service directly. */
   protected readonly backTarget = this.navigationHistory.backTarget;
@@ -260,6 +271,29 @@ export class FilmDetail {
     // Re-selects on every navigation between two `film/:id` routes — the
     // router reuses this component instance rather than recreating it.
     effect(() => this.films.select(this.id()));
+
+    // Re-themes the whole app (background, app bar, sidebar included), not
+    // just this view's own box — `document.documentElement` is the one root
+    // every Material component's `--mat-sys-*` lookup resolves against, so
+    // setting the properties there is the only way to reach the app shell
+    // from inside this view. `null` (no poster palette) clears back to the
+    // app's default theme. Deliberately never cleared on leaving the view
+    // (repo owner's call): the last film's theme stays until the next detail
+    // view replaces it — and no film loaded yet (`undefined`) is not a reason
+    // to reset either.
+    effect(() => {
+      const film = this.films.detail();
+      if (film) this.applyPosterTheme(film.posterPalette ? posterThemeStyles(film.posterPalette) : null);
+    });
+  }
+
+  private applyPosterTheme(styles: Record<string, string> | null): void {
+    const root = this.document.documentElement.style;
+    for (const property of appliedThemeProperties) root.removeProperty(property);
+    appliedThemeProperties = styles ? Object.keys(styles) : [];
+    if (styles) {
+      for (const [property, value] of Object.entries(styles)) root.setProperty(property, value);
+    }
   }
 
   protected readonly isLoading = this.films.detailIsLoading;

@@ -58,6 +58,8 @@ export interface RatingHistoryEntry {
  * timestamps.
  */
 export interface FilmDetail extends Film {
+  /** Seed palette (up to 4 entries, ranked by dominance) for the detail view's dynamic theme (`shared/poster-theme.ts`); `null` with no poster or an unextractable one. */
+  readonly posterPalette: readonly string[] | null;
   readonly delayDays: number;
   /** Newest first (FR-RAT-05/06), as the backend orders it. */
   readonly ratingHistory: readonly RatingHistoryEntry[];

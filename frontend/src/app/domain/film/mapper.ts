@@ -47,6 +47,7 @@ export function toFilm(dto: FilmDto): Film {
 export function toFilmDetail(dto: FilmDto): FilmDetail {
   return {
     ...toFilm(dto),
+    posterPalette: dto.poster_palette,
     delayDays: dto.delay_days,
     ratingHistory: dto.rating_history.map((entry) => ({
       id: entry.id,

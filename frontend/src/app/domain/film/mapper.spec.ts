@@ -13,6 +13,7 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     genre: ['Crime'],
     tags: [],
     poster_image: null,
+    poster_palette: null,
     letterboxd_url: null,
     is_favorite: false,
     owned: false,
@@ -33,6 +34,16 @@ describe('toFilmDetail', () => {
   it('maps a null letterboxd_url to null', () => {
     const detail = toFilmDetail(filmDto({ letterboxd_url: null }));
     expect(detail.letterboxdUrl).toBeNull();
+  });
+
+  it('carries a set poster_palette through as posterPalette', () => {
+    const detail = toFilmDetail(filmDto({ poster_palette: ['#8a2be2', '#123456'] }));
+    expect(detail.posterPalette).toEqual(['#8a2be2', '#123456']);
+  });
+
+  it('maps a null poster_palette to null', () => {
+    const detail = toFilmDetail(filmDto({ poster_palette: null }));
+    expect(detail.posterPalette).toBeNull();
   });
 });
 

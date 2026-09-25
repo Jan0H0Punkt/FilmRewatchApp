@@ -9,6 +9,8 @@ and persistence stay with the calling view and its facades (§6.1).
   film detail view's tags and genres (FR-TAG-03/06, REQ §4.4).
 - `rating-stars.ts` — the app's one star-rendering rule (FR-RAT-09/11/13),
   shared by the Library and Rewatch views.
+- `poster-theme.ts` — builds the Film Detail view's `--mat-sys-*` dynamic
+  colour overrides from a poster's seed palette (REQ §7.3 `poster_palette`).
 
 A film card and poster-with-placeholder are still unbuilt — views hold those
 inline until a second caller appears.

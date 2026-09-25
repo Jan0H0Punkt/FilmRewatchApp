@@ -45,6 +45,8 @@ export interface FilmDto {
   readonly genre: readonly string[];
   readonly tags: readonly string[];
   readonly poster_image: string | null;
+  /** Seed palette (up to 4 entries, ranked by dominance) extracted from `poster_image` for the film detail view's dynamic theme (§6.5 `shared/poster-theme.ts`); `null` with no poster. Read-only — never sent on create/patch. */
+  readonly poster_palette: readonly string[] | null;
   readonly letterboxd_url: string | null;
   readonly owned: boolean;
   readonly is_favorite: boolean;
