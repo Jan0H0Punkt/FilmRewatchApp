@@ -1,0 +1,131 @@
+@if (isLoading()) {
+  <p class="stats__state" role="status">Counting your watches…</p>
+  <mat-progress-bar mode="indeterminate" aria-hidden="true" />
+}
+
+@if (error()) {
+  <div class="stats__state stats__state--error" role="alert">
+    <p>The statistics could not be loaded. Is the backend running?</p>
+    <button matButton type="button" (click)="reload()">Try again</button>
+  </div>
+}
+
+@if (stats(); as stats) {
+  <!-- `[selectable]` is off on the selected chip so a second click cannot
+       deselect it and leave no scope chosen. -->
+  <mat-chip-listbox class="stats__scopes" aria-label="Period">
+    <mat-chip-option [selected]="scope() === 'all'" [selectable]="scope() !== 'all'" (selectionChange)="select('all')">
+      All time
+    </mat-chip-option>
+    @for (y of stats.years; track y.year) {
+      <mat-chip-option
+        [selected]="scope() === y.year"
+        [selectable]="scope() !== y.year"
+        (selectionChange)="select(y.year)"
+      >
+        {{ y.year }}
+      </mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  @if (block(); as b) {
+    @if (b.watches === 0 && scope() !== 'all') {
+      <p class="stats__state">No watches this year</p>
+    } @else {
+      <ul class="stats__tiles">
+        <li>
+          <mat-card
+            ><strong>{{ b.watches }}</strong> watches</mat-card
+          >
+        </li>
+        <li>
+          <mat-card
+            ><strong>{{ b.firstWatches }}</strong> first watches</mat-card
+          >
+        </li>
+        <li>
+          <mat-card
+            ><strong>{{ b.rewatches }}</strong> rewatches</mat-card
+          >
+        </li>
+        @if (b.filmsReleasedThatYear !== null) {
+          <li>
+            <mat-card
+              ><strong>{{ b.filmsReleasedThatYear }}</strong> released this year</mat-card
+            >
+          </li>
+        }
+        <li>
+          <mat-card
+            ><strong>{{ b.minutesWatched / 60 | number: '1.0-1' }}</strong> hours</mat-card
+          >
+        </li>
+        <li>
+          <mat-card
+            ><strong>{{ b.distinctFilms }}</strong> films</mat-card
+          >
+        </li>
+      </ul>
+
+      <section>
+        <h2>{{ scope() === 'all' ? 'Watches per year' : 'Watches per month' }}</h2>
+        <ol class="stats__bars">
+          @for (bucket of b.buckets; track bucket.label) {
+            <li [attr.aria-label]="bucket.label + ': ' + bucket.count">
+              <span class="stats__bar-count" aria-hidden="true">{{ bucket.count || '' }}</span>
+              <span class="stats__bar" [style.height.%]="percent(bucket.count, b.buckets)" aria-hidden="true"></span>
+              <span class="stats__bar-label" aria-hidden="true">{{ bucket.label }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+
+      <section>
+        <h2>Ratings</h2>
+        <p>Average: {{ b.averageRating === null ? 'no ratings' : (b.averageRating | number: '1.1-2') }}</p>
+        <ol class="stats__bars">
+          @for (r of b.ratingDistribution; track r.value) {
+            <li [attr.aria-label]="r.value + ' stars: ' + r.count">
+              <span class="stats__bar-count" aria-hidden="true">{{ r.count || '' }}</span>
+              <span
+                class="stats__bar"
+                [style.height.%]="percent(r.count, b.ratingDistribution)"
+                aria-hidden="true"
+              ></span>
+              <span class="stats__bar-label" aria-hidden="true">{{ r.value }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+
+      <div class="stats__tops">
+        <section>
+          <h2>Top films</h2>
+          <ol>
+            @for (f of b.topFilms; track f.filmId) {
+              <li>
+                <a [routerLink]="['/film', f.filmId]">{{ f.title }}</a> · {{ f.count }}
+              </li>
+            }
+          </ol>
+        </section>
+        <section>
+          <h2>Top directors</h2>
+          <ol>
+            @for (d of b.topDirectors; track d.name) {
+              <li>{{ d.name }} · {{ d.count }}</li>
+            }
+          </ol>
+        </section>
+        <section>
+          <h2>Top genres</h2>
+          <ol>
+            @for (g of b.topGenres; track g.name) {
+              <li>{{ g.name }} · {{ g.count }}</li>
+            }
+          </ol>
+        </section>
+      </div>
+    }
+  }
+}
