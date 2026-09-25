@@ -10,9 +10,10 @@ from app.genres.models import FilmGenre, Genre
 from app.ratings.models import RatingEntry
 from app.ratings.service import EARLIER_WATCH_DATE
 from app.stats.repository import StatsRepository
+from app.tags.models import FilmTag, Tag
 
 
-def test_watches_joins_primary_title_and_genres_and_undates_the_sentinel(
+def test_watches_joins_primary_title_and_genres_and_tags_and_undates_the_sentinel(
     db_session: Session,
 ) -> None:
     film = Film(
@@ -27,11 +28,14 @@ def test_watches_joins_primary_title_and_genres_and_undates_the_sentinel(
     db_session.add(Title(film_id=film.id, value="Heat (alt)", is_primary=False, is_original=False))
     crime, thriller = Genre(name="Crime"), Genre(name="Thriller")
     db_session.add_all([crime, thriller])
+    neo_noir = Tag(name="Neo-Noir")
+    db_session.add(neo_noir)
     db_session.flush()
     db_session.add_all(
         [
             FilmGenre(film_id=film.id, genre_id=thriller.id, position=1),
             FilmGenre(film_id=film.id, genre_id=crime.id, position=0),
+            FilmTag(film_id=film.id, tag_id=neo_noir.id),
             RatingEntry(film_id=film.id, value=Decimal("4.5"), watch_date=date(2026, 3, 1)),
             RatingEntry(film_id=film.id, value=None, watch_date=EARLIER_WATCH_DATE),
         ]
@@ -43,4 +47,5 @@ def test_watches_joins_primary_title_and_genres_and_undates_the_sentinel(
     assert [w.watch_date for w in watches] == [date(2026, 3, 1), None]
     assert {w.title for w in watches} == {"Heat"}
     assert watches[0].genres == ("Crime", "Thriller")
+    assert watches[0].tags == ("Neo-Noir",)
     assert watches[0].value == Decimal("4.5")

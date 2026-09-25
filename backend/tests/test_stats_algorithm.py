@@ -23,6 +23,7 @@ def _watch(
     director: str = "Michael Mann",
     runtime_minutes: int = 170,
     genres: tuple[str, ...] = ("Crime",),
+    tags: tuple[str, ...] = (),
     value: Decimal | None = Decimal("4.0"),
 ) -> Watch:
     return Watch(
@@ -32,6 +33,7 @@ def _watch(
         director=director,
         runtime_minutes=runtime_minutes,
         genres=genres,
+        tags=tags,
         watch_date=watch_date,
         value=value,
     )
@@ -163,6 +165,31 @@ def test_top_lists_rank_by_score_and_break_ties_by_average_then_name() -> None:
         TopName("Horror", 1, 4.0, 4.0),
         TopName("Sci-Fi", 1, 4.0, 4.0),
     ]
+
+
+def test_top_tags_use_the_same_score_rule_as_top_films() -> None:
+    watches = [
+        _watch(tags=("Neo-Noir", "Masterpiece"), value=Decimal("4.0")),
+        _watch(tags=("Neo-Noir",), value=Decimal("2.0")),
+    ]
+
+    tags = {t.name: t for t in compute(watches, TODAY).total.top_tags}
+    assert (tags["Neo-Noir"].watches, tags["Neo-Noir"].average_rating, tags["Neo-Noir"].score) == (
+        2,
+        3.0,
+        6.0,
+    )
+    assert (
+        tags["Masterpiece"].watches,
+        tags["Masterpiece"].average_rating,
+        tags["Masterpiece"].score,
+    ) == (1, 4.0, 4.0)
+
+
+def test_a_tag_with_only_unrated_watches_is_excluded_from_top_tags() -> None:
+    watches = [_watch(tags=("Rewatch-only",), value=None)]
+
+    assert compute(watches, TODAY).total.top_tags == []
 
 
 def test_top_films_score_multiplies_watches_by_average_rating() -> None:

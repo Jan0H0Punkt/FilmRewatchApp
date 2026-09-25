@@ -52,6 +52,7 @@ class StatsBlockRead(_Read):
     rating_distribution: list[RatingCountRead]
     top_genres: list[TopNameRead]
     top_directors: list[TopNameRead]
+    top_tags: list[TopNameRead]
     top_films: list[TopFilmRead]
     buckets: list[BucketRead]
 

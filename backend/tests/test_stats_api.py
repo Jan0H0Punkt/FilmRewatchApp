@@ -26,7 +26,15 @@ def _client(stats: Stats) -> TestClient:
 
 def test_the_payload_carries_total_and_flattened_years() -> None:
     watch = Watch(
-        FILM, "Heat", 1995, "Michael Mann", 170, ("Crime",), date(2026, 3, 1), Decimal("4.5")
+        FILM,
+        "Heat",
+        1995,
+        "Michael Mann",
+        170,
+        ("Crime",),
+        ("Neo-Noir",),
+        date(2026, 3, 1),
+        Decimal("4.5"),
     )
 
     body = _client(compute([watch], date(2026, 9, 25))).get("/api/v1/stats").json()
@@ -41,6 +49,9 @@ def test_the_payload_carries_total_and_flattened_years() -> None:
     ]
     assert body["total"]["top_genres"] == [
         {"name": "Crime", "watches": 1, "average_rating": 4.5, "score": 4.5}
+    ]
+    assert body["total"]["top_tags"] == [
+        {"name": "Neo-Noir", "watches": 1, "average_rating": 4.5, "score": 4.5}
     ]
     [year] = body["years"]
     assert year["year"] == 2026

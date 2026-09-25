@@ -29,6 +29,7 @@ class Watch:
     director: str
     runtime_minutes: int
     genres: tuple[str, ...]
+    tags: tuple[str, ...]
     watch_date: date | None
     value: Decimal | None
 
@@ -75,12 +76,13 @@ class StatsBlock:
     minutes_watched: int
     average_rating: float | None
     rating_distribution: list[RatingCount]
-    # All three rank by score = watches x average_rating of the RATED watches
-    # only (a genre/director scores once per watch of a film carrying it); an
-    # unrated watch is never imputed a value, so a name/film with no rated
+    # All four rank by score = watches x average_rating of the RATED watches
+    # only (a genre/director/tag scores once per watch of a film carrying it);
+    # an unrated watch is never imputed a value, so a name/film with no rated
     # watch in the block has no score and is absent from the list.
     top_genres: list[TopName]
     top_directors: list[TopName]
+    top_tags: list[TopName]
     top_films: list[TopFilm]
     buckets: list[Bucket]
 
@@ -166,6 +168,12 @@ def _block(
             TopName(name, watch_count, average, score)
             for name, watch_count, average, score in _top_scored(
                 ((w.director, w) for w in watches), str
+            )
+        ],
+        top_tags=[
+            TopName(name, watch_count, average, score)
+            for name, watch_count, average, score in _top_scored(
+                ((t, w) for w in watches for t in w.tags), str
             )
         ],
         top_films=[

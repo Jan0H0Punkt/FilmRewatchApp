@@ -1,8 +1,9 @@
 """Data-access layer for the stats module (DESIGN §5.1).
 
-Two reads, no rules: every rating entry joined with its film's primary title
-and metadata, and every film's genres. Genres come from a second query because
-joining them in would repeat each entry once per genre.
+Three reads, no rules: every rating entry joined with its film's primary
+title and metadata, every film's genres, and every film's tags. Genres and
+tags each come from their own query because joining them in would repeat
+each entry once per association.
 """
 
 from collections import defaultdict
@@ -16,6 +17,7 @@ from app.genres.models import FilmGenre, Genre
 from app.ratings.models import RatingEntry
 from app.ratings.service import EARLIER_WATCH_DATE
 from app.stats.algorithm import Watch
+from app.tags.models import FilmTag, Tag
 
 
 class StatsRepository:
@@ -34,6 +36,13 @@ class StatsRepository:
         )
         for film_id, name in genre_rows:
             genres[film_id].append(name)
+
+        tags: defaultdict[UUID, list[str]] = defaultdict(list)
+        tag_rows = self._session.execute(
+            select(FilmTag.film_id, Tag.name).join(Tag, Tag.id == FilmTag.tag_id).order_by(Tag.name)
+        )
+        for film_id, name in tag_rows:
+            tags[film_id].append(name)
 
         statement = (
             select(
@@ -56,6 +65,7 @@ class StatsRepository:
                 director=row.director,
                 runtime_minutes=row.runtime_minutes,
                 genres=tuple(genres[row.film_id]),
+                tags=tuple(tags[row.film_id]),
                 watch_date=None if row.watch_date == EARLIER_WATCH_DATE else row.watch_date,
                 value=row.value,
             )
