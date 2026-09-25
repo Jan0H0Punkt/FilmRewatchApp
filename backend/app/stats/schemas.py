@@ -16,9 +16,11 @@ class _Read(StrictSchema):
     model_config = ConfigDict(from_attributes=True)
 
 
-class NamedCountRead(_Read):
+class TopNameRead(_Read):
     name: str
-    count: int
+    watches: int
+    average_rating: float
+    score: float
 
 
 class TopFilmRead(_Read):
@@ -48,8 +50,8 @@ class StatsBlockRead(_Read):
     minutes_watched: int
     average_rating: float | None
     rating_distribution: list[RatingCountRead]
-    top_genres: list[NamedCountRead]
-    top_directors: list[NamedCountRead]
+    top_genres: list[TopNameRead]
+    top_directors: list[TopNameRead]
     top_films: list[TopFilmRead]
     buckets: list[BucketRead]
 

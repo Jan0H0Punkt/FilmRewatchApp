@@ -7,7 +7,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from app.stats.algorithm import Bucket, NamedCount, TopFilm, Watch, compute
+from app.stats.algorithm import Bucket, TopFilm, TopName, Watch, compute
 
 TODAY = date(2026, 9, 25)
 HEAT = uuid.uuid4()
@@ -142,7 +142,7 @@ def test_average_and_distribution_skip_unrated_watches() -> None:
     ]
 
 
-def test_top_lists_rank_by_watches_and_break_ties_alphabetically() -> None:
+def test_top_lists_rank_by_score_and_break_ties_by_average_then_name() -> None:
     watches = [
         _watch(),
         _watch(),
@@ -154,11 +154,14 @@ def test_top_lists_rank_by_watches_and_break_ties_alphabetically() -> None:
         TopFilm(HEAT, "Heat", 2, 4.0, 8.0),
         TopFilm(ALIEN, "Alien", 1, 4.0, 4.0),
     ]
-    assert block.top_directors == [NamedCount("Michael Mann", 2), NamedCount("Ridley Scott", 1)]
+    assert block.top_directors == [
+        TopName("Michael Mann", 2, 4.0, 8.0),
+        TopName("Ridley Scott", 1, 4.0, 4.0),
+    ]
     assert block.top_genres == [
-        NamedCount("Crime", 2),
-        NamedCount("Horror", 1),
-        NamedCount("Sci-Fi", 1),
+        TopName("Crime", 2, 4.0, 8.0),
+        TopName("Horror", 1, 4.0, 4.0),
+        TopName("Sci-Fi", 1, 4.0, 4.0),
     ]
 
 
@@ -199,6 +202,49 @@ def test_top_films_tie_on_score_breaks_by_higher_average() -> None:
     top = compute(watches, TODAY).total.top_films
     assert [f.title for f in top] == ["Zebra", "Alien"]
     assert top[0].score == top[1].score == 8.0
+
+
+def test_top_directors_use_the_same_score_rule_as_top_films() -> None:
+    watches = [_watch(value=Decimal("4.0")), _watch(value=Decimal("5.0")), _watch(value=None)]
+
+    [director] = compute(watches, TODAY).total.top_directors
+    assert (director.name, director.watches, director.average_rating, director.score) == (
+        "Michael Mann",
+        3,
+        4.5,
+        13.5,
+    )
+
+
+def test_a_director_with_only_unrated_watches_is_excluded_from_top_directors() -> None:
+    watches = [_watch(value=None), _watch(ALIEN, director="Ridley Scott", value=None)]
+
+    assert compute(watches, TODAY).total.top_directors == []
+
+
+def test_top_genres_use_the_same_score_rule_as_top_films() -> None:
+    watches = [
+        _watch(genres=("Crime", "Thriller"), value=Decimal("4.0")),
+        _watch(genres=("Crime",), value=Decimal("2.0")),
+    ]
+
+    genres = {g.name: g for g in compute(watches, TODAY).total.top_genres}
+    assert (genres["Crime"].watches, genres["Crime"].average_rating, genres["Crime"].score) == (
+        2,
+        3.0,
+        6.0,
+    )
+    assert (
+        genres["Thriller"].watches,
+        genres["Thriller"].average_rating,
+        genres["Thriller"].score,
+    ) == (1, 4.0, 4.0)
+
+
+def test_a_genre_with_only_unrated_watches_is_excluded_from_top_genres() -> None:
+    watches = [_watch(genres=("Silent",), value=None)]
+
+    assert compute(watches, TODAY).total.top_genres == []
 
 
 def test_top_films_are_scoped_to_the_block_year() -> None:

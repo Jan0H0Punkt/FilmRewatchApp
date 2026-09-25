@@ -36,6 +36,12 @@ def test_the_payload_carries_total_and_flattened_years() -> None:
     assert body["total"]["top_films"] == [
         {"film_id": str(FILM), "title": "Heat", "watches": 1, "average_rating": 4.5, "score": 4.5}
     ]
+    assert body["total"]["top_directors"] == [
+        {"name": "Michael Mann", "watches": 1, "average_rating": 4.5, "score": 4.5}
+    ]
+    assert body["total"]["top_genres"] == [
+        {"name": "Crime", "watches": 1, "average_rating": 4.5, "score": 4.5}
+    ]
     [year] = body["years"]
     assert year["year"] == 2026
     assert year["watches"] == 1
