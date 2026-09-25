@@ -77,6 +77,25 @@ def test_an_undated_watch_counts_only_in_total() -> None:
     assert (year.block.watches, year.block.first_watches, year.block.rewatches) == (1, 0, 1)
 
 
+def test_an_undated_watch_makes_every_dated_year_a_rewatch() -> None:
+    # The undated entry says the film was seen before, so both its dated
+    # watches — in different years — are rewatches, not first watches.
+    stats = compute(
+        [
+            _watch(watch_date=None, value=None),
+            _watch(watch_date=date(2024, 6, 1)),
+            _watch(watch_date=date(2025, 6, 1)),
+        ],
+        TODAY,
+    )
+
+    [y2026, y2025, y2024] = stats.years
+    assert (y2026.block.first_watches, y2026.block.rewatches) == (0, 0)
+    assert (y2025.block.first_watches, y2025.block.rewatches) == (0, 1)
+    assert (y2024.block.first_watches, y2024.block.rewatches) == (0, 1)
+    assert (stats.total.first_watches, stats.total.rewatches) == (0, 3)
+
+
 def test_a_film_with_only_an_undated_watch_creates_no_year() -> None:
     stats = compute([_watch(watch_date=None)], TODAY)
 
