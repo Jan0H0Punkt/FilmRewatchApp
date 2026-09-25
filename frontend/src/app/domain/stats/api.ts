@@ -16,7 +16,13 @@ export interface StatsBlockDto {
   readonly rating_distribution: readonly { readonly value: number; readonly count: number }[];
   readonly top_genres: readonly { readonly name: string; readonly count: number }[];
   readonly top_directors: readonly { readonly name: string; readonly count: number }[];
-  readonly top_films: readonly { readonly film_id: string; readonly title: string; readonly count: number }[];
+  readonly top_films: readonly {
+    readonly film_id: string;
+    readonly title: string;
+    readonly watches: number;
+    readonly average_rating: number;
+    readonly score: number;
+  }[];
   /** `"1"`…`"12"` in a year block, `"2025"` in the all-time block. */
   readonly buckets: readonly { readonly label: string; readonly count: number }[];
 }

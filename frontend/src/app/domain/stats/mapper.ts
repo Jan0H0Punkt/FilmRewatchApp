@@ -16,7 +16,13 @@ function toBlock(dto: StatsBlockDto, bucketLabel: (label: string) => string): St
     ratingDistribution: dto.rating_distribution,
     topGenres: dto.top_genres,
     topDirectors: dto.top_directors,
-    topFilms: dto.top_films.map((f) => ({ filmId: f.film_id, title: f.title, count: f.count })),
+    topFilms: dto.top_films.map((f) => ({
+      filmId: f.film_id,
+      title: f.title,
+      watches: f.watches,
+      averageRating: f.average_rating,
+      score: f.score,
+    })),
     buckets: dto.buckets.map((b) => ({ label: bucketLabel(b.label), count: b.count })),
   };
 }

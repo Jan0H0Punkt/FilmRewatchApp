@@ -4,10 +4,12 @@ export interface NamedCount {
   readonly count: number;
 }
 
-export interface FilmCount {
+export interface TopFilm {
   readonly filmId: string;
   readonly title: string;
-  readonly count: number;
+  readonly watches: number;
+  readonly averageRating: number;
+  readonly score: number;
 }
 
 export interface RatingCount {
@@ -34,7 +36,7 @@ export interface StatsBlock {
   readonly ratingDistribution: readonly RatingCount[];
   readonly topGenres: readonly NamedCount[];
   readonly topDirectors: readonly NamedCount[];
-  readonly topFilms: readonly FilmCount[];
+  readonly topFilms: readonly TopFilm[];
   readonly buckets: readonly Bucket[];
 }
 
