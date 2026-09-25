@@ -183,8 +183,8 @@ def _top_scored[K: Hashable](
 ) -> list[tuple[K, int, float, float]]:
     """Ranks each key by ``score = watches x average_rating`` of its RATED watches only.
 
-    ``watches`` counts every occurrence of the key (unrated included); a
-    rated watch's value is never imputed, so a key with none in this block
+    ``watches`` counts every occurrence of the key (unrated included); an
+    unrated watch is never imputed a value, so a key with no rated watch here
     scores nothing and is dropped. Ties break by higher average, then by
     ``name``. Shared by top films, directors, and genres — a genre key
     appears once per watch of each film carrying it.
