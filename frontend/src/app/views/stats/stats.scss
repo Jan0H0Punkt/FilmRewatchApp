@@ -67,6 +67,8 @@
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
+  // % heights resolve against the content box, so this padding is where the
+  // tallest bar's count lands.
   padding-block-start: 1.25rem;
 }
 
