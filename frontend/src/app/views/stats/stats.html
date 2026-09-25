@@ -69,8 +69,10 @@
         <ol class="stats__bars">
           @for (bucket of b.buckets; track bucket.label) {
             <li [attr.aria-label]="bucket.label + ': ' + bucket.count">
-              <span class="stats__bar-count" aria-hidden="true">{{ bucket.count || '' }}</span>
-              <span class="stats__bar" [style.height.%]="percent(bucket.count, b.buckets)" aria-hidden="true"></span>
+              <span class="stats__bar-track" aria-hidden="true">
+                <span class="stats__bar-count">{{ bucket.count || '' }}</span>
+                <span class="stats__bar" [style.height.%]="percent(bucket.count, b.buckets)"></span>
+              </span>
               <span class="stats__bar-label" aria-hidden="true">{{ barLabel(bucket.label) }}</span>
             </li>
           }
@@ -83,12 +85,10 @@
         <ol class="stats__bars">
           @for (r of b.ratingDistribution; track r.value) {
             <li [attr.aria-label]="r.value + ' stars: ' + r.count">
-              <span class="stats__bar-count" aria-hidden="true">{{ r.count || '' }}</span>
-              <span
-                class="stats__bar"
-                [style.height.%]="percent(r.count, b.ratingDistribution)"
-                aria-hidden="true"
-              ></span>
+              <span class="stats__bar-track" aria-hidden="true">
+                <span class="stats__bar-count">{{ r.count || '' }}</span>
+                <span class="stats__bar" [style.height.%]="percent(r.count, b.ratingDistribution)"></span>
+              </span>
               <span class="stats__bar-label" aria-hidden="true">{{ r.value }}</span>
             </li>
           }
