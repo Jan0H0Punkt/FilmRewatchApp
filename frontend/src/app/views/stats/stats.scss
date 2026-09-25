@@ -59,7 +59,7 @@
 
 .stats__bar-track {
   // The bar's height% must resolve against a box holding only the bar — not the count
-  // above it or the label below — otherwise equal-height bars render at different sizes.
+  // above it or the label below — otherwise large values get squeezed to the same height.
   flex: 1;
   min-block-size: 0;
   inline-size: 100%;
