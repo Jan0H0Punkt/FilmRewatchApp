@@ -7,7 +7,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from app.stats.algorithm import Bucket, FilmCount, NamedCount, Watch, compute
+from app.stats.algorithm import Bucket, NamedCount, TopFilm, Watch, compute
 
 TODAY = date(2026, 9, 25)
 HEAT = uuid.uuid4()
@@ -150,13 +150,70 @@ def test_top_lists_rank_by_watches_and_break_ties_alphabetically() -> None:
     ]
 
     block = compute(watches, TODAY).total
-    assert block.top_films == [FilmCount(HEAT, "Heat", 2), FilmCount(ALIEN, "Alien", 1)]
+    assert block.top_films == [
+        TopFilm(HEAT, "Heat", 2, 4.0, 8.0),
+        TopFilm(ALIEN, "Alien", 1, 4.0, 4.0),
+    ]
     assert block.top_directors == [NamedCount("Michael Mann", 2), NamedCount("Ridley Scott", 1)]
     assert block.top_genres == [
         NamedCount("Crime", 2),
         NamedCount("Horror", 1),
         NamedCount("Sci-Fi", 1),
     ]
+
+
+def test_top_films_score_multiplies_watches_by_average_rating() -> None:
+    watches = [_watch(value=Decimal("4.0")), _watch(value=Decimal("5.0")), _watch(value=None)]
+
+    [film] = compute(watches, TODAY).total.top_films
+    assert (film.watches, film.average_rating, film.score) == (3, 4.5, 13.5)
+
+
+def test_a_film_with_only_unrated_watches_is_excluded_from_top_films_but_still_counted() -> None:
+    watches = [_watch(value=None), _watch(value=None)]
+
+    block = compute(watches, TODAY).total
+    assert block.top_films == []
+    assert block.watches == 2
+    assert block.distinct_films == 1
+
+
+def test_unrated_watches_count_toward_watches_but_not_average_rating() -> None:
+    watches = [_watch(value=Decimal("5.0")), _watch(value=None), _watch(value=None)]
+
+    [film] = compute(watches, TODAY).total.top_films
+    assert (film.watches, film.average_rating) == (3, 5.0)
+
+
+def test_top_films_tie_on_score_breaks_by_higher_average() -> None:
+    zebra, alien = uuid.uuid4(), uuid.uuid4()
+    watches = [
+        _watch(zebra, title="Zebra", value=Decimal("4.0")),
+        _watch(zebra, title="Zebra", value=Decimal("4.0")),
+        _watch(alien, title="Alien", value=Decimal("2.0")),
+        _watch(alien, title="Alien", value=Decimal("2.0")),
+        _watch(alien, title="Alien", value=Decimal("2.0")),
+        _watch(alien, title="Alien", value=Decimal("2.0")),
+    ]
+
+    top = compute(watches, TODAY).total.top_films
+    assert [f.title for f in top] == ["Zebra", "Alien"]
+    assert top[0].score == top[1].score == 8.0
+
+
+def test_top_films_are_scoped_to_the_block_year() -> None:
+    # Rated high in 2024, only unrated in 2025 — absent from 2025's top films
+    # even though the film has an all-time score from 2024.
+    watches = [
+        _watch(watch_date=date(2024, 3, 1), value=Decimal("5.0")),
+        _watch(watch_date=date(2025, 3, 1), value=None),
+    ]
+
+    stats = compute(watches, TODAY)
+    year_2025 = next(y for y in stats.years if y.year == 2025).block
+    year_2024 = next(y for y in stats.years if y.year == 2024).block
+    assert year_2025.top_films == []
+    assert year_2024.top_films == [TopFilm(HEAT, "Heat", 1, 5.0, 5.0)]
 
 
 def test_top_lists_hold_at_most_five() -> None:

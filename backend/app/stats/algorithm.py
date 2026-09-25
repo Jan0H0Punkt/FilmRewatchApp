@@ -40,10 +40,12 @@ class NamedCount:
 
 
 @dataclass(frozen=True, slots=True)
-class FilmCount:
+class TopFilm:
     film_id: UUID
     title: str
-    count: int
+    watches: int
+    average_rating: float
+    score: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,12 +73,15 @@ class StatsBlock:
     minutes_watched: int
     average_rating: float | None
     rating_distribution: list[RatingCount]
-    # Ranked by number of watches in the block, not by rating: every watch
-    # counts, unrated ones too, and a genre scores once per watch of each film
-    # carrying it.
+    # top_genres/top_directors: ranked by number of watches in the block, not
+    # by rating — every watch counts, unrated ones too, and a genre scores
+    # once per watch of each film carrying it. top_films: ranked by
+    # watches x average_rating of the film's RATED watches in the block; an
+    # unrated watch is never imputed a value, so a film with no rated watch
+    # in the block has no score and is absent from the list.
     top_genres: list[NamedCount]
     top_directors: list[NamedCount]
-    top_films: list[FilmCount]
+    top_films: list[TopFilm]
     buckets: list[Bucket]
 
 
@@ -153,10 +158,7 @@ def _block(
         rating_distribution=[RatingCount(v, ratings[v]) for v in RATING_VALUES],
         top_genres=[NamedCount(n, c) for n, c in _top((g for w in watches for g in w.genres), str)],
         top_directors=[NamedCount(n, c) for n, c in _top((w.director for w in watches), str)],
-        top_films=[
-            FilmCount(f, titles[f], c)
-            for f, c in _top((w.film_id for w in watches), titles.__getitem__)
-        ],
+        top_films=_top_films(watches),
         buckets=buckets,
     )
 
@@ -165,3 +167,30 @@ def _top[K: Hashable](keys: Iterable[K], name: Callable[[K], str]) -> list[tuple
     """The ``TOP_N`` most frequent keys; a tie sorts alphabetically by ``name``."""
     counts = Counter(keys)
     return sorted(counts.items(), key=lambda item: (-item[1], name(item[0])))[:TOP_N]
+
+
+def _top_films(watches: Sequence[Watch]) -> list[TopFilm]:
+    """``score = watches x average_rating`` of the film's RATED watches only.
+
+    ``watches`` counts every watch of the film (unrated included); a rated
+    watch's value is never imputed, so a film with none in this block scores
+    nothing and is excluded. Ties break by higher average, then title.
+    """
+    titles = {w.film_id: w.title for w in watches}
+    counts = Counter(w.film_id for w in watches)
+    rated_values: dict[UUID, list[float]] = {}
+    for w in watches:
+        if w.value is not None:
+            rated_values.setdefault(w.film_id, []).append(float(w.value))
+
+    films: list[tuple[UUID, int, float, float]] = []
+    for film_id, values in rated_values.items():
+        average = sum(values) / len(values)
+        watch_count = counts[film_id]
+        films.append((film_id, watch_count, average, watch_count * average))
+
+    films.sort(key=lambda f: (-f[3], -f[2], titles[f[0]]))
+    return [
+        TopFilm(film_id, titles[film_id], watch_count, round(average, 2), round(score, 2))
+        for film_id, watch_count, average, score in films[:TOP_N]
+    ]

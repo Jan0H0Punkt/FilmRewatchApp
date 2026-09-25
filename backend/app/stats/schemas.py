@@ -21,10 +21,12 @@ class NamedCountRead(_Read):
     count: int
 
 
-class FilmCountRead(_Read):
+class TopFilmRead(_Read):
     film_id: UUID
     title: str
-    count: int
+    watches: int
+    average_rating: float
+    score: float
 
 
 class RatingCountRead(_Read):
@@ -48,7 +50,7 @@ class StatsBlockRead(_Read):
     rating_distribution: list[RatingCountRead]
     top_genres: list[NamedCountRead]
     top_directors: list[NamedCountRead]
-    top_films: list[FilmCountRead]
+    top_films: list[TopFilmRead]
     buckets: list[BucketRead]
 
 
