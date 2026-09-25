@@ -88,8 +88,15 @@
 
 .stats__tops {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  // 2x2 grid on wide screens: `repeat(auto-fit, minmax(...))` would give 3+1
+  // once the viewport is wide enough for three 220px cards, not the 2x2 this
+  // view wants. 900px matches the app's nav breakpoint (§6.5).
+  grid-template-columns: 1fr;
   gap: 16px;
+
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   mat-card {
     padding: 16px;

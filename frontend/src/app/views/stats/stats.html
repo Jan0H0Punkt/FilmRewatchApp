@@ -173,6 +173,30 @@
             }
           </ol>
         </mat-card>
+        <mat-card>
+          <h2>Top tags</h2>
+          <ol>
+            @for (t of b.topTags; track t.name; let i = $index) {
+              <li
+                [attr.aria-label]="
+                  t.name + ', ' + t.watches + ' watches, average ' + (t.averageRating | number: '1.1-2')
+                "
+              >
+                <span
+                  class="stats__rank-bar"
+                  aria-hidden="true"
+                  [style.width.%]="percent(t.score, scores(b.topTags))"
+                ></span>
+                <span class="stats__rank">{{ i + 1 }}</span>
+                <span class="stats__name" [matTooltip]="t.name" matTooltipPosition="above" appTruncatedTooltip>{{
+                  t.name
+                }}</span>
+                <span class="stats__watches">{{ t.watches }}×</span>
+                <span class="stats__rating">{{ t.averageRating | number: '1.1-1' }}★</span>
+              </li>
+            }
+          </ol>
+        </mat-card>
       </div>
     }
   }

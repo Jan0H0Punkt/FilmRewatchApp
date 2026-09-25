@@ -21,6 +21,7 @@ function block(watches: number): StatsBlock {
     ratingDistribution: [],
     topGenres: watches ? [{ name: 'Crime', watches, averageRating: 4, score: watches * 4 }] : [],
     topDirectors: watches ? [{ name: 'Michael Mann', watches, averageRating: 4, score: watches * 4 }] : [],
+    topTags: watches ? [{ name: 'Neo-Noir', watches, averageRating: 4, score: watches * 4 }] : [],
     topFilms: watches ? [{ filmId: 'f1', title: 'Heat', watches, averageRating: 4, score: watches * 4 }] : [],
     buckets: [],
   };
