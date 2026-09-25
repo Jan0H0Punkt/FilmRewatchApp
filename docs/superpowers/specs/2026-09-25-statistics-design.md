@@ -9,7 +9,7 @@ A Statistics page showing viewing statistics once for **all time** and once for 
 ## Approach
 
 - One backend endpoint `GET /api/v1/stats` in a new feature module `backend/app/stats/`.
-- The repository loads every rating entry joined with its film's data (id, primary title, release year, runtime, director, genres) in **one** query.
+- The repository loads every rating entry joined with its film's data (id, primary title, release year, runtime, director) in **one** query, plus a second query for genres — joining genres into the first query would repeat each entry once per genre.
 - A dependency-free pure function in `stats/algorithm.py` (same pattern as `rewatch/algorithm.py`) computes the whole payload; it is unit-testable without a database.
 - The frontend only renders. No client-side aggregation.
 
@@ -59,9 +59,9 @@ Rules:
 - `domain/stats/` — `model.ts`, `api.ts`, `mapper.ts`, `facade.ts` (§6.1: DTO → domain → view).
 - `views/stats/` — the page, registered in `core/routes.registry.ts` as `{ path: 'stats', title: 'Statistics', navIcon: 'bar_chart', navLabel: 'Statistics' }` → third navigation destination.
 - Layout, top to bottom:
-  1. Scope switcher — `mat-chip-listbox`: **All time · 2026 · 2025 · …** (UI copy is English, like the other views); the current year is preselected.
+  1. Scope switcher — a single-select `mat-button-toggle-group`: **All time · 2026 · 2025 · …** (UI copy is English, like the other views); the current year is preselected. (A `mat-chip-listbox` was tried first, but a non-selectable selected chip loses `aria-selected`, so the switcher moved to the single-select toggle group.)
   2. KPI tiles — watches, first watches, rewatches, films released that year (year scope only), hours watched, distinct films.
-  3. Bar chart of `buckets` in plain CSS (no chart library).
+  3. Bar chart of `buckets` in plain CSS (no chart library); the all-time chart shows two-digit year labels (`'05`) to keep 12+ tracked years from overlapping at phone width, with the full year still in each bar's `aria-label`.
   4. Ratings — average plus distribution as small bars.
   5. Top lists — genres, directors, films; film titles link to `film/:id`.
 - An empty year shows "No watches this year" instead of zero tiles.
