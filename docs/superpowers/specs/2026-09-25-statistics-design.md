@@ -9,7 +9,7 @@ A Statistics page showing viewing statistics once for **all time** and once for 
 ## Approach
 
 - One backend endpoint `GET /api/v1/stats` in a new feature module `backend/app/stats/`.
-- The repository loads every rating entry joined with its film's data (id, primary title, release year, runtime, director) in **one** query, plus a second query for genres — joining genres into the first query would repeat each entry once per genre.
+- The repository loads every rating entry joined with its film's data (id, primary title, release year, runtime, director) in **one** query, plus a second query for genres and a third for tags — joining either into the first query would repeat each entry once per association.
 - A dependency-free pure function in `stats/algorithm.py` (same pattern as `rewatch/algorithm.py`) computes the whole payload; it is unit-testable without a database.
 - The frontend only renders. No client-side aggregation.
 
@@ -31,6 +31,7 @@ A **watch** is one rating entry, rated or not (FR-RAT-12). Entries dated `EARLIE
 | `rating_distribution` | Count per value 0.5…5.0 (10 buckets, zeros included), non-null only | same, all time |
 | `top_genres` | Top 5 genres by `score = watches × average_rating` of the genre's rated watches (name + watches + average_rating + score); a watch counts once per genre of its film. Unrated watches count in `watches` but are never imputed a rating value, so a genre with no rated watch in the block has no score and is excluded | same, all time |
 | `top_directors` | Same rule as `top_genres`, keyed by director | same, all time |
+| `top_tags` | Same rule as `top_genres`, keyed by tag | same, all time |
 | `top_films` | Same rule, keyed by film (id + primary title + watches + average_rating + score) | same, all time |
 | `buckets` | 12 month buckets (Jan–Dec) with watch counts | One bucket per tracked year |
 
@@ -52,7 +53,7 @@ Rules:
 }
 ```
 
-`StatsBlock`: `watches`, `first_watches`, `rewatches`, `films_released_that_year`, `distinct_films`, `minutes_watched`, `average_rating`, `rating_distribution` (`[{value, count}]`), `top_genres` / `top_directors` (`[{name, watches, average_rating, score}]`), `top_films` (`[{film_id, title, watches, average_rating, score}]`), `buckets` (`[{label, count}]` — `"1"`…`"12"` for months, `"2025"` for years).
+`StatsBlock`: `watches`, `first_watches`, `rewatches`, `films_released_that_year`, `distinct_films`, `minutes_watched`, `average_rating`, `rating_distribution` (`[{value, count}]`), `top_genres` / `top_directors` / `top_tags` (`[{name, watches, average_rating, score}]`), `top_films` (`[{film_id, title, watches, average_rating, score}]`), `buckets` (`[{label, count}]` — `"1"`…`"12"` for months, `"2025"` for years).
 
 ## Frontend
 
@@ -63,7 +64,7 @@ Rules:
   2. KPI tiles — watches, first watches, rewatches, films released that year (year scope only), hours watched, distinct films.
   3. Bar chart of `buckets` in plain CSS (no chart library); the all-time chart shows two-digit year labels (`'05`) to keep 12+ tracked years from overlapping at phone width, with the full year still in each bar's `aria-label`.
   4. Ratings — average plus distribution as small bars.
-  5. Top lists — genres, directors, films; film titles link to `film/:id`.
+  5. Top lists — films, directors, genres, tags, laid out as a 2x2 card grid on wide screens (single column below the 900px nav breakpoint); film titles link to `film/:id`.
 - An empty year shows "No watches this year" instead of zero tiles.
 - Colours via `--mat-sys-*` tokens only, so Dark/Light/Auto work unchanged.
 
