@@ -1,0 +1,30 @@
+/** `StatsDto` → `Stats` (DESIGN §6.1). */
+import type { StatsBlockDto, StatsDto } from './api';
+import type { Stats, StatsBlock } from './model';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function toBlock(dto: StatsBlockDto, bucketLabel: (label: string) => string): StatsBlock {
+  return {
+    watches: dto.watches,
+    firstWatches: dto.first_watches,
+    rewatches: dto.rewatches,
+    filmsReleasedThatYear: dto.films_released_that_year,
+    distinctFilms: dto.distinct_films,
+    minutesWatched: dto.minutes_watched,
+    averageRating: dto.average_rating,
+    ratingDistribution: dto.rating_distribution,
+    topGenres: dto.top_genres,
+    topDirectors: dto.top_directors,
+    topFilms: dto.top_films.map((f) => ({ filmId: f.film_id, title: f.title, count: f.count })),
+    buckets: dto.buckets.map((b) => ({ label: bucketLabel(b.label), count: b.count })),
+  };
+}
+
+export function toStats(dto: StatsDto): Stats {
+  return {
+    total: toBlock(dto.total, (year) => year),
+    // A year block's buckets are months `"1"`…`"12"`.
+    years: dto.years.map((y) => ({ year: y.year, ...toBlock(y, (month) => MONTHS[Number(month) - 1]) })),
+  };
+}
