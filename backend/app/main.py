@@ -23,6 +23,7 @@ from app.films.router import router as films_router
 from app.genres.router import router as genres_router
 from app.ratings.router import router as ratings_router
 from app.rewatch.router import router as rewatch_router
+from app.stats.router import router as stats_router
 from app.tags.router import router as tags_router
 
 API_V1_PREFIX = "/api/v1"
@@ -48,6 +49,7 @@ def build_api_router() -> APIRouter:
     api.include_router(tags_router, prefix="/tags", tags=["tags"])
     api.include_router(genres_router, prefix="/genres", tags=["genres"])
     api.include_router(rewatch_router, prefix="/rewatch-suggestions", tags=["rewatch"])
+    api.include_router(stats_router, prefix="/stats", tags=["stats"])
     # There is no ``app/adapters`` module — the adapter pattern (§5.6) is future
     # work, if ever. Were one built, it would be an internal integration
     # surface, not a public API namespace, so nothing would be mounted here.
