@@ -1,0 +1,27 @@
+<mat-card class="setting">
+  <div class="setting__header">
+    <h2 id="rewatch-share-label" class="setting__title">Rewatch share</h2>
+    <span class="setting__value">{{ valueLabel() }}</span>
+  </div>
+  <p class="setting__hint">
+    How much of this year's watching should be rewatches. The Rewatch list only offers enough films to reach it.
+  </p>
+  <mat-slider min="0" max="100" step="10" showTickMarks [displayWith]="percent">
+    <input
+      #thumb
+      matSliderThumb
+      aria-labelledby="rewatch-share-label"
+      [value]="shown()"
+      (input)="shown.set(thumb.valueAsNumber)"
+      (change)="onRewatchShareChange(thumb.valueAsNumber)"
+    />
+  </mat-slider>
+  <div class="setting__ends" aria-hidden="true">
+    <span>New watches</span>
+    <span>Rewatches</span>
+  </div>
+</mat-card>
+
+@if (error()) {
+  <p class="settings__error" role="alert">{{ error() }}</p>
+}

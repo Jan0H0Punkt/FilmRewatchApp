@@ -37,23 +37,38 @@ describe('App', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toBe('Rewatch');
   });
 
-  it('renders all three primary destinations in the navigation', async () => {
+  it('renders all primary destinations in the navigation', async () => {
     const labels = (await render()).querySelectorAll('nav a .app-nav__label');
 
-    expect([...labels].map((label) => label.textContent?.trim())).toEqual(['Rewatch', 'Library', 'Statistics']);
+    expect([...labels].map((label) => label.textContent?.trim())).toEqual([
+      'Rewatch',
+      'Library',
+      'Statistics',
+      'Settings',
+    ]);
   });
 
   it('renders each destination icon as a hidden ligature', async () => {
     const icons = (await render()).querySelectorAll('nav a mat-icon');
 
-    expect([...icons].map((icon) => icon.textContent?.trim())).toEqual(['replay', 'video_library', 'bar_chart']);
+    expect([...icons].map((icon) => icon.textContent?.trim())).toEqual([
+      'replay',
+      'video_library',
+      'bar_chart',
+      'settings',
+    ]);
     expect([...icons].every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 
   it('points each destination at its own route', async () => {
     const links = (await render()).querySelectorAll('nav a');
 
-    expect([...links].map((link) => link.getAttribute('href'))).toEqual(['/rewatch', '/library', '/stats']);
+    expect([...links].map((link) => link.getAttribute('href'))).toEqual([
+      '/rewatch',
+      '/library',
+      '/stats',
+      '/settings',
+    ]);
   });
 
   it('labels the navigation landmark', async () => {

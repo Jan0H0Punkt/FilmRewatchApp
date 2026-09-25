@@ -22,6 +22,9 @@ const filmForm = (): Promise<typeof import('../views/film-form/film-form').FilmF
 const stats = (): Promise<typeof import('../views/stats/stats').Stats> =>
   import('../views/stats/stats').then((module) => module.Stats);
 
+const settings = (): Promise<typeof import('../views/settings/settings').Settings> =>
+  import('../views/settings/settings').then((module) => module.Settings);
+
 export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   // Rewatch is the landing route: it is the primary discovery view (§6.5).
   // A redirect rather than a second mount, so `/` resolves to the same URL the
@@ -30,6 +33,7 @@ export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   { path: 'rewatch', title: 'Rewatch', loadComponent: rewatch, navIcon: 'replay', navLabel: 'Rewatch' },
   { path: 'library', title: 'Library', loadComponent: library, navIcon: 'video_library', navLabel: 'Library' },
   { path: 'stats', title: 'Statistics', loadComponent: stats, navIcon: 'bar_chart', navLabel: 'Statistics' },
+  { path: 'settings', title: 'Settings', loadComponent: settings, navIcon: 'settings', navLabel: 'Settings' },
   // Reached by selecting a film, never from the navigation (§6.5).
   { path: 'film/:id', title: 'Film', loadComponent: filmDetail },
   // Reached only from the Library's "Add new film" action (FR-LIB-05), never from the navigation.

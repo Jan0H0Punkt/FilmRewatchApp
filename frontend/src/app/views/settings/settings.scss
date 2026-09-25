@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.setting {
+  max-inline-size: 560px;
+  padding: 16px;
+}
+
+.setting__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.setting__title {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.setting__value {
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-title-medium);
+}
+
+.setting__hint {
+  margin-block: 4px 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+// The slider's own box is inset from its track ends by the thumb's radius;
+// stretching it and letting the end labels span the card lines them up.
+mat-slider {
+  display: block;
+  margin-inline: 0;
+}
+
+.setting__ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.settings__error {
+  color: var(--mat-sys-error);
+}

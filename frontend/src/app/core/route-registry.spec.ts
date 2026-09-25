@@ -34,8 +34,13 @@ describe('navDestinations', () => {
 });
 
 describe('ROUTE_REGISTRY', () => {
-  it('exposes exactly the three §6.5 primary destinations', () => {
-    expect(navDestinations(ROUTE_REGISTRY).map((item) => item.label)).toEqual(['Rewatch', 'Library', 'Statistics']);
+  it('exposes exactly the primary destinations', () => {
+    expect(navDestinations(ROUTE_REGISTRY).map((item) => item.label)).toEqual([
+      'Rewatch',
+      'Library',
+      'Statistics',
+      'Settings',
+    ]);
   });
 
   it('never exposes the contextual film detail route', () => {
