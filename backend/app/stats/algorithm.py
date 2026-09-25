@@ -71,6 +71,9 @@ class StatsBlock:
     minutes_watched: int
     average_rating: float | None
     rating_distribution: list[RatingCount]
+    # Ranked by number of watches in the block, not by rating: every watch
+    # counts, unrated ones too, and a genre scores once per watch of each film
+    # carrying it.
     top_genres: list[NamedCount]
     top_directors: list[NamedCount]
     top_films: list[FilmCount]
