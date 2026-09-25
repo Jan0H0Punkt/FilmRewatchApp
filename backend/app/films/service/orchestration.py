@@ -24,6 +24,7 @@ from app.films.service.normalisation import deduplicated, derive_natural_key
 from app.films.service.protocols import (
     FilmRepositoryProtocol,
     GenreAssignmentProtocol,
+    PosterPaletteFetcher,
     RatingHistoryProtocol,
     RewatchProjectionProtocol,
     TagAssignmentProtocol,
@@ -42,12 +43,14 @@ class FilmService:
         genres: GenreAssignmentProtocol,
         ratings: RatingHistoryProtocol,
         rewatch: RewatchProjectionProtocol,
+        fetch_poster_palette: PosterPaletteFetcher,
     ) -> None:
         self._repository = repository
         self._tags = tags
         self._genres = genres
         self._ratings = ratings
         self._rewatch = rewatch
+        self._fetch_poster_palette = fetch_poster_palette
 
     def _commit(self) -> None:
         """Seal the unit of work, invalidating the rewatch due-list with it.
@@ -90,6 +93,12 @@ class FilmService:
             runtime_minutes=data.runtime_minutes,
             poster_image=data.poster_image,
             letterboxd_url=data.letterboxd_url,
+            # ponytail: the poster palette fetch runs synchronously inside this
+            # request (and the edit's) — fine single-user; move it to a
+            # background task if a slow poster host ever makes writes feel slow.
+            poster_palette=self._fetch_poster_palette(data.poster_image)
+            if data.poster_image is not None
+            else None,
             owned=data.owned,
         )
         self._repository.add_film(film)
@@ -148,6 +157,7 @@ class FilmService:
             genre=[genre.name for genre in self._genres.list_for_film(film.id)],
             tags=[tag.name for tag in self._tags.list_for_film(film.id)],
             poster_image=film.poster_image,
+            poster_palette=film.poster_palette,
             letterboxd_url=film.letterboxd_url,
             owned=film.owned,
             is_favorite=film.is_favorite,
@@ -217,11 +227,19 @@ class FilmService:
             film.director = data.director
         if data.runtime_minutes is not None:
             film.runtime_minutes = data.runtime_minutes
-        if "poster_image" in data.model_fields_set:
+        if "poster_image" in data.model_fields_set and data.poster_image != film.poster_image:
             # One of the two fields whose stored value is itself nullable: an
             # explicit null here means "remove", not "unchanged" — FR-LIB-15 for
-            # the poster, REQ §4.1 for the Letterboxd link.
+            # the poster, REQ §4.1 for the Letterboxd link. The palette is
+            # re-derived only when the poster actually changes (FR-LIB-13/14)
+            # — an edit that repeats the same URL, or touches unrelated
+            # fields, must not re-fetch it.
             film.poster_image = data.poster_image
+            film.poster_palette = (
+                self._fetch_poster_palette(data.poster_image)
+                if data.poster_image is not None
+                else None
+            )
         if "letterboxd_url" in data.model_fields_set:
             film.letterboxd_url = data.letterboxd_url
         if data.owned is not None:

@@ -45,6 +45,7 @@ from app.films.service.orchestration import FilmService
 from app.films.service.protocols import (
     FilmRepositoryProtocol,
     GenreAssignmentProtocol,
+    PosterPaletteFetcher,
     RatingHistoryProtocol,
     TagAssignmentProtocol,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "FilmRepositoryProtocol",
     "FilmService",
     "GenreAssignmentProtocol",
+    "PosterPaletteFetcher",
     "RatingHistoryProtocol",
     "TagAssignmentProtocol",
     "derive_natural_key",

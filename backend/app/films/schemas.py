@@ -302,6 +302,15 @@ class FilmDetailRead(StrictSchema):
     genre: list[str]
     tags: list[str]
     poster_image: str | None
+    # Server-derived Material 3 seed palette, up to 4 lowercase "#rrggbb"
+    # entries ranked by dominance (FR-LIB-13/14) — the client maps a role by
+    # position: surfaces/neutrals from the first entry, primary/secondary/
+    # tertiary from the rest. Always the poster's real dominant colours,
+    # black/white/gray included, never rejected for looking colourless.
+    # Read-only: never accepted by FilmCreate/FilmUpdate, the strict base
+    # rejects it as an unknown field there. Null only when there is no poster
+    # or the fetch/decode failed.
+    poster_palette: list[str] | None
     letterboxd_url: str | None
     owned: bool
     is_favorite: bool

@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_session
 from app.films.repository import FilmRepository
-from app.films.service import FilmService
+from app.films.service import FilmService, PosterPaletteFetcher
+from app.films.service.poster_palette import palette_from_url
 from app.genres.dependencies import get_genre_service
 from app.genres.service import GenreService
 from app.ratings.dependencies import get_rating_service
@@ -32,12 +33,18 @@ def get_film_repository(session: Annotated[Session, Depends(get_session)]) -> Fi
     return FilmRepository(session)
 
 
+def get_poster_palette_fetcher() -> PosterPaletteFetcher:
+    """The real network fetch, overridden in tests to avoid touching one."""
+    return palette_from_url
+
+
 def get_film_service(
     repository: Annotated[FilmRepository, Depends(get_film_repository)],
     tags: Annotated[TagService, Depends(get_tag_service)],
     genres: Annotated[GenreService, Depends(get_genre_service)],
     ratings: Annotated[RatingService, Depends(get_rating_service)],
     rewatch: Annotated[RewatchRepository, Depends(get_rewatch_repository)],
+    fetch_poster_palette: Annotated[PosterPaletteFetcher, Depends(get_poster_palette_fetcher)],
 ) -> FilmService:
     """The film service over its repository and peer services."""
-    return FilmService(repository, tags, genres, ratings, rewatch)
+    return FilmService(repository, tags, genres, ratings, rewatch, fetch_poster_palette)

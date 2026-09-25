@@ -16,7 +16,7 @@ inside the harness' outer transaction — survives for the test to inspect.
 """
 
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import date, datetime
 from decimal import Decimal
 from typing import cast
@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
 from app.core.db import get_session
+from app.films.dependencies import get_poster_palette_fetcher
 from app.films.models import Film, Title
 from app.genres.models import Genre
 from app.genres.service import GenreService
@@ -39,12 +40,25 @@ from app.tags.models import FilmTag, Tag
 # --------------------------------------------------------------------------- #
 
 
-def _client_over(db_session: Session) -> TestClient:
+def _no_op_poster_palette_fetcher(_url: str) -> list[str] | None:
+    """The default fetcher override for every API test below (FR-LIB-13/14):
+    a poster URL never actually resolves to a real host in this suite, so
+    every test but the dedicated poster-palette one below runs with no
+    network access at all."""
+    return None
+
+
+def _client_over(
+    db_session: Session, poster_palette_fetcher: Callable[[str], list[str] | None] | None = None
+) -> TestClient:
     """The real app with the request session swapped for the harness one.
 
     The ``finally: rollback()`` mirrors what closing the request-scoped
     session does in production: uncommitted work from a failed request is
-    discarded; work the service committed is unaffected.
+    discarded; work the service committed is unaffected. The poster-palette
+    fetch (FR-LIB-13/14) is overridden too, defaulting to a fake that never
+    touches the network — the film payloads below use ``example.org`` URLs
+    that were never meant to be dereferenced.
     """
     app = create_app()
 
@@ -55,6 +69,9 @@ def _client_over(db_session: Session) -> TestClient:
             db_session.rollback()
 
     app.dependency_overrides[get_session] = override
+    app.dependency_overrides[get_poster_palette_fetcher] = lambda: (
+        poster_palette_fetcher or _no_op_poster_palette_fetcher
+    )
     return TestClient(app)
 
 
@@ -112,6 +129,7 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
         "genre",
         "tags",
         "poster_image",
+        "poster_palette",
         "letterboxd_url",
         "owned",
         "is_favorite",
@@ -140,6 +158,21 @@ def test_create_returns_201_with_the_full_projection_and_no_natural_key(
 
     # The detail read serves the same projection (§7.3).
     assert client.get(f"/api/v1/films/{film_id}").json() == body
+
+
+def test_poster_palette_is_derived_and_served_in_the_detail_projection(db_session: Session) -> None:
+    # The fetcher is overridden with a fake so this stays offline — see
+    # _client_over's docstring — while still proving the wiring end to end.
+    client = _client_over(db_session, poster_palette_fetcher=lambda _url: ["#abcdef", "#123456"])
+
+    response = client.post("/api/v1/films", json=_payload())
+
+    assert response.status_code == 201
+    body = cast(dict[str, object], response.json())
+    assert body["poster_palette"] == ["#abcdef", "#123456"]
+
+    film_id = body["id"]
+    assert client.get(f"/api/v1/films/{film_id}").json()["poster_palette"] == ["#abcdef", "#123456"]
 
 
 def test_a_film_can_be_logged_without_rating_the_watch(db_session: Session) -> None:

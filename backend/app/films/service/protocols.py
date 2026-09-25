@@ -7,7 +7,7 @@ lets the unit tests inject in-memory fakes (§9) without touching the database.
 """
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import date
 from decimal import Decimal
 from typing import Protocol
@@ -16,6 +16,12 @@ from app.films.models import Film, Title
 from app.genres.models import Genre
 from app.ratings.models import RatingEntry
 from app.tags.models import Tag
+
+# The poster-palette fetch (FR-LIB-13/14): a plain callable rather than a
+# Protocol class — one method, no state, satisfied directly by the real
+# function (app.films.service.poster_palette.palette_from_url) and by a
+# test fake with no adapter needed either way.
+PosterPaletteFetcher = Callable[[str], list[str] | None]
 
 
 class FilmRepositoryProtocol(Protocol):

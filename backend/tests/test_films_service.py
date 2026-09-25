@@ -221,11 +221,32 @@ class FakeRewatchProjection:
         self.stale_marks += 1
 
 
+class FakePosterPaletteFetcher:
+    """In-memory ``PosterPaletteFetcher`` fake, recording every url it was called
+    with (§9) — the poster-palette tests assert on ``calls`` to prove a fetch
+    was, or was not, triggered without touching the network."""
+
+    def __init__(self, palette: list[str] | None = None) -> None:
+        self.calls: list[str] = []
+        self.palette = ["#336699"] if palette is None else palette
+
+    def __call__(self, url: str) -> list[str] | None:
+        self.calls.append(url)
+        return self.palette
+
+
 def make_service() -> tuple[FilmService, FakeFilmRepository, FakeTagService, FakeRatingService]:
     repository = FakeFilmRepository()
     tags = FakeTagService()
     ratings = FakeRatingService()
-    service = FilmService(repository, tags, FakeGenreService(), ratings, FakeRewatchProjection())
+    service = FilmService(
+        repository,
+        tags,
+        FakeGenreService(),
+        ratings,
+        FakeRewatchProjection(),
+        FakePosterPaletteFetcher(),
+    )
     return service, repository, tags, ratings
 
 
@@ -238,7 +259,9 @@ def make_service_with_genres() -> tuple[
     tags = FakeTagService()
     genres = FakeGenreService()
     ratings = FakeRatingService()
-    service = FilmService(repository, tags, genres, ratings, FakeRewatchProjection())
+    service = FilmService(
+        repository, tags, genres, ratings, FakeRewatchProjection(), FakePosterPaletteFetcher()
+    )
     return service, repository, tags, genres, ratings
 
 
@@ -777,6 +800,124 @@ def test_update_poster_can_be_set_replaced_and_removed() -> None:
     assert untouched.poster_image is None
 
 
+# --------------------------------------------------------------------------- #
+# Poster palette derivation (FR-LIB-13/14) — the fetcher is a fake, no network
+# --------------------------------------------------------------------------- #
+
+
+def test_create_with_a_poster_fetches_and_stores_its_palette() -> None:
+    fetcher = FakePosterPaletteFetcher(palette=["#abcdef"])
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+
+    created = service.create(payload(poster_image="https://example.org/heat.jpg"))
+
+    assert fetcher.calls == ["https://example.org/heat.jpg"]
+    assert created.poster_palette == ["#abcdef"]
+
+
+def test_create_without_a_poster_never_calls_the_fetcher() -> None:
+    fetcher = FakePosterPaletteFetcher()
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+
+    created = service.create(payload())
+
+    assert fetcher.calls == []
+    assert created.poster_palette is None
+
+
+def test_patching_the_poster_recomputes_its_palette() -> None:
+    fetcher = FakePosterPaletteFetcher(palette=["#111111"])
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+    created = service.create(payload())
+    assert fetcher.calls == []
+
+    fetcher.palette = ["#222222"]  # test-only fake reconfigured mid-test
+    updated = service.update(created.id, update_payload(poster_image="https://example.org/a.jpg"))
+
+    assert fetcher.calls == ["https://example.org/a.jpg"]
+    assert updated.poster_palette == ["#222222"]
+
+
+def test_patching_the_poster_to_null_clears_its_palette() -> None:
+    fetcher = FakePosterPaletteFetcher(palette=["#111111"])
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+    created = service.create(payload(poster_image="https://example.org/a.jpg"))
+    assert created.poster_palette == ["#111111"]
+
+    removed = service.update(created.id, update_payload(poster_image=None))
+
+    assert removed.poster_palette is None
+    # Clearing never needs a fetch — the second call would be for the null case,
+    # which has nothing to fetch.
+    assert fetcher.calls == ["https://example.org/a.jpg"]
+
+
+def test_an_unrelated_patch_never_calls_the_fetcher() -> None:
+    fetcher = FakePosterPaletteFetcher()
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+    created = service.create(payload(poster_image="https://example.org/a.jpg"))
+    assert fetcher.calls == ["https://example.org/a.jpg"]
+
+    updated = service.update(created.id, update_payload(is_favorite=True))
+
+    assert fetcher.calls == ["https://example.org/a.jpg"]  # no second call
+    assert updated.poster_palette == ["#336699"]  # unchanged from create
+
+
+def test_repatching_the_same_poster_url_never_refetches() -> None:
+    fetcher = FakePosterPaletteFetcher()
+    service = FilmService(
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        FakeRewatchProjection(),
+        fetcher,
+    )
+    created = service.create(payload(poster_image="https://example.org/a.jpg"))
+    assert fetcher.calls == ["https://example.org/a.jpg"]
+
+    updated = service.update(created.id, update_payload(poster_image="https://example.org/a.jpg"))
+
+    assert fetcher.calls == ["https://example.org/a.jpg"]  # unchanged value, no refetch
+    assert updated.poster_palette == ["#336699"]
+
+
 def test_update_letterboxd_url_can_be_set_replaced_and_removed() -> None:
     service, _, _, _ = make_service()
     created = service.create(payload())
@@ -964,7 +1105,12 @@ def test_every_write_path_invalidates_the_rewatch_projection() -> None:
     # leave yesterday's projection looking current (§5.8).
     rewatch = FakeRewatchProjection()
     service = FilmService(
-        FakeFilmRepository(), FakeTagService(), FakeGenreService(), FakeRatingService(), rewatch
+        FakeFilmRepository(),
+        FakeTagService(),
+        FakeGenreService(),
+        FakeRatingService(),
+        rewatch,
+        FakePosterPaletteFetcher(),
     )
 
     created = service.create(payload())

@@ -29,6 +29,8 @@ uv run pytest tests/test_core_errors.py::test_name   # run one test
 uv run uvicorn app.main:app --reload      # run the API locally (Swagger at /docs, schema at /openapi.json)
 uv run alembic upgrade head               # apply migrations
 uv run alembic revision --autogenerate    # after `upgrade head`: must produce an empty diff
+uv run python -m app.films.backfill_poster_palettes          # one-off: compute poster_palette for pre-existing films
+uv run python -m app.films.backfill_poster_palettes --all    # recompute poster_palette for every film with a poster
 ```
 
 There is no CI — `make typecheck`, `make lint`, `make format-check`, and `make test` are the local gate for every change (the repo-level pre-commit hook runs the Ruff pair on staged backend files). The strict type-check must pass with zero errors from the first commit; treat a pyright or Ruff error as a build break. Everything runs through `uv run`, which uses `backend/.venv` (syncing it first if stale) — no manual activation; pyright resolves types from that environment, so a run outside `uv run`/the venv reports spurious missing-import errors.

@@ -17,6 +17,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Uuid, text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, utc_now
@@ -41,6 +42,10 @@ class Film(Base):
     poster_image: Mapped[str | None] = mapped_column(String(2048))
     # User-entered Letterboxd link, same optionality/nullability as poster_image.
     letterboxd_url: Mapped[str | None] = mapped_column(String(2048))
+    # Server-derived Material 3 seed palette (up to 4 "#rrggbb" entries,
+    # ranked by dominance), computed from the poster image; null when there is
+    # no poster or none could be derived.
+    poster_palette: Mapped[list[str] | None] = mapped_column(ARRAY(String(7)))
     # "I own this film on disc" (REQ §4.1) — plain metadata the views mark with
     # an icon; no rewatch-engine input, unlike the two below.
     owned: Mapped[bool] = mapped_column(Boolean, default=False)
