@@ -1,7 +1,9 @@
 /** Statistics domain models (DESIGN §6.1) — see docs/superpowers/specs/2026-09-25-statistics-design.md. */
-export interface NamedCount {
+export interface TopName {
   readonly name: string;
-  readonly count: number;
+  readonly watches: number;
+  readonly averageRating: number;
+  readonly score: number;
 }
 
 export interface TopFilm {
@@ -34,8 +36,8 @@ export interface StatsBlock {
   /** `null` when no watch in the block was rated (FR-RAT-12). */
   readonly averageRating: number | null;
   readonly ratingDistribution: readonly RatingCount[];
-  readonly topGenres: readonly NamedCount[];
-  readonly topDirectors: readonly NamedCount[];
+  readonly topGenres: readonly TopName[];
+  readonly topDirectors: readonly TopName[];
   readonly topFilms: readonly TopFilm[];
   readonly buckets: readonly Bucket[];
 }

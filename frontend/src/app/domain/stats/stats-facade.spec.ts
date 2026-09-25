@@ -19,8 +19,8 @@ function block(overrides: Partial<StatsBlockDto> = {}): StatsBlockDto {
     minutes_watched: 510,
     average_rating: 4.5,
     rating_distribution: [{ value: 4.5, count: 3 }],
-    top_genres: [{ name: 'Crime', count: 3 }],
-    top_directors: [{ name: 'Michael Mann', count: 3 }],
+    top_genres: [{ name: 'Crime', watches: 3, average_rating: 4.5, score: 13.5 }],
+    top_directors: [{ name: 'Michael Mann', watches: 3, average_rating: 4.5, score: 13.5 }],
     top_films: [{ film_id: 'f1', title: 'Heat', watches: 3, average_rating: 4.5, score: 13.5 }],
     buckets: [{ label: '2026', count: 3 }],
     ...overrides,
@@ -78,6 +78,7 @@ describe('StatsFacade', () => {
     expect(stats?.total.topFilms).toEqual([
       { filmId: 'f1', title: 'Heat', watches: 3, averageRating: 4.5, score: 13.5 },
     ]);
+    expect(stats?.total.topDirectors).toEqual([{ name: 'Michael Mann', watches: 3, averageRating: 4.5, score: 13.5 }]);
     expect(stats?.years[0].year).toBe(2026);
     expect(stats?.years[0].filmsReleasedThatYear).toBe(0);
   });

@@ -4,6 +4,13 @@ import { Injectable } from '@angular/core';
 
 import { environment } from '../../../environments/environment';
 
+interface TopNameDto {
+  readonly name: string;
+  readonly watches: number;
+  readonly average_rating: number;
+  readonly score: number;
+}
+
 /** Mirrors the backend's `StatsBlockRead`. */
 export interface StatsBlockDto {
   readonly watches: number;
@@ -14,8 +21,8 @@ export interface StatsBlockDto {
   readonly minutes_watched: number;
   readonly average_rating: number | null;
   readonly rating_distribution: readonly { readonly value: number; readonly count: number }[];
-  readonly top_genres: readonly { readonly name: string; readonly count: number }[];
-  readonly top_directors: readonly { readonly name: string; readonly count: number }[];
+  readonly top_genres: readonly TopNameDto[];
+  readonly top_directors: readonly TopNameDto[];
   readonly top_films: readonly {
     readonly film_id: string;
     readonly title: string;

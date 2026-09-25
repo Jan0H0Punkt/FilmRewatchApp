@@ -1,8 +1,17 @@
 /** `StatsDto` → `Stats` (DESIGN §6.1). */
 import type { StatsBlockDto, StatsDto } from './api';
-import type { Stats, StatsBlock } from './model';
+import type { Stats, StatsBlock, TopName } from './model';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function toTopName(names: StatsBlockDto['top_genres']): TopName[] {
+  return names.map((n) => ({
+    name: n.name,
+    watches: n.watches,
+    averageRating: n.average_rating,
+    score: n.score,
+  }));
+}
 
 function toBlock(dto: StatsBlockDto, bucketLabel: (label: string) => string): StatsBlock {
   return {
@@ -14,8 +23,8 @@ function toBlock(dto: StatsBlockDto, bucketLabel: (label: string) => string): St
     minutesWatched: dto.minutes_watched,
     averageRating: dto.average_rating,
     ratingDistribution: dto.rating_distribution,
-    topGenres: dto.top_genres,
-    topDirectors: dto.top_directors,
+    topGenres: toTopName(dto.top_genres),
+    topDirectors: toTopName(dto.top_directors),
     topFilms: dto.top_films.map((f) => ({
       filmId: f.film_id,
       title: f.title,
