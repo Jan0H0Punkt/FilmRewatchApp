@@ -265,6 +265,14 @@ of the rule server-side. `natural_key` **is** a column (it backs the "no duplica
 never types it: the business layer builds it from primary title + release year + director, and rebuilds it
 whenever one of those changes (FR-LIB-04/08).
 
+`poster_palette` is a column of the same "derived, server-side, read-only" shape: the business layer fetches the
+`poster_image` URL (FR-LIB-13/14) and stores a ranked Material 3 seed palette (up to four `"#rrggbb"` entries, most
+dominant colour first, or `null` when there is no poster or none could be derived), recomputed whenever the poster
+changes. Unlike `natural_key` it is also part of the API's detail projection — the client maps a colour role to
+each entry by position (surfaces/neutrals from the first, primary/secondary/tertiary from the rest) to tint the
+film detail view, since it cannot read the poster's pixels itself (the poster is on an arbitrary host, so the
+browser hits CORS).
+
 **How the trickier rules are enforced.**
 
 - *No two tags — or genres — with the same name, ignoring case* → a unique index on `lower(name)` on each table.
@@ -292,6 +300,8 @@ All endpoints are namespaced under `/api/v1` (§3.2, FR-EXT-11) and documented a
 | `GET /tags`                   | List tags (supports `?prefix=` for autocomplete)                           | FR-TAG-06                      |
 | `GET /genres`                 | List genres (supports `?prefix=` for autocomplete)                         | FR-SF-07 (filter/autocomplete) |
 | `GET /rewatch-suggestions`    | Latest daily-computed due-list (`film_id` + `days_until_rewatch`, ordered) | FR-RW-*, §5.8                  |
+| `GET /settings`               | The stored app settings (currently just the rewatch share)                | FR-RW-08                       |
+| `PUT /settings`               | Replace the stored settings; returns the stored state                     | FR-RW-08                       |
 
 Tags and genres are **created implicitly** through film create/edit payloads (FR-TAG-01: a tag never exists
 standalone; the same applies to genres, §5.2). `GET /tags` and `GET /genres` are read-only lookups for filtering
@@ -479,6 +489,9 @@ like any other read. Each suggestion's `film_id` is joined to the cached film me
   those that remain — a subset, not a re-sort, so it does not conflict with FR-RW-04. It would run client-side
   over the cached due-list (joining each `film_id` to its cached metadata) and **reuse the Search & Filter
   registry** (FR-EXT-05) rather than a second mechanism. See §11.
+- **Rewatch-share cap (FR-RW-08), shipped.** Distinct from the future filter above: when the rewatch-share
+  setting is set, the view caps the due-list to a **prefix** of the algorithm's order — also a subset, not a
+  re-sort, so it is likewise a permitted FR-RW-04 filter. `Off` (the default) leaves the view exactly as before.
 - **Optimistic removal on watch.** When a new watch (RatingEntry) is logged for a film currently in the cached
   due-list — from anywhere in the app — the client immediately removes that film from the list, because a
   freshly watched film won't be due again for a while. This is a local update to the cached due-list only; the

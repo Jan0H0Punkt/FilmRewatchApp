@@ -486,6 +486,11 @@ application must honour when integrating it.
 - **FR-RW-06:** If the algorithm returns an empty list (e.g. no films qualify), the view shall display an appropriate empty state message.
 - **FR-RW-07:** If the algorithm throws an error or times out, the view shall display a non-blocking error message. The rest of the
   application shall remain fully functional.
+- **FR-RW-08:** The user may set a **rewatch share** — `null` (Off, default) or an integer percentage `0–100` in steps of 10 — stored
+  server-side so it is shared across devices (single user, §2). When set, the Rewatch view caps its due list (a FR-RW-04 subset filter, not
+  a re-sort) to only as many films as it takes for this year's share of rewatches among all watches to reach the target, showing none
+  once already at or above it; `Off` leaves the view uncapped, and the cap fails open (uncapped) if this year's watch/rewatch counts cannot
+  be loaded. See §7.1 for the cap's display.
 
 ---
 
@@ -639,6 +644,8 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 - The view shall display a loading indicator while the suggestion list is being fetched.
 - An **empty state** is shown when no suggestions are returned (FR-RW-06).
 - An **error state** is shown if the algorithm fails (FR-RW-07), without hiding the cards from the previous successful run.
+- When the rewatch-share cap (FR-RW-08) hides at least one due film, a note above the list reads "Showing k of n due films · t% rewatch
+  target"; at `k = 0` this note replaces the empty state, explaining why the list is empty instead of showing an unexplained one.
 
 ---
 
