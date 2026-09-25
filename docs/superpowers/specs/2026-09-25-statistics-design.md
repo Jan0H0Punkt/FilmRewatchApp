@@ -57,14 +57,14 @@ Rules:
 ## Frontend
 
 - `domain/stats/` — `model.ts`, `api.ts`, `mapper.ts`, `facade.ts` (§6.1: DTO → domain → view).
-- `views/stats/` — the page, registered in `core/routes.registry.ts` as `{ path: 'stats', title: 'Statistics', navIcon: 'bar_chart', navLabel: 'Statistik' }` → third navigation destination.
+- `views/stats/` — the page, registered in `core/routes.registry.ts` as `{ path: 'stats', title: 'Statistics', navIcon: 'bar_chart', navLabel: 'Statistics' }` → third navigation destination.
 - Layout, top to bottom:
-  1. Scope switcher — `mat-chip-listbox`: **Gesamt · 2026 · 2025 · …**; the current year is preselected.
+  1. Scope switcher — `mat-chip-listbox`: **All time · 2026 · 2025 · …** (UI copy is English, like the other views); the current year is preselected.
   2. KPI tiles — watches, first watches, rewatches, films released that year (year scope only), hours watched, distinct films.
   3. Bar chart of `buckets` in plain CSS (no chart library).
   4. Ratings — average plus distribution as small bars.
   5. Top lists — genres, directors, films; film titles link to `film/:id`.
-- An empty year shows "Keine Watches in diesem Jahr" instead of zero tiles.
+- An empty year shows "No watches this year" instead of zero tiles.
 - Colours via `--mat-sys-*` tokens only, so Dark/Light/Auto work unchanged.
 
 ## Testing
