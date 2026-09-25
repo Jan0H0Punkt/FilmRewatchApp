@@ -6,8 +6,13 @@ import { provideRouter } from '@angular/router';
 
 import { RewatchFacade } from '../../domain/rewatch/facade';
 import type { RewatchCardVm } from '../../domain/rewatch/model';
+import { SettingsFacade } from '../../domain/settings/facade';
+import { StatsFacade } from '../../domain/stats/facade';
+import type { Stats } from '../../domain/stats/model';
 import { LetterboxdDialog } from './letterboxd-dialog';
 import { Rewatch } from './rewatch';
+
+const THIS_YEAR = new Date().getFullYear();
 
 /** Stands in for `MatDialog` — `Rewatch` never reads `open()`'s return value. */
 function stubMatDialog() {
@@ -27,11 +32,22 @@ const HEAT: RewatchCardVm = {
   letterboxdUrl: null,
 };
 
+/**
+ * FR-RW-08 inputs for the cap; default to Off/not-loaded so every existing
+ * test below (none of which mention the cap) keeps seeing the due-list
+ * unfiltered, same as before the setting existed.
+ */
+interface CapInputs {
+  readonly rewatchShare?: number | null;
+  readonly stats?: Stats | null;
+}
+
 async function render(
   cards: readonly RewatchCardVm[],
   isLoading = false,
   error: unknown = undefined,
   dialog: ReturnType<typeof stubMatDialog> = stubMatDialog(),
+  cap: CapInputs = {},
 ): Promise<HTMLElement> {
   // The favourite test renders twice; without the reset the second
   // `configureTestingModule` throws because a component already exists.
@@ -52,12 +68,58 @@ async function render(
           setDoneBefore: (): void => undefined,
         },
       },
+      {
+        provide: SettingsFacade,
+        useValue: { rewatchShare: signal(cap.rewatchShare ?? null), onViewOpened: (): void => undefined },
+      },
+      {
+        provide: StatsFacade,
+        useValue: { stats: signal(cap.stats ?? null), onViewOpened: (): void => undefined },
+      },
       { provide: MatDialog, useValue: dialog },
     ],
   });
   const fixture = TestBed.createComponent(Rewatch);
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
+}
+
+function statsWithYear(watches: number, rewatches: number): Stats {
+  return {
+    total: {
+      watches,
+      firstWatches: 0,
+      rewatches,
+      filmsReleasedThatYear: null,
+      distinctFilms: 0,
+      minutesWatched: 0,
+      averageRating: null,
+      ratingDistribution: [],
+      topGenres: [],
+      topDirectors: [],
+      topTags: [],
+      topFilms: [],
+      buckets: [],
+    },
+    years: [
+      {
+        year: THIS_YEAR,
+        watches,
+        firstWatches: 0,
+        rewatches,
+        filmsReleasedThatYear: null,
+        distinctFilms: 0,
+        minutesWatched: 0,
+        averageRating: null,
+        ratingDistribution: [],
+        topGenres: [],
+        topDirectors: [],
+        topTags: [],
+        topFilms: [],
+        buckets: [],
+      },
+    ],
+  };
 }
 
 describe('Rewatch view', () => {
@@ -144,6 +206,67 @@ describe('Rewatch view', () => {
 
     expect(element.querySelector('[role="alert"]')).not.toBeNull();
     expect(element.querySelectorAll('.rewatch__card')).toHaveLength(1);
+  });
+
+  describe('rewatch-share cap (FR-RW-08, §Cap)', () => {
+    const SEVEN: RewatchCardVm = { ...HEAT, id: 'f2', title: 'Se7en' };
+    const PULP: RewatchCardVm = { ...HEAT, id: 'f3', title: 'Pulp Fiction' };
+
+    it('shows the full list when the share is Off', async () => {
+      const element = await render([HEAT, SEVEN, PULP], false, undefined, stubMatDialog(), {
+        rewatchShare: null,
+        stats: statsWithYear(2, 0),
+      });
+
+      expect(element.querySelectorAll('.rewatch__card')).toHaveLength(3);
+      expect(element.querySelector('.rewatch__count')?.textContent).toBe('3 films due');
+    });
+
+    it('shows the full list, no cap, when stats failed to load (fails open)', async () => {
+      const element = await render([HEAT, SEVEN, PULP], false, undefined, stubMatDialog(), {
+        rewatchShare: 50,
+        stats: null,
+      });
+
+      expect(element.querySelectorAll('.rewatch__card')).toHaveLength(3);
+    });
+
+    it("shows only the prefix the cap allows, in the algorithm's order, with the note above the list", async () => {
+      // share 50%, 2 watches and 0 rewatches this year -> k = 2 (see rewatch-cap.spec.ts).
+      const element = await render([HEAT, SEVEN, PULP], false, undefined, stubMatDialog(), {
+        rewatchShare: 50,
+        stats: statsWithYear(2, 0),
+      });
+
+      const cards = element.querySelectorAll('.rewatch__card');
+      expect(cards).toHaveLength(2);
+      expect(element.textContent).toContain('Heat');
+      expect(element.textContent).toContain('Se7en');
+      expect(element.textContent).not.toContain('Pulp Fiction');
+      expect(element.querySelector('.rewatch__count')?.textContent).toBe(
+        'Showing 2 of 3 due films · 50% rewatch target',
+      );
+    });
+
+    it('replaces the empty state with the note when the cap is zero', async () => {
+      const element = await render([HEAT, SEVEN], false, undefined, stubMatDialog(), {
+        rewatchShare: 0,
+        stats: statsWithYear(5, 1),
+      });
+
+      expect(element.querySelectorAll('.rewatch__card')).toHaveLength(0);
+      expect(element.textContent).toContain('Showing 0 of 2 due films · 0% rewatch target');
+      expect(element.textContent).not.toContain('Nothing due right now');
+    });
+
+    it('shows no note when the cap hides nothing', async () => {
+      const element = await render([HEAT], false, undefined, stubMatDialog(), {
+        rewatchShare: 90,
+        stats: statsWithYear(100, 0),
+      });
+
+      expect(element.querySelector('.rewatch__count')?.textContent).toBe('1 film due');
+    });
   });
 
   describe('Letterboxd title icon (§7.1)', () => {

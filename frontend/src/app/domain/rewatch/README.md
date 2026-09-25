@@ -14,3 +14,9 @@ is the "done watching by" filter (`doneBefore`/`setDoneBefore`): a film whose
 runtime would run past that clock time if started now is dropped from
 `cards`, using the shared `ClockService` "now" so the grid re-filters as time
 passes rather than only when the view reopens.
+
+`cap.ts`'s `rewatchCap` is a third, unrelated to `RewatchFacade` itself
+(FR-RW-08, §Cap): the pure "how many due films to show" formula for the
+rewatch-share setting. It lives here rather than in `domain/settings/`
+because it caps the rewatch _due-list_; `views/rewatch/rewatch.ts` is what
+calls it, reading `StatsFacade` and `SettingsFacade` directly for its inputs.

@@ -10,6 +10,8 @@ import { ClockService } from '../../core/clock';
 import { Rewatch } from '../../views/rewatch/rewatch';
 import { FilmFacade } from '../film/facade';
 import type { Film } from '../film/model';
+import { SettingsFacade } from '../settings/facade';
+import { StatsFacade } from '../stats/facade';
 import type { RewatchSuggestionDto } from './api';
 import { RewatchApi } from './api';
 import { RewatchFacade } from './facade';
@@ -268,6 +270,11 @@ describe('opening the Rewatch view', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: FilmFacade, useValue: filmFacadeStub([]) },
+        // Stubbed out (plain signals, no real `HttpClient` traffic): this
+        // block is about `/rewatch-suggestions`'s own re-fetch-on-open, not
+        // the FR-RW-08 cap — see `views/rewatch/rewatch.spec.ts` for that.
+        { provide: StatsFacade, useValue: { stats: signal(null), onViewOpened: (): void => undefined } },
+        { provide: SettingsFacade, useValue: { rewatchShare: signal(null), onViewOpened: (): void => undefined } },
       ],
     });
     httpTesting = TestBed.inject(HttpTestingController);

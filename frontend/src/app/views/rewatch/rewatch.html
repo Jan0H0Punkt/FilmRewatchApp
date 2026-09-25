@@ -6,8 +6,11 @@
     <mat-timepicker #doneByPicker interval="15m" />
   </mat-form-field>
   @if (cards().length > 0) {
-    <!-- role="status" so the number is announced once the list lands. -->
-    <p class="rewatch__count" role="status">{{ countLabel() }}</p>
+    <!-- role="status" so the number is announced once the list lands.
+         FR-RW-08: `capNote()` takes over here instead of `countLabel()` once
+         the cap actually hides something — both say "how many", this one
+         also says the target, so there is never a need for both at once. -->
+    <p class="rewatch__count" role="status">{{ capNote() ?? countLabel() }}</p>
   }
 </div>
 
@@ -85,7 +88,11 @@
     }
   </ul>
 } @else if (!isLoading() && !error()) {
-  <p class="rewatch__state">Nothing due right now. Enjoy the backlog.</p>
+  <!-- FR-RW-08: with the cap at k = 0, `capNote()` explains the empty list
+       ("Showing 0 of n …") in place of the plain empty state below. -->
+  <p class="rewatch__state" [attr.role]="capNote() ? 'status' : null">
+    {{ capNote() ?? 'Nothing due right now. Enjoy the backlog.' }}
+  </p>
 }
 
 <app-scroll-to-top-fab />
