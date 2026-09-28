@@ -21,6 +21,7 @@
    - 5.4 [Search & Filter](#54-search--filter)
    - 5.5 [Rewatch Suggestion Engine](#55-rewatch-suggestion-engine)
    - 5.6 [Offline & Sync](#56-offline--sync)
+   - 5.7 [Letterboxd Sync](#57-letterboxd-sync)
 6. [Extensibility Requirements](#6-extensibility-requirements)
 7. [UI / UX Requirements](#7-ui--ux-requirements)
    - 7.1 [Rewatch Suggestion View](#71-rewatch-suggestion-view)
@@ -58,6 +59,7 @@ The following capabilities are **in scope**:
 - Offline-capable frontend: browsing and viewing cached data remain functional without a network connection; operations that cannot be
   answered from cache surface a neutral, non-blocking "currently unavailable" message (see FR-OFF-04) rather than failing silently.
 - Write operations performed while offline are queued locally and synced to the backend when connectivity is restored.
+- A one-way Letterboxd sync: new Letterboxd diary entries are queued for the user's review (see §5.7).
 - Single local deployment: the backend and database run on the user's laptop; the mobile browser syncs only when the device is on the same
   network and the laptop is running.
 
@@ -68,7 +70,7 @@ The following are explicitly **out of scope** for this version:
 - Always-on / remote-server deployment and multi-topology hosting (the application targets a single local-laptop deployment; see §3.6).
 - Social or sharing features.
 - Native mobile applications (iOS / Android).
-- Export or import of data.
+- Export of data; import of data other than the Letterboxd sync (§5.7).
 
 ---
 
@@ -552,6 +554,30 @@ application must honour when integrating it.
 
 ---
 
+### 5.7 Letterboxd Sync
+
+The user also logs films on Letterboxd. New Letterboxd diary entries are brought into the app one way (Letterboxd → app) and
+**only with the user's approval**. Design: `docs/superpowers/specs/2026-09-28-letterboxd-sync-design.md`.
+
+- **FR-LBX-01:** The source is the public RSS feed of the Letterboxd member named by the `LETTERBOXD_USERNAME` setting. With no
+  username set, the sync is off. The backend checks hourly and syncs when the last sync is more than 24 hours old, and once on every
+  start; the user can also trigger a sync manually.
+- **FR-LBX-02:** Only diary entries (items with a watch date) are read, newest-logged first. The sync stops at the first entry already
+  known: its Letterboxd id is already in the review list (open or resolved), or its matched film already has a watch on that date.
+- **FR-LBX-03:** An entry dated after the server's current date is skipped without stopping and retried by the next sync.
+- **FR-LBX-04:** An entry is matched to a film by its Letterboxd link first (the film's `letterboxd_url` slug on letterboxd.com), then
+  by title and year against every title of a film (case-insensitive, trimmed). Exactly one match becomes the entry's suggested film;
+  zero or several leave it without one.
+- **FR-LBX-05:** The sync never adds a watch or edits a film. Every new entry is stored in the review list.
+- **FR-LBX-06:** Per open entry the user can **approve** the suggestion or **assign** another film (both add the watch with the entry's
+  date and rating, and set the film's `letterboxd_url` when it has none), **create** the film through the prefilled film form, or
+  **dismiss** the entry. A resolved entry cannot be acted on again.
+- **FR-LBX-07:** An open entry whose film now has a watch on the entry's date (e.g. the user created the film from the form) is
+  resolved automatically the next time the list is read.
+- **FR-LBX-08:** An entry without a Letterboxd rating is an unrated watch (FR-RAT-12); no rating is imputed.
+
+---
+
 ## 6. Extensibility Requirements
 
 These requirements ensure the application can accommodate new features, views, and integrations without requiring structural rework of
@@ -842,5 +868,6 @@ normal use.
 | 1.1     | 2026-06-05 | Reconciled with DESIGN_V1 and approved. Genre is now a first-class entity (§4.4, modelled like Tag). Watched-only library: every film must have ≥ 1 rating — first rating mandatory at create, deleting the last rating deletes the film, no "not yet rated" state (FR-LIB-03, FR-RAT-07/11, §4.1, §4.5, §7.3). Rewatch engine is a once-daily backend job returning only due/overdue films, most-overdue first; no manual refresh (FR-RW-02/03/04/05, §7.1). Navigation is a desktop drawer + mobile bottom bar (§7, §7.4). Deployment narrowed to a single local-laptop target; multi-topology / deployment-agnostic dropped (§1.3, §3.6, FR-EXT-13, NFR-OFF-06). Global tag/genre delete deferred (FR-TAG-05). |
 | 1.4     | 2026-09-20 | Added `owned` (§4.1): a boolean marking a film the user owns on disc, defaulting to `false`. Plain metadata — no rewatch-engine input, so unlike `is_favorite`/`delay_days` it *is* accepted at create. Shown as a disc icon on the Library rows and Rewatch cards, toggled on the Film Detail view and editable in the film form. |
 | 1.3     | 2026-09-15 | Added `letterboxd_url` (§4.1): an optional, user-entered link to the film's Letterboxd page, nullable like `poster_image`. Edited on the Film Detail view only; an explicit `null` on PATCH clears it, an absent field leaves it unchanged. No `letterboxd.com` host restriction — Letterboxd's own share button produces `boxd.it` short links. |
+| 1.5     | 2026-09-28 | Letterboxd sync (§5.7, FR-LBX-01..08): a one-way, approval-first import of Letterboxd diary entries through the member RSS feed. "Import of data" leaves the out-of-scope list only for this path (§1.3). |
 
 ---

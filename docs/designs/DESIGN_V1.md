@@ -25,6 +25,7 @@
     - [5.6 Integration Adapter Pattern](#56-integration-adapter-pattern)
     - [5.7 Type Safety](#57-type-safety)
     - [5.8 Rewatch Suggestion Engine](#58-rewatch-suggestion-engine)
+    - [5.9 Letterboxd Sync](#59-letterboxd-sync)
   - [6. Frontend Design](#6-frontend-design)
     - [6.1 Layered Structure (Angular client)](#61-layered-structure-angular-client)
     - [6.2 Cache-First Data Layer \& Sync Queue](#62-cache-first-data-layer--sync-queue)
@@ -421,6 +422,19 @@ passes it to the pure algorithm, and persists the result. Replacing the algorith
 
 ---
 
+### 5.9 Letterboxd Sync
+
+`app/letterboxd/` (REQ §5.7) reads `https://letterboxd.com/<LETTERBOXD_USERNAME>/rss/` with `urllib` and `xml.etree`, no
+dependency. `run_sync` walks the diary entries newest-logged first and stores each new one in `letterboxd_entries` (with a
+`suggested_film_id` when exactly one film matches) until the FR-LBX-02 stop rule fires; it never writes a watch. The review routes
+under `/api/v1/letterboxd` (`GET /entries`, `POST /entries/{id}/assign`, `POST /entries/{id}/dismiss`, `POST /sync`) resolve entries;
+`assign` goes service-to-service through `FilmService.add_rating`/`update`, so the rewatch projection is invalidated as for any
+other watch. The FastAPI lifespan starts one asyncio task (`scheduler.run_periodically`) when a username is set: an hourly wall-clock
+check that runs the sync in a worker thread once the last success is 24 h old. A module-level lock keeps the scheduled and the
+manual sync from overlapping; the `guid` unique constraint is the backstop.
+
+---
+
 ## 6. Frontend Design
 
 ### 6.1 Layered Structure (Angular client)
@@ -514,9 +528,11 @@ rely on the browser/SW HTTP cache on a best-effort basis (FR-OFF-03).
 
 ### 6.5 Views & Navigation
 
-Three routed views (§7): `rewatch`, `library` (Search & Filter + Add Film), and `film/:id` (Detail). Only **two**
-are primary navigation destinations — **Rewatch** and **Library**; the Film Detail view is reached *contextually*
-by selecting a film, and **Add Film** is an action inside the Library view (§7.2), not a nav destination. Routes
+Three routed views (§7): `rewatch`, `library` (Search & Filter + Add Film), and `film/:id` (Detail). Only **three**
+are primary navigation destinations — **Rewatch**, **Library**, and `letterboxd` — the Letterboxd review list
+(REQ §5.7), a primary navigation destination whose icon carries the number of open entries (§5.9); the Film Detail
+view is reached *contextually* by selecting a film, and **Add Film** is an action inside the Library view (§7.2),
+not a nav destination. Routes
 are driven by a **route registry** so new views can be added without editing existing entries (FR-EXT-02). Shared
 presentational components — film card, rating stars, tag chip, poster-with-placeholder — live in `shared/` for
 reuse across views (FR-EXT-03), each meeting WCAG 2.1 AA (NFR-A11Y-01..04).
