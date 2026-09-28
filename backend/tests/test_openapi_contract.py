@@ -50,6 +50,11 @@ _EXPECTED_ROUTES = {
     # The rewatch-share setting (2026-09-25-rewatch-share-design.md, FR-RW-08).
     ("GET", "/api/v1/settings"),
     ("PUT", "/api/v1/settings"),
+    # The Letterboxd sync (2026-09-28-letterboxd-sync-design.md, REQ §5.7).
+    ("GET", "/api/v1/letterboxd/entries"),
+    ("POST", "/api/v1/letterboxd/entries/{entry_id}/assign"),
+    ("POST", "/api/v1/letterboxd/entries/{entry_id}/dismiss"),
+    ("POST", "/api/v1/letterboxd/sync"),
 }
 
 # The framework-level codes core/errors.py's handlers can emit without a

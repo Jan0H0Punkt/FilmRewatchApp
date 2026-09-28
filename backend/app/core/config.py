@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # Letterboxd member whose RSS feed is synced into the review list (REQ §5.7,
+    # FR-LBX-01). Empty turns the sync off.
+    letterboxd_username: str = ""
+
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

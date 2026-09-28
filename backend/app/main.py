@@ -12,7 +12,10 @@ CORS is wired below from configuration (PR2), and the single error-envelope
 exception handler (PR5) is registered on the app (DESIGN §5.4, NFR-MAINT-03).
 """
 
+import asyncio
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +24,8 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.films.router import router as films_router
 from app.genres.router import router as genres_router
+from app.letterboxd.router import router as letterboxd_router
+from app.letterboxd.scheduler import run_periodically
 from app.ratings.router import router as ratings_router
 from app.rewatch.router import router as rewatch_router
 from app.settings.router import router as settings_router
@@ -53,10 +58,21 @@ def build_api_router() -> APIRouter:
     api.include_router(rewatch_router, prefix="/rewatch-suggestions", tags=["rewatch"])
     api.include_router(stats_router, prefix="/stats", tags=["stats"])
     api.include_router(settings_router, prefix="/settings", tags=["settings"])
+    api.include_router(letterboxd_router, prefix="/letterboxd", tags=["letterboxd"])
     # There is no ``app/adapters`` module — the adapter pattern (§5.6) is future
     # work, if ever. Were one built, it would be an internal integration
     # surface, not a public API namespace, so nothing would be mounted here.
     return api
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    """Run the daily Letterboxd sync while the app is up (FR-LBX-01); off without a username."""
+    username = get_settings().letterboxd_username
+    task = asyncio.create_task(run_periodically(username)) if username else None
+    yield
+    if task is not None:
+        task.cancel()
 
 
 def create_app() -> FastAPI:
@@ -69,9 +85,9 @@ def create_app() -> FastAPI:
         title="Film Rewatch API",
         # App version (SemVer 2.0.0, policy in the root README). The /api/vN
         # contract is SemVer's "public API": breaking it bumps MAJOR and the
-        # URL version together. M4 adds the rewatch-suggestions route without
+        # URL version together. This adds the letterboxd routes without
         # touching any existing one, so this is a MINOR bump.
-        version="0.3.0",
+        version="0.4.0",
         summary="Backend API for the Film Rewatch application.",
         description=(
             "Versioned (`v1`) HTTP/JSON API. M1 ships the core domain: log a "
@@ -82,6 +98,7 @@ def create_app() -> FastAPI:
             "route below documents the specific codes it can return. "
             "Listing/search and merge are later milestones."
         ),
+        lifespan=lifespan,
     )
     # Allowed origins come from config — the backend hardcodes no client origin
     # (DESIGN §3.6/§8). The app has no auth/cookies, so credentials stay off.

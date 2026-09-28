@@ -18,20 +18,23 @@ domain codes as :class:`AppError` subclasses, one per feature module. The
 single, stable inventory (NFR-MAINT-01/03) — every code any M1 route can
 return, and why:
 
-======================  =====  ==========================================
-Code                    HTTP   Raised by
-======================  =====  ==========================================
-``VALIDATION_ERROR``    422    Request-schema failures; also
-                               ``FilmIdCollisionError``, ``InvalidTagNameError``,
-                               ``InvalidGenreNameError`` (domain rules that
-                               are still "the payload was invalid")
-``NOT_FOUND``           404    Unknown route; ``FilmNotFoundError``,
-                               ``RatingNotFoundError``
-``DUPLICATE_FILM``      409    ``DuplicateFilmError`` (FR-LIB-05/09)
-``FUTURE_WATCH_DATE``   422    ``FutureWatchDateError`` (FR-RAT-03)
-``INTERNAL_ERROR``      500    Unexpected crash; a genuine race past the
-                               natural-key pre-check (§3.6)
-======================  =====  ==========================================
+==========================  ====  ==================================================
+Code                        HTTP  Raised by
+==========================  ====  ==================================================
+``VALIDATION_ERROR``        422   Request-schema failures; also
+                                  ``FilmIdCollisionError``, ``InvalidTagNameError``,
+                                  ``InvalidGenreNameError`` (domain rules that
+                                  are still "the payload was invalid")
+``NOT_FOUND``               404   Unknown route; ``FilmNotFoundError``,
+                                  ``RatingNotFoundError``, ``EntryNotFoundError``
+``DUPLICATE_FILM``          409   ``DuplicateFilmError`` (FR-LIB-05/09)
+``FUTURE_WATCH_DATE``       422   ``FutureWatchDateError`` (FR-RAT-03)
+``ENTRY_RESOLVED``          409   ``EntryResolvedError`` (FR-LBX-06)
+``LETTERBOXD_DISABLED``     409   ``LetterboxdDisabledError`` (FR-LBX-01)
+``LETTERBOXD_UNAVAILABLE``  502   ``LetterboxdUnavailableError``
+``INTERNAL_ERROR``          500   Unexpected crash; a genuine race past the
+                                  natural-key pre-check (§3.6)
+==========================  ====  ==================================================
 
 :func:`error_responses` turns a ``{status_code: [codes]}`` mapping into the
 FastAPI ``responses=`` kwarg, documenting :class:`ErrorResponse` as the schema
