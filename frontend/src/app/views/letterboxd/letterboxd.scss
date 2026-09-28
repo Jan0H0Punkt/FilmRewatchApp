@@ -1,0 +1,39 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.letterboxd__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.letterboxd__hint,
+.letterboxd__state {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.letterboxd__error {
+  margin: 0;
+  color: var(--mat-sys-error);
+}
+
+.entry__rating {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--mat-sys-primary);
+}
+
+.entry__suggestion {
+  margin: 4px 0 0;
+}
+
+.entry mat-card-actions {
+  flex-wrap: wrap;
+}

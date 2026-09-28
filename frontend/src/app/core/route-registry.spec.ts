@@ -39,6 +39,7 @@ describe('ROUTE_REGISTRY', () => {
       'Rewatch',
       'Library',
       'Statistics',
+      'Letterboxd',
       'Settings',
     ]);
   });

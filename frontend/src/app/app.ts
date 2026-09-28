@@ -7,8 +7,9 @@
  * and never toggles is a static sidebar — the container, the breakpoint
  * observer and the `mode` binding would all render the same thing.
  */
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -36,7 +37,15 @@ const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
 
 @Component({
   selector: 'app-root',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [
+    MatBadgeModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,4 +89,13 @@ export class App {
 
   /** Derived from the registry, so registering a route stays the one wiring point (FR-EXT-02). */
   protected readonly destinations = navDestinations(ROUTE_REGISTRY);
+
+  /** Each destination's `navBadge`, resolved once here, in the injection context it may `inject` from. */
+  private readonly badges = new Map<string, Signal<number>>(
+    ROUTE_REGISTRY.flatMap((entry) => (entry.navBadge ? [[entry.path, entry.navBadge()] as const] : [])),
+  );
+
+  protected badgeCount(path: string): number {
+    return this.badges.get(path)?.() ?? 0;
+  }
 }

@@ -4,7 +4,7 @@
  * The interface and builder function. Views register themselves in
  * `routes.registry.ts` (the append-only data file), not here.
  */
-import type { Type } from '@angular/core';
+import type { Signal, Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 /** One routed view's registration (§6.5). */
@@ -23,6 +23,11 @@ export interface RouteRegistryEntry {
   readonly navIcon?: string;
   /** Navigation label, shown beside `navIcon`. */
   readonly navLabel?: string;
+  /**
+   * A count shown on the destination's navigation icon; 0 hides it. Called
+   * once in the app shell's injection context, so it may `inject` a facade.
+   */
+  readonly navBadge?: () => Signal<number>;
   /**
    * Set instead of `loadComponent` to make this path a redirect — the landing
    * route (§6.5) points at the Rewatch view this way rather than mounting the

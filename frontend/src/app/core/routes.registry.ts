@@ -5,6 +5,9 @@
  * place new routes are wired; `app.routes.ts` and `route-registry.ts` never
  * change. See `core/route-registry.ts` for the interface.
  */
+import { inject } from '@angular/core';
+
+import { LetterboxdFacade } from '../domain/letterboxd/facade';
 import type { RouteRegistryEntry } from './route-registry';
 
 const rewatch = (): Promise<typeof import('../views/rewatch/rewatch').Rewatch> =>
@@ -22,6 +25,9 @@ const filmForm = (): Promise<typeof import('../views/film-form/film-form').FilmF
 const stats = (): Promise<typeof import('../views/stats/stats').Stats> =>
   import('../views/stats/stats').then((module) => module.Stats);
 
+const letterboxd = (): Promise<typeof import('../views/letterboxd/letterboxd').Letterboxd> =>
+  import('../views/letterboxd/letterboxd').then((module) => module.Letterboxd);
+
 const settings = (): Promise<typeof import('../views/settings/settings').Settings> =>
   import('../views/settings/settings').then((module) => module.Settings);
 
@@ -33,6 +39,15 @@ export const ROUTE_REGISTRY: readonly RouteRegistryEntry[] = [
   { path: 'rewatch', title: 'Rewatch', loadComponent: rewatch, navIcon: 'replay', navLabel: 'Rewatch' },
   { path: 'library', title: 'Library', loadComponent: library, navIcon: 'video_library', navLabel: 'Library' },
   { path: 'stats', title: 'Statistics', loadComponent: stats, navIcon: 'bar_chart', navLabel: 'Statistics' },
+  {
+    path: 'letterboxd',
+    title: 'Letterboxd',
+    loadComponent: letterboxd,
+    navIcon: 'sync',
+    navLabel: 'Letterboxd',
+    // Open review-list entries (REQ §5.7).
+    navBadge: () => inject(LetterboxdFacade).openCount,
+  },
   { path: 'settings', title: 'Settings', loadComponent: settings, navIcon: 'settings', navLabel: 'Settings' },
   // Reached by selecting a film, never from the navigation (§6.5).
   { path: 'film/:id', title: 'Film', loadComponent: filmDetail },

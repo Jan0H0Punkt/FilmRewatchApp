@@ -1,0 +1,73 @@
+<div class="letterboxd__toolbar">
+  <p class="letterboxd__hint">New Letterboxd diary entries wait here until you approve them.</p>
+  <button class="letterboxd__sync" matButton type="button" [disabled]="isBusy()" (click)="sync()">
+    <mat-icon>sync</mat-icon>
+    Sync now
+  </button>
+</div>
+
+@if (isBusy() || isLoading()) {
+  <mat-progress-bar mode="indeterminate" aria-hidden="true" />
+}
+
+@if (actionError()) {
+  <p class="letterboxd__error" role="alert">{{ actionError() }}</p>
+}
+
+@if (loadFailed()) {
+  <div class="letterboxd__state" role="alert">
+    <p>The review list could not be loaded. Is the backend running?</p>
+    <button matButton type="button" (click)="reload()">Try again</button>
+  </div>
+} @else if (!isLoading() && entries().length === 0) {
+  <p class="letterboxd__state">Nothing to review.</p>
+}
+
+@for (entry of entries(); track entry.id) {
+  <mat-card class="entry">
+    <mat-card-header>
+      <mat-card-title>
+        <a class="entry__link" [href]="entry.filmUrl" target="_blank" rel="noopener">{{ entry.filmTitle }}</a>
+        ({{ entry.filmYear }})
+      </mat-card-title>
+      <mat-card-subtitle>
+        Watched {{ entry.watchedDate | date: 'd MMM y' }}
+        @if (entry.rewatch) {
+          · rewatch
+        }
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="entry__rating" [attr.aria-label]="ratingLabel(entry.rating)">
+        @if (stars(entry.rating); as icons) {
+          @for (icon of icons; track $index) {
+            <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
+          }
+        } @else {
+          Unrated
+        }
+      </p>
+      @if (entry.suggestedFilm; as film) {
+        <p class="entry__suggestion">
+          Matches <a [routerLink]="['/film', film.id]">{{ film.title }}</a>
+        </p>
+      } @else {
+        <p class="entry__suggestion">Not in your library yet.</p>
+      }
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button class="entry__dismiss destructive" matButton type="button" [disabled]="isBusy()" (click)="dismiss(entry)">
+        Dismiss
+      </button>
+      <button class="entry__assign" matButton type="button" [disabled]="isBusy()" (click)="assign(entry)">
+        Assign…
+      </button>
+      <a class="entry__create" matButton routerLink="/films/new" [queryParams]="createParams(entry)">Create film</a>
+      @if (entry.suggestedFilm) {
+        <button class="entry__approve" matButton="filled" type="button" [disabled]="isBusy()" (click)="approve(entry)">
+          Approve
+        </button>
+      }
+    </mat-card-actions>
+  </mat-card>
+}

@@ -1,14 +1,18 @@
 /** The app shell: the branding, the theme control, and the §6.5 navigation. */
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { App } from './app';
+import { LetterboxdFacade } from './domain/letterboxd/facade';
+
+/** The Letterboxd badge's facade, stubbed so the shell needs no HTTP. */
+const LETTERBOXD_STUB = { provide: LetterboxdFacade, useValue: { openCount: signal(2) } };
 
 async function render(routes: Parameters<typeof provideRouter>[0] = []): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [App],
-    providers: [provideRouter(routes)],
+    providers: [provideRouter(routes), LETTERBOXD_STUB],
   });
   const fixture = TestBed.createComponent(App);
   await fixture.whenStable();
@@ -26,7 +30,7 @@ describe('App', () => {
   it("shows the active route's title in the app bar, not the app name", async () => {
     TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }])],
+      providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }]), LETTERBOXD_STUB],
     });
     // Navigated before the component is created, so `pageTitle`'s initial
     // `startWith` already sees it — no later `NavigationEnd` to wait out.
@@ -44,6 +48,7 @@ describe('App', () => {
       'Rewatch',
       'Library',
       'Statistics',
+      'Letterboxd',
       'Settings',
     ]);
   });
@@ -51,10 +56,14 @@ describe('App', () => {
   it('renders each destination icon as a hidden ligature', async () => {
     const icons = (await render()).querySelectorAll('nav a mat-icon');
 
-    expect([...icons].map((icon) => icon.textContent?.trim())).toEqual([
+    // `.textContent` on the icon would also pick up `matBadge`'s own digit
+    // span (always in the DOM, `mat-badge-hidden` only hides it visually) —
+    // the ligature is the icon's direct text node, its first child.
+    expect([...icons].map((icon) => icon.childNodes[0]?.textContent?.trim())).toEqual([
       'replay',
       'video_library',
       'bar_chart',
+      'sync',
       'settings',
     ]);
     expect([...icons].every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
@@ -67,12 +76,21 @@ describe('App', () => {
       '/rewatch',
       '/library',
       '/stats',
+      '/letterboxd',
       '/settings',
     ]);
   });
 
   it('labels the navigation landmark', async () => {
     expect((await render()).querySelector('nav')?.getAttribute('aria-label')).toBe('Primary');
+  });
+
+  it('names the open Letterboxd count on its navigation link', async () => {
+    const links = [...(await render()).querySelectorAll<HTMLAnchorElement>('nav a')];
+    const letterboxd = links.find((link) => link.textContent?.includes('Letterboxd'))!;
+
+    expect(letterboxd.getAttribute('aria-label')).toBe('Letterboxd, 2 to review');
+    expect(links.find((link) => link.textContent?.includes('Library'))!.getAttribute('aria-label')).toBeNull();
   });
 
   describe('back control (§6.5)', () => {
@@ -83,7 +101,7 @@ describe('App', () => {
     it('shows no back control on a primary navigation destination', async () => {
       TestBed.configureTestingModule({
         imports: [App],
-        providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }])],
+        providers: [provideRouter([{ path: 'rewatch', title: 'Rewatch', component: StubView }]), LETTERBOXD_STUB],
       });
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
@@ -96,7 +114,7 @@ describe('App', () => {
     it('shows a back control on a contextual route, defaulting to the library route', async () => {
       TestBed.configureTestingModule({
         imports: [App],
-        providers: [provideRouter([{ path: 'film/:id', title: 'Film', component: StubView }])],
+        providers: [provideRouter([{ path: 'film/:id', title: 'Film', component: StubView }]), LETTERBOXD_STUB],
       });
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
@@ -116,6 +134,7 @@ describe('App', () => {
             { path: 'rewatch', title: 'Rewatch', component: StubView },
             { path: 'film/:id', title: 'Film', component: StubView },
           ]),
+          LETTERBOXD_STUB,
         ],
       });
       const fixture = TestBed.createComponent(App);
