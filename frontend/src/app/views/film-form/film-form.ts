@@ -74,6 +74,18 @@ function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Parses a `yyyy-MM-dd` query param into a local-time `Date`; `null` when absent or malformed. */
+function parseIsoDate(value: string | undefined): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+}
+
+/** A rating query param as a half step in 0.5..5 (FR-RAT-02), or `null`. */
+function parseRating(value: string | undefined): number | null {
+  const parsed = Number(value);
+  return value && parsed >= 0.5 && parsed <= 5 && Number.isInteger(parsed * 2) ? parsed : null;
+}
+
 /** FR-LIB-14: well-formed http(s) URL, nothing more — mirrors the backend's `_validated_url`. */
 function isWellFormedHttpUrl(value: string): boolean {
   try {
@@ -128,6 +140,17 @@ export class FilmForm {
    * carries no such param, and that absence *is* the mode switch.
    */
   readonly id = input<string>();
+
+  /**
+   * Prefill from a Letterboxd review-list entry (REQ §5.7, FR-LBX-06), bound
+   * from query params like `title`. All strings, since they come off the URL;
+   * each is parsed where it seeds its field and ignored when malformed.
+   */
+  readonly year = input<string>();
+  readonly letterboxdLink = input<string>();
+  readonly watchedOn = input<string>();
+  readonly rating = input<string>();
+  readonly rewatch = input<string>();
 
   /** The film being edited, or `null` in create mode. */
   protected readonly filmId = computed<string | null>(() => this.id() ?? null);
@@ -262,23 +285,28 @@ export class FilmForm {
 
   // Each field prefills from the film in edit mode and starts empty in create
   // mode — `linkedSignal` for the same reason `titles` above is one.
-  protected readonly releaseYear = linkedSignal<number | null>(() => this.film()?.releaseYear ?? null);
+  protected readonly releaseYear = linkedSignal<number | null>(() => {
+    const film = this.film();
+    if (film !== null) return film.releaseYear;
+    const year = Number(this.year());
+    return this.year() && Number.isInteger(year) ? year : null;
+  });
   protected readonly director = linkedSignal(() => this.film()?.director ?? '');
   protected readonly runtimeMinutes = linkedSignal<number | null>(() => this.film()?.runtimeMinutes ?? null);
   protected readonly selectedGenres = linkedSignal<readonly string[]>(() => this.film()?.genres ?? []);
   protected readonly selectedTags = linkedSignal<readonly string[]>(() => this.film()?.tags ?? []);
   protected readonly posterImage = linkedSignal(() => this.film()?.posterImage ?? '');
-  protected readonly letterboxdUrl = linkedSignal(() => this.film()?.letterboxdUrl ?? '');
+  protected readonly letterboxdUrl = linkedSignal(() => this.film()?.letterboxdUrl ?? this.letterboxdLink() ?? '');
   protected readonly owned = linkedSignal(() => this.film()?.owned ?? false);
   protected readonly today = new Date();
-  protected readonly watchDate = signal<Date | null>(this.today);
+  protected readonly watchDate = linkedSignal<Date | null>(() => parseIsoDate(this.watchedOn()) ?? this.today);
   /**
-   * "I had already seen this before" — a plain `signal`, not a `linkedSignal`
-   * like the fields above: it has nothing to prefill from, since it is
-   * create-only (an existing film's prior watches are the detail view's
-   * Watched before action).
+   * "I had already seen this before" — seeds only from the Letterboxd
+   * `rewatch` param (create-only: an existing film's prior watches are the
+   * detail view's Watched before action, so edit mode has nothing to prefill
+   * this from either).
    */
-  protected readonly watchedBefore = signal(false);
+  protected readonly watchedBefore = linkedSignal(() => this.rewatch() === 'true');
 
   protected readonly tagNames = inject(TagFacade).names;
   protected readonly genreNames = inject(GenreFacade).names;
@@ -287,7 +315,7 @@ export class FilmForm {
   // but defaulting to 'unrated' rather than requiring an explicit pick —
   // the rating is optional here (doc's field table), so nothing should
   // block submit until the user deliberately rates the watch.
-  protected readonly selectedValue = signal<number | 'unrated'>('unrated');
+  protected readonly selectedValue = linkedSignal<number | 'unrated'>(() => parseRating(this.rating()) ?? 'unrated');
   protected readonly hoverValue = signal<number | null>(null);
   private readonly pickerValue = computed<number>(() => {
     const selected = this.selectedValue();
@@ -404,7 +432,9 @@ export class FilmForm {
       rating: selectedValue === 'unrated' ? null : selectedValue,
       watchedBefore: this.watchedBefore(),
     };
-    this.send(this.films.create(payload), '/library', 'The film could not be created.');
+    // Back to the review list when the form was opened from a Letterboxd entry (FR-LBX-06).
+    const target = this.letterboxdLink() ? '/letterboxd' : '/library';
+    this.send(this.films.create(payload), target, 'The film could not be created.');
   }
 
   /** The shared tail of both submits: hold the button, then navigate on success or surface the failure. */

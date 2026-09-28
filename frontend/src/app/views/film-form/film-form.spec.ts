@@ -516,4 +516,103 @@ describe('FilmForm', () => {
       expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('prefilled from a Letterboxd entry', () => {
+    async function renderFromLetterboxd(
+      facade = stubFilmFacade(),
+    ): Promise<{ element: HTMLElement; harness: RouterTestingHarness }> {
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter(
+            [
+              { path: 'films/new', loadComponent: () => Promise.resolve(FilmForm) },
+              { path: 'letterboxd', component: BlankComponent },
+              { path: 'library', component: BlankComponent },
+            ],
+            withComponentInputBinding(),
+          ),
+          provideNativeDateAdapter(),
+          { provide: FilmFacade, useValue: facade },
+          { provide: TagFacade, useValue: stubLabelFacade([]) },
+          { provide: GenreFacade, useValue: stubLabelFacade([]) },
+        ],
+      });
+      const harness = await RouterTestingHarness.create(
+        '/films/new?title=Heat&year=1995&letterboxdLink=https%3A%2F%2Fletterboxd.com%2Ffilm%2Fheat%2F&watchedOn=2026-09-20&rating=4.5&rewatch=true',
+      );
+      return { element: harness.routeNativeElement!, harness };
+    }
+
+    it('prefills title, year, link, watch date, rating and watched-before', async () => {
+      const facade = stubFilmFacade();
+      const { element, harness } = await renderFromLetterboxd(facade);
+
+      setValue(element, '.film-form__director input', 'Michael Mann');
+      setValue(element, '.film-form__runtime input', '170');
+      await harness.fixture.whenStable();
+      for (const [row, value] of [
+        ['film-form__genres', 'Crime'],
+        ['film-form__tags', 'heist'],
+      ] as const) {
+        const input = element.querySelector<HTMLInputElement>(`.${row} input`)!;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        pressEnter(input);
+        await harness.fixture.whenStable();
+      }
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await harness.fixture.whenStable();
+
+      const payload = facade.create.mock.calls[0]![0] as FilmCreateInput;
+      expect(payload.titles[0]!.value).toBe('Heat');
+      expect(payload.releaseYear).toBe(1995);
+      expect(payload.letterboxdUrl).toBe('https://letterboxd.com/film/heat/');
+      expect(payload.watchDate).toBe('2026-09-20');
+      expect(payload.rating).toBe(4.5);
+      expect(payload.watchedBefore).toBe(true);
+    });
+
+    it('returns to the review list after saving', async () => {
+      const { element, harness } = await renderFromLetterboxd();
+      setValue(element, '.film-form__director input', 'Michael Mann');
+      setValue(element, '.film-form__runtime input', '170');
+      await harness.fixture.whenStable();
+      for (const [row, value] of [
+        ['film-form__genres', 'Crime'],
+        ['film-form__tags', 'heist'],
+      ] as const) {
+        const input = element.querySelector<HTMLInputElement>(`.${row} input`)!;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        pressEnter(input);
+        await harness.fixture.whenStable();
+      }
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe('/letterboxd');
+    });
+
+    it('ignores a rating that is not a half step', async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter(
+            [{ path: 'films/new', loadComponent: () => Promise.resolve(FilmForm) }],
+            withComponentInputBinding(),
+          ),
+          provideNativeDateAdapter(),
+          { provide: FilmFacade, useValue: stubFilmFacade() },
+          { provide: TagFacade, useValue: stubLabelFacade([]) },
+          { provide: GenreFacade, useValue: stubLabelFacade([]) },
+        ],
+      });
+      const harness = await RouterTestingHarness.create('/films/new?title=Heat&rating=7');
+
+      expect(
+        harness
+          .routeNativeElement!.querySelector('.film-form__unrated')
+          ?.classList.contains('film-form__unrated--active'),
+      ).toBe(true);
+    });
+  });
 });
