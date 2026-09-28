@@ -122,8 +122,15 @@ class LetterboxdService:
         return run_sync(self._repository, self._fetch(), self._today())
 
     def list_open(self) -> list[LetterboxdEntryRead]:
-        """Open entries, newest watch first, after auto-resolving the ones now in the app (FR-LBX-07)."""
-        still_open: list[LetterboxdEntry] = []
+        """Open entries, newest watch first, after auto-resolving the ones now in the app (FR-LBX-07).
+
+        Resolving one entry of an unknown film (e.g. by creating it) leaves
+        sibling entries of that same film still open, so each one's displayed
+        suggestion is the freshly recomputed match, not the stale one from
+        sync time — otherwise a sibling would still say "no match" with no
+        way to approve it, inviting a duplicate film.
+        """
+        still_open: list[tuple[LetterboxdEntry, uuid.UUID | None]] = []
         resolved_any = False
         for entry in self._repository.list_open():
             film_id = match_film(
@@ -133,13 +140,17 @@ class LetterboxdService:
                 entry.resolved_at = utc_now()
                 resolved_any = True
             else:
-                still_open.append(entry)
+                still_open.append((entry, film_id))
         if resolved_any:
             self._repository.commit()
 
-        titles = self._repository.primary_titles(
-            {entry.suggested_film_id for entry in still_open if entry.suggested_film_id is not None}
-        )
+        suggested_ids = {
+            suggested_id
+            for entry, film_id in still_open
+            if (suggested_id := film_id if film_id is not None else entry.suggested_film_id)
+            is not None
+        }
+        titles = self._repository.primary_titles(suggested_ids)
         return [
             LetterboxdEntryRead(
                 id=entry.id,
@@ -150,14 +161,18 @@ class LetterboxdService:
                 rating=float(entry.rating) if entry.rating is not None else None,
                 rewatch=entry.rewatch,
                 suggested_film=(
-                    SuggestedFilmRead(
-                        id=entry.suggested_film_id, title=titles[entry.suggested_film_id]
+                    SuggestedFilmRead(id=suggested_id, title=titles[suggested_id])
+                    if (
+                        suggested_id := (
+                            film_id if film_id is not None else entry.suggested_film_id
+                        )
                     )
-                    if entry.suggested_film_id is not None and entry.suggested_film_id in titles
+                    is not None
+                    and suggested_id in titles
                     else None
                 ),
             )
-            for entry in still_open
+            for entry, film_id in still_open
         ]
 
     def assign(self, entry_id: uuid.UUID, film_id: uuid.UUID) -> None:

@@ -278,6 +278,26 @@ def test_list_open_auto_resolves_an_entry_whose_watch_now_exists(db_session: Ses
     assert entry.resolved_at is not None
 
 
+def test_list_open_uses_a_fresh_match_for_a_still_open_entry_of_the_same_film(
+    db_session: Session,
+) -> None:
+    """Resolving A's film must also refresh B's suggestion, not just A's (§5.7)."""
+    url = "https://letterboxd.com/film/unknown/"
+    first = _open_entry(db_session, "g1", film_url=url, watched_date=date(2026, 9, 20))
+    second = _open_entry(db_session, "g2", film_url=url, watched_date=date(2026, 9, 21))
+    film = _add_film(db_session, "Unknown", 1995, url)
+    db_session.add(
+        RatingEntry(film_id=film.id, value=Decimal("4.5"), watch_date=first.watched_date)
+    )
+    db_session.flush()
+
+    rows = _service(db_session).list_open()
+
+    assert [row.id for row in rows] == [second.id]
+    suggested = rows[0].suggested_film
+    assert suggested is not None and (suggested.id, suggested.title) == (film.id, "Unknown")
+
+
 def test_assign_adds_the_watch_and_resolves(db_session: Session) -> None:
     film = _add_film(db_session, "Heat", 1995)
     entry = _open_entry(db_session)
