@@ -3,10 +3,10 @@
  * two modes told apart by the `id` route param:
  *
  * - `films/new`: creates a film together with its mandatory first rating in
- *   one `POST /films` (FR-LIB-01..03), reached through the Library's search
- *   (`?title=` prefill). Creating always runs through that search, so the user
- *   has seen every existing match first — duplicates are avoided by
- *   construction rather than caught afterwards (FR-LIB-05).
+ *   one `POST /films` (FR-LIB-01..03), reached either through the Library's
+ *   search (`?title=` prefill) or, prefilled from a Letterboxd entry, the
+ *   review list's "Create film" action (REQ §5.7). Either way the backend's
+ *   `DUPLICATE_FILM` 409 (FR-LIB-05) is the backstop against a duplicate.
  * - `film/:id/edit`: edits every field of an existing film in one
  *   `PATCH /films/{id}` (FR-LIB-06/07), reached from the detail view's Edit
  *   action. The rating block is create-only — an existing film's ratings are
