@@ -123,6 +123,8 @@ describe('LetterboxdFacade', () => {
     await settle();
     expect(facade.actionError()).toBe('Letterboxd could not be reached.');
     expect(facade.isBusy()).toBe(false);
+    http.expectOne(`${BASE}/entries`).flush([DTO]);
+    await settle();
 
     facade.dismiss('e1');
     expect(facade.actionError()).toBeNull();
@@ -131,5 +133,37 @@ describe('LetterboxdFacade', () => {
       .flush(null, { status: 204, statusText: 'No Content' });
     await settle();
     http.expectOne(`${BASE}/entries`).flush([]);
+  });
+
+  it('surfaces the error envelope message when present', async () => {
+    http.expectOne(`${BASE}/entries`).flush([DTO]);
+    await settle();
+
+    facade.sync();
+    http
+      .expectOne({ url: `${BASE}/sync`, method: 'POST' })
+      .flush(
+        { error: { code: 'LETTERBOXD_DISABLED', message: 'Sync is disabled.' } },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await settle();
+
+    expect(facade.actionError()).toBe('Sync is disabled.');
+    http.expectOne(`${BASE}/entries`).flush([DTO]);
+  });
+
+  it('reloads the entries list after a failed action', async () => {
+    http.expectOne(`${BASE}/entries`).flush([DTO]);
+    await settle();
+
+    facade.dismiss('e1');
+    http
+      .expectOne({ url: `${BASE}/entries/e1/dismiss`, method: 'POST' })
+      .flush('down', { status: 502, statusText: 'Bad Gateway' });
+    await settle();
+
+    http.expectOne(`${BASE}/entries`).flush([]);
+    await settle();
+    expect(facade.openCount()).toBe(0);
   });
 });

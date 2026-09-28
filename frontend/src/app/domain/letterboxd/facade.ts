@@ -2,6 +2,7 @@
  * The Letterboxd facade (DESIGN §6.1) — the single API `views/letterboxd/`
  * and the navigation badge call (REQ §5.7).
  */
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { Observable } from 'rxjs';
 
@@ -9,6 +10,15 @@ import { FilmFacade } from '../film/facade';
 import { LetterboxdApi } from './api';
 import { toLetterboxdEntry } from './mapper';
 import type { LetterboxdEntry } from './model';
+
+/** The backend's `{ error: { message } }` envelope, when present, beats the generic per-action text — mirrors `film-form.ts`. */
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof HttpErrorResponse) {
+    const body = error.error as { error?: { message?: string } } | null;
+    if (body?.error?.message) return body.error.message;
+  }
+  return fallback;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LetterboxdFacade {
@@ -60,9 +70,11 @@ export class LetterboxdFacade {
         onSuccess();
         this.api.entries.reload();
       },
-      error: () => {
+      error: (error: unknown) => {
         this.isBusy.set(false);
-        this.actionError.set(failure);
+        this.actionError.set(extractErrorMessage(error, failure));
+        // The entry may have been resolved elsewhere in the meantime (409 ENTRY_RESOLVED) — reload so it drops off.
+        this.api.entries.reload();
       },
     });
   }
