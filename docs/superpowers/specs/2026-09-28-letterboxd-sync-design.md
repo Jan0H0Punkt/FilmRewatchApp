@@ -85,7 +85,7 @@ All under `/api/v1/letterboxd`, errors in the standard envelope (NFR-MAINT-03).
 | Method & path | Body | Response |
 |---|---|---|
 | `GET /entries` | — | `200` list of open entries, newest `watched_date` first (auto-resolve runs first) |
-| `POST /entries/{id}/assign` | `{ "film_id": UUID }` | `200`; adds the watch via `FilmService.add_rating`, sets the film's `letterboxd_url` if null, resolves the entry. Used both to approve the suggestion and to pick another film. `404 NOT_FOUND` for an unknown entry or film, `409 ENTRY_RESOLVED` if already resolved |
+| `POST /entries/{id}/assign` | `{ "film_id": UUID }` | `204`; adds the watch via `FilmService.add_rating`, sets the film's `letterboxd_url` if null, resolves the entry. Used both to approve the suggestion and to pick another film. `404 NOT_FOUND` for an unknown entry or film, `409 ENTRY_RESOLVED` if already resolved |
 | `POST /entries/{id}/dismiss` | — | `204`; resolves without adding anything. Same `404`/`409` |
 | `POST /sync` | — | `200 { "queued": n }`; runs a sync now. `409 LETTERBOXD_DISABLED` when no username, `502 LETTERBOXD_UNAVAILABLE` when the feed cannot be read |
 
@@ -97,11 +97,11 @@ Entry read shape: `id`, `film_title`, `film_year`, `film_url`, `watched_date`, `
 - `views/letterboxd/` — the review view, registered in `core/routes.registry.ts` with a nav entry (icon `sync`, label "Letterboxd") showing the number of open entries as a badge.
 - One row per entry: title, year, watch date, rating stars (or the unrated em-dash), a link to the Letterboxd page, the suggested film (linked to its detail view) if any, and these actions:
   - **Approve** (only with a suggestion, the primary action) → `POST …/assign` with the suggested film's id.
-  - **Create film** → `films/new` with query params `title`, `year`, `letterboxd_url`, `watch_date`, `rating`, `watched_before` (from `rewatch`). The film form reads them once to prefill; everything else in the form is unchanged. The user adds director, runtime, genres, tags.
+  - **Create film** → `films/new` with query params `title`, `year`, `letterboxdLink`, `watchedOn`, `rating`, `rewatch` (camelCase: they bind to the form's inputs by name). After saving, the form returns to the review list instead of the Library. The film form reads them once to prefill; everything else in the form is unchanged. The user adds director, runtime, genres, tags.
   - **Assign** → dialog with a film search over the cached library list → `POST …/assign`.
   - **Dismiss** → confirm dialog → `POST …/dismiss`.
 - A "Sync now" button calls `POST /letterboxd/sync` and reloads the list.
-- The view needs the backend; offline it shows the FR-OFF-04 "currently unavailable" message.
+- The view needs the backend; when the list cannot load it shows an error message (the FR-OFF-04 offline layer is M5 and not built yet).
 - The badge count loads with the app shell and refreshes after each action in the view.
 
 ## Docs
