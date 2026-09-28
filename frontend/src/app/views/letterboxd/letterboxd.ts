@@ -52,10 +52,15 @@ export class Letterboxd {
     };
   }
 
+  /** Adds the entry's watch to the film the sync matched (FR-LBX-06). */
   protected approve(entry: LetterboxdEntry): void {
     if (entry.suggestedFilm !== null) this.letterboxd.assign(entry.id, entry.suggestedFilm.id);
   }
 
+  /**
+   * Approve for a film the user picks instead of the suggestion — for a wrong
+   * or missing match of a film already in the library (FR-LBX-06).
+   */
   protected assign(entry: LetterboxdEntry): void {
     this.dialog
       .open<AssignDialog, AssignDialogData, string>(AssignDialog, {
