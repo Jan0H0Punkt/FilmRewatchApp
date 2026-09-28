@@ -5,8 +5,8 @@ for the parse. The feed holds the member's last 50 diary entries, newest-logged
 first, followed by list posts; list posts carry no watch date and are skipped.
 """
 
+import http.client
 import re
-import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -99,6 +99,9 @@ def fetch_feed(username: str) -> list[FeedEntry]:
     try:
         with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
             body: bytes = response.read()
-    except (urllib.error.URLError, TimeoutError) as error:
+    # OSError covers URLError/TimeoutError/ConnectionResetError (connect-time
+    # failures); HTTPException covers a connection dropped mid-read, e.g.
+    # IncompleteRead or RemoteDisconnected.
+    except (OSError, http.client.HTTPException) as error:
         raise LetterboxdUnavailableError() from error
     return parse_feed(body)

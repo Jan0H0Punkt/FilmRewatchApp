@@ -1,5 +1,6 @@
 """Letterboxd feed parsing and fetching (spec 2026-09-28-letterboxd-sync). Offline."""
 
+import http.client
 import urllib.error
 from datetime import date
 from decimal import Decimal
@@ -84,5 +85,24 @@ def test_fetch_failure_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
         raise urllib.error.URLError("offline")
 
     monkeypatch.setattr(feed.urllib.request, "urlopen", refuse)
+    with pytest.raises(LetterboxdUnavailableError):
+        feed.fetch_feed("janhy")
+
+
+def test_feed_dropped_mid_read_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _DroppedResponse:
+        def __enter__(self) -> "_DroppedResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            raise http.client.IncompleteRead(b"")
+
+    def urlopen_that_drops(*_args: object, **_kwargs: object) -> _DroppedResponse:
+        return _DroppedResponse()
+
+    monkeypatch.setattr(feed.urllib.request, "urlopen", urlopen_that_drops)
     with pytest.raises(LetterboxdUnavailableError):
         feed.fetch_feed("janhy")
