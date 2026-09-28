@@ -207,7 +207,7 @@ into another module's repository.
 §4 already lists every field and rule. This section only covers what is **new at the database level**: how those
 entities become Postgres tables, what the database stores versus computes, and how the harder rules are enforced.
 
-The seven tables and how they relate (keys only — full fields live in §4):
+The eight tables and how they relate (keys only — full fields live in §4):
 
 ```mermaid
 erDiagram
@@ -240,12 +240,18 @@ erDiagram
         uuid film_id FK
         uuid genre_id FK
     }
+    letterboxd_entries {
+        uuid id PK
+        string guid UK
+        uuid suggested_film_id FK
+    }
     films ||--o{ titles : "has"
     films ||--o{ rating_entries : "has"
     films ||--o{ film_tags : ""
     tags  ||--o{ film_tags : ""
     films ||--o{ film_genres : ""
     genres ||--o{ film_genres : ""
+    films |o--o{ letterboxd_entries : "suggests"
 ```
 
 **How the §4 entities become tables.** A film's list of titles and its rating history each become their *own*
@@ -256,7 +262,10 @@ films by a many-to-many **join table** (`film_tags`, `film_genres`). So "Drama" 
 is stored once and reused, which keeps casing consistent for exact-match genre filtering (FR-SF-07) and enables
 genre autocomplete the same way tags get it. Genres stay free text, not an enum (§4.1): the user types any genre,
 and it is created if new or reused if it already exists (mirroring FR-TAG-01). This enriches genre beyond §4's
-plain `List<String>` — flagged for the requirements reconciliation (§11).
+plain `List<String>` — flagged for the requirements reconciliation (§11). **`letterboxd_entries`** (§5.9, REQ
+§5.7) holds one row per synced diary entry awaiting review, with an optional `suggested_film_id` FK to `films`
+(nulled if that film is later deleted) — it is not a join table, since a resolved entry is kept rather than
+deleted once its watch lands in `rating_entries`.
 
 **What the database stores vs. computes.** `average_rating` is **not a column** — it is not stored anywhere, and
 the API's §7.3 projection no longer carries it either; the client derives it from the `rating_history` the
@@ -303,6 +312,10 @@ All endpoints are namespaced under `/api/v1` (§3.2, FR-EXT-11) and documented a
 | `GET /rewatch-suggestions`    | Latest daily-computed due-list (`film_id` + `days_until_rewatch`, ordered) | FR-RW-*, §5.8                  |
 | `GET /settings`               | The stored app settings (currently just the rewatch share)                | FR-RW-08                       |
 | `PUT /settings`               | Replace the stored settings; returns the stored state                     | FR-RW-08                       |
+| `GET /letterboxd/entries`     | Open review-list entries, newest watch first, auto-resolving matched ones | FR-LBX-05..07                  |
+| `POST /letterboxd/entries/{id}/assign` | Add the entry's watch to `film_id` and resolve it                | FR-LBX-06                      |
+| `POST /letterboxd/entries/{id}/dismiss` | Resolve the entry without adding a watch                        | FR-LBX-06                      |
+| `POST /letterboxd/sync`       | Manually run the feed sync now; returns how many entries were queued      | FR-LBX-01..03                  |
 
 Tags and genres are **created implicitly** through film create/edit payloads (FR-TAG-01: a tag never exists
 standalone; the same applies to genres, §5.2). `GET /tags` and `GET /genres` are read-only lookups for filtering
@@ -431,7 +444,9 @@ under `/api/v1/letterboxd` (`GET /entries`, `POST /entries/{id}/assign`, `POST /
 `assign` goes service-to-service through `FilmService.add_rating`/`update`, so the rewatch projection is invalidated as for any
 other watch. The FastAPI lifespan starts one asyncio task (`scheduler.run_periodically`) when a username is set: an hourly wall-clock
 check that runs the sync in a worker thread once the last success is 24 h old. A module-level lock keeps the scheduled and the
-manual sync from overlapping; the `guid` unique constraint is the backstop.
+manual sync from overlapping; the `guid` unique constraint is the backstop. The last-sync time lives only in the running
+task's memory, not the database, so it starts `None` on every process start — every backend start therefore syncs once,
+immediately, before the 24 h cadence takes over.
 
 ---
 
