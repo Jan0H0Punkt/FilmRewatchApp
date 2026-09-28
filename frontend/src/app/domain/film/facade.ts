@@ -194,9 +194,8 @@ export class FilmFacade {
   /**
    * `POST /films` (FR-LIB-01..03). Reloads `list` on success rather than
    * inserting locally (unlike `update` above): the view navigates back to the
-   * Library afterwards, and a reload lands the created film in its actual
-   * primary-title-sorted position instead of wherever a local append would
-   * put it.
+   * Library afterwards, and a reload hands it the server's full record of the
+   * created film instead of a locally assembled guess.
    */
   create(input: FilmCreateInput): Observable<Film> {
     return this.api.create(toFilmCreateDto(input)).pipe(

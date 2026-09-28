@@ -17,6 +17,7 @@ function film(id: string, ...titles: readonly string[]): Film {
     isFavorite: false,
     owned: false,
     titles: titles.map((value, index) => ({ value, isPrimary: index === 0, isOriginal: index === 0 })),
+    updatedAt: '2024-01-01T00:00:00Z',
   };
 }
 
@@ -41,8 +42,10 @@ describe('title search', () => {
     expect(search('in love')).toEqual([MOOD, LOSE]);
   });
 
-  it('leaves the source order alone when nothing is searched', () => {
-    expect(search('')).toEqual(LIBRARY);
+  it('puts the most recently edited film first when nothing is searched', () => {
+    const recent = { ...MOOD, updatedAt: '2024-03-01T00:00:00Z' };
+    const newest = { ...AMELIE, updatedAt: '2024-03-01T00:00:00.5Z' };
+    expect(filterFilms([recent, INTERSTELLAR, newest], { title: '' })).toEqual([newest, recent, INTERSTELLAR]);
   });
 
   it('matches partial words', () => {

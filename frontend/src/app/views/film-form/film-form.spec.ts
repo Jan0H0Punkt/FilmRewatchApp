@@ -38,6 +38,7 @@ const CREATED: Film = {
   isFavorite: false,
   owned: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],
+  updatedAt: '2024-01-01T00:00:00Z',
 };
 
 /** The film edit mode loads. Two titles and a Letterboxd link, so the prefill has something to get wrong. */

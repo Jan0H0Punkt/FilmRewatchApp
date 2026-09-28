@@ -40,10 +40,11 @@ export function toFilm(dto: FilmDto): Film {
       isPrimary: title.is_primary,
       isOriginal: title.is_original,
     })),
+    updatedAt: dto.updated_at,
   };
 }
 
-/** Map the §7.3 projection to the domain detail model — adds the delay, the history, and the timestamps. */
+/** Map the §7.3 projection to the domain detail model — adds the delay, the history, and the creation timestamp. */
 export function toFilmDetail(dto: FilmDto): FilmDetail {
   return {
     ...toFilm(dto),
@@ -56,7 +57,6 @@ export function toFilmDetail(dto: FilmDto): FilmDetail {
       createdAt: entry.created_at,
     })),
     createdAt: dto.created_at,
-    updatedAt: dto.updated_at,
   };
 }
 

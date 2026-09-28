@@ -2,7 +2,7 @@
  * The canonical film domain model (DESIGN §6.1) — shared by every view.
  *
  * `Film` carries only what the library list renders; `FilmDetail` below adds
- * the rest of the §7.3 wire projection (rating history, timestamps,
+ * the rest of the §7.3 wire projection (rating history, creation timestamp,
  * `delay_days`) for the Film Detail and Rewatch views.
  */
 export interface Film {
@@ -34,6 +34,8 @@ export interface Film {
    * (FR-SF-01), so the list model has to carry them.
    */
   readonly titles: readonly FilmTitle[];
+  /** Last edit to the film record (§7.3) — the Library's default order, newest first. Rating writes don't bump it. */
+  readonly updatedAt: string;
 }
 
 /** One title of a film (REQ §4.1 Title object) — the detail view lists all of them. */
@@ -54,8 +56,8 @@ export interface RatingHistoryEntry {
 
 /**
  * The full §7.3 detail projection (`GET /films/{id}`) — everything the
- * library list omits: the rewatch delay, the rating history, and the record
- * timestamps.
+ * library list omits: the rewatch delay, the rating history, and the creation
+ * timestamp.
  */
 export interface FilmDetail extends Film {
   /** Seed palette (up to 4 entries, ranked by dominance) for the detail view's dynamic theme (`shared/poster-theme.ts`); `null` with no poster or an unextractable one. */
@@ -64,7 +66,6 @@ export interface FilmDetail extends Film {
   /** Newest first (FR-RAT-05/06), as the backend orders it. */
   readonly ratingHistory: readonly RatingHistoryEntry[];
   readonly createdAt: string;
-  readonly updatedAt: string;
 }
 
 /**

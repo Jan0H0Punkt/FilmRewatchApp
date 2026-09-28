@@ -97,13 +97,16 @@ function isWithinTypoBudget(a: string, b: string, budget: number): boolean {
 
 /**
  * The films matching every active criterion (AND logic, FR-SF-03), best title
- * match first. Only the title has a notion of quality — the other criteria are
- * yes/no — so an unsearched library keeps the order it arrived in, which leaves
- * the eventual sort control (FR-SF-10) owning that order alone.
+ * match first, most recently edited first within equal matches — and overall
+ * when nothing is searched. That default is what the eventual sort control
+ * (FR-SF-10) replaces.
  */
 export function filterFilms(films: readonly Film[], criteria: LibraryCriteria): readonly Film[] {
   const active = PREDICATES.map((predicate) => predicate(criteria)).filter((predicate) => predicate !== null);
-  const matches = films.filter((film) => active.every((predicate) => predicate(film)));
+  const matches = films
+    .filter((film) => active.every((predicate) => predicate(film)))
+    // Parsed, not string-compared: the ISO strings don't share one fractional-second width.
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const query = words(criteria.title);
   if (query.length === 0) return matches;
   return matches
