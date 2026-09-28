@@ -13,7 +13,7 @@ from PIL import Image
 
 from app.films.service.poster_palette import palette_from_image_bytes
 
-_HUE_BUCKETS = 12
+_HUE_BUCKETS = 24
 
 
 def _png_bytes(image: Image.Image) -> bytes:
@@ -92,7 +92,7 @@ def test_garbage_bytes_are_handled_without_raising() -> None:
     assert palette_from_image_bytes(b"not an image") is None
 
 
-def test_a_hue_bucket_is_represented_by_its_most_saturated_swatch() -> None:
+def test_a_hue_bucket_is_represented_by_its_highest_chroma_swatch() -> None:
     # An accent bucket holding a common dull gray-brown and a rarer vivid
     # brown of the same hue is represented by the vivid one; the dominant
     # (surface) bucket keeps its most common shade.
@@ -107,3 +107,19 @@ def test_a_hue_bucket_is_represented_by_its_most_saturated_swatch() -> None:
     palette = palette_from_image_bytes(_png_bytes(image))
 
     assert palette == ["#dbceb5", "#935a3a"]
+
+
+def test_a_bright_accent_beats_a_dark_one_of_equal_hsv_saturation() -> None:
+    # Ghost in the Cell: HSV rates dark brown #5f3221 and orange #a46139 both
+    # ~0.65 saturated; by chroma the orange is clearly the more vivid.
+    near_black = (0x0B, 0x0B, 0x0F)
+    dark_brown = (0x5F, 0x32, 0x21)
+    orange = (0xA4, 0x61, 0x39)
+    image = Image.new("RGB", (64, 64), near_black)
+    for y in range(34, 64):
+        for x in range(64):
+            image.putpixel((x, y), dark_brown if y < 54 else orange)
+
+    palette = palette_from_image_bytes(_png_bytes(image))
+
+    assert palette == ["#0b0b0f", "#a46139"]

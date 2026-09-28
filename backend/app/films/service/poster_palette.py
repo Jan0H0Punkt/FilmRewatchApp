@@ -24,7 +24,7 @@ _USER_AGENT = "FilmRewatchApp/1.0 (poster colour fetch)"
 # instead of by hue so a grayscale poster still yields its own seed.
 _NEUTRAL_SATURATION = 0.08
 _NEUTRAL_VALUE = 0.15
-_HUE_BUCKETS = 12
+_HUE_BUCKETS = 24
 _MAX_PALETTE_SIZE = 4
 
 logger = logging.getLogger(__name__)
@@ -60,21 +60,19 @@ def palette_from_image_bytes(data: bytes) -> list[str] | None:
     the client can map surfaces/primary/secondary/tertiary by position.
 
     # ponytail: hue-bucket dominance heuristic — quantize to a small palette,
-    # bucket each swatch by hue (or "neutral" when saturation/value are too
-    # low for hue to mean anything), rank buckets by total population, and
-    # return each bucket's representative swatch — the most populous one for
-    # the first bucket (it drives the surfaces, so the commonest shade is the
-    # faithful one) and for neutral (saturation means nothing there), the most
-    # saturated one for the accent buckets (so a vivid accent beats a duller,
-    # more common shade of the same hue). Ranking buckets rather than swatches beats picking the
-    # single most populous swatch outright: a dominant colour that spans
-    # several near-identical quantizer swatches (e.g. a beige poster split
-    # into ~8 shades) would otherwise lose to a smaller, uniform patch.
-    # Ceiling: the neutral bucket lumps black + gray + white into one swatch
-    # pick, and hue buckets are a coarse 30° split rather than perceptual
-    # clustering. Upgrade path if palettes look off in practice: port
-    # Material's QuantizerCelebi + Score algorithm (what the Android/web M3
-    # libraries actually use) instead of this thumbnail-and-quantize shortcut.
+    # bucket each swatch by hue (15° buckets, or "neutral" when saturation/
+    # value are too low for hue to mean anything), rank buckets by total
+    # population, and return one swatch per bucket: the most populous for the
+    # first bucket (it drives the surfaces, so the commonest shade is the
+    # faithful one) and for neutral, the highest-chroma one for the accent
+    # buckets. Chroma (max - min channel), not HSV saturation: HSV rates a dark
+    # brown as saturated as a bright orange of the same hue. Ranking buckets
+    # rather than swatches keeps a dominant colour split across several
+    # near-identical quantizer swatches (a beige poster in ~8 shades) from
+    # losing to a smaller, uniform patch.
+    # Ceiling: the neutral bucket lumps black + gray + white together, and a
+    # colour straddling a bucket edge is split in two. Upgrade path if palettes
+    # look off: port Material's QuantizerCelebi + Score algorithm.
     """
     try:
         image = Image.open(io.BytesIO(data)).convert("RGB")
@@ -92,24 +90,24 @@ def palette_from_image_bytes(data: bytes) -> list[str] | None:
     if not counts:
         return None
 
-    buckets: dict[str | int, list[tuple[int, float, tuple[int, int, int]]]] = {}
+    buckets: dict[str | int, list[tuple[int, int, tuple[int, int, int]]]] = {}
     for count, index in counts:
         r, g, b = palette[index * 3 : index * 3 + 3]
         h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
         bucket: str | int = (
             "neutral" if s < _NEUTRAL_SATURATION or v < _NEUTRAL_VALUE else int(h * _HUE_BUCKETS)
         )
-        buckets.setdefault(bucket, []).append((count, s, (r, g, b)))
+        buckets.setdefault(bucket, []).append((count, max(r, g, b) - min(r, g, b), (r, g, b)))
 
     ranked = sorted(
         buckets.items(),
-        key=lambda bucket: sum(count for count, _s, _rgb in bucket[1]),
+        key=lambda bucket: sum(count for count, _chroma, _rgb in bucket[1]),
         reverse=True,
     )
     result: list[str] = []
     for position, (key, swatches) in enumerate(ranked[:_MAX_PALETTE_SIZE]):
         by_population = position == 0 or key == "neutral"
-        _count, _s, (r, g, b) = max(
+        _count, _chroma, (r, g, b) = max(
             swatches, key=lambda item: item[0] if by_population else item[1]
         )
         result.append(f"#{r:02x}{g:02x}{b:02x}")
