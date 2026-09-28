@@ -47,7 +47,7 @@ export class AssignDialog {
   protected readonly matches = computed<readonly Film[]>(() => {
     const query = this.search().trim().toLowerCase();
     return this.films()
-      .filter((film) => film.primaryTitle.toLowerCase().includes(query))
+      .filter((film) => film.titles.some((title) => title.value.toLowerCase().includes(query)))
       .slice(0, MAX_OPTIONS);
   });
 
