@@ -528,11 +528,11 @@ rely on the browser/SW HTTP cache on a best-effort basis (FR-OFF-03).
 
 ### 6.5 Views & Navigation
 
-Three routed views (§7): `rewatch`, `library` (Search & Filter + Add Film), and `film/:id` (Detail). Only **three**
-are primary navigation destinations — **Rewatch**, **Library**, and `letterboxd` — the Letterboxd review list
-(REQ §5.7), a primary navigation destination whose icon carries the number of open entries (§5.9); the Film Detail
-view is reached *contextually* by selecting a film, and **Add Film** is an action inside the Library view (§7.2),
-not a nav destination. Routes
+Three routed views (§7): `rewatch`, `library` (Search & Filter + Add Film), and `film/:id` (Detail). Only **five**
+are primary navigation destinations — **Rewatch**, **Library**, **Statistics**, **Settings**, and the Letterboxd
+review list (REQ §5.7, its icon carries the number of open entries; §5.9); the Film Detail view is reached
+*contextually* by selecting a film, and **Add Film** is an action inside the Library view (§7.2), not a nav
+destination. Routes
 are driven by a **route registry** so new views can be added without editing existing entries (FR-EXT-02). Shared
 presentational components — film card, rating stars, tag chip, poster-with-placeholder — live in `shared/` for
 reuse across views (FR-EXT-03), each meeting WCAG 2.1 AA (NFR-A11Y-01..04).
