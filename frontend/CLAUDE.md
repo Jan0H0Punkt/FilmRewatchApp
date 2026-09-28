@@ -22,6 +22,8 @@ npm run format       # prettier --write (config: .prettierrc, ignores: .prettier
 npm run format:check # prettier --check — what the pre-commit hook runs on staged files
 ```
 
+**Never run `npx`** (not `npx ng …`, not `npx vitest`, not `npx prettier`). Use the npm scripts from `package.json` above; if a needed command has no script, add one to `package.json` rather than reaching for `npx`.
+
 There is no CI — a clean `ng build` (which runs the strict TS + template type-check), `ng test`, and `npm run lint` are the local gate for every change. Treat a type error as a build break (DESIGN §5.7). The ESLint template config includes `templateAccessibility` — a11y findings in templates are lint errors (NFR-A11Y-01..04).
 
 A repo-level pre-commit hook (`.githooks/pre-commit`, enabled once per clone with `git config core.hooksPath .githooks`) Prettier-checks staged frontend files and runs `ng lint` before every commit that touches `frontend/`.
