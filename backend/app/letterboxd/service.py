@@ -6,12 +6,18 @@ call it without the request-scoped ``FilmService`` it never needs (FR-LBX-05).
 
 import threading
 import uuid
-from collections.abc import Collection, Sequence
+from collections.abc import Callable, Collection, Sequence
 from datetime import date
+from decimal import Decimal
 from typing import Protocol
 
-from app.letterboxd.feed import FeedEntry
+from app.core.db import utc_now
+from app.films.schemas import FilmDetailRead, FilmUpdate
+from app.letterboxd.errors import EntryNotFoundError, EntryResolvedError
+from app.letterboxd.feed import FeedEntry, film_slug
 from app.letterboxd.models import LetterboxdEntry
+from app.letterboxd.schemas import LetterboxdEntryRead, SuggestedFilmRead
+from app.ratings.schemas import RatingEntryRead
 
 # Keeps the scheduled and a manual sync from interleaving; the ``guid`` unique
 # constraint is the backstop. ponytail: one process only — a second backend
@@ -82,3 +88,100 @@ def run_sync(
             queued += 1
         repository.commit()
         return queued
+
+
+class FilmWriter(Protocol):
+    """The ``FilmService`` calls the review actions need (service-to-service, §5.1)."""
+
+    def add_rating(
+        self, film_id: uuid.UUID, value: Decimal | None, watch_date: date
+    ) -> RatingEntryRead: ...
+
+    def get_detail(self, film_id: uuid.UUID) -> FilmDetailRead: ...
+
+    def update(self, film_id: uuid.UUID, data: FilmUpdate) -> FilmDetailRead: ...
+
+
+class LetterboxdService:
+    """The review list's reads and actions (FR-LBX-05..07), plus the manual sync."""
+
+    def __init__(
+        self,
+        repository: LetterboxdRepositoryProtocol,
+        films: FilmWriter,
+        fetch: Callable[[], list[FeedEntry]],
+        today: Callable[[], date] = date.today,
+    ) -> None:
+        self._repository = repository
+        self._films = films
+        self._fetch = fetch
+        self._today = today
+
+    def sync(self) -> int:
+        """Fetch the feed and queue its new entries; returns how many were queued."""
+        return run_sync(self._repository, self._fetch(), self._today())
+
+    def list_open(self) -> list[LetterboxdEntryRead]:
+        """Open entries, newest watch first, after auto-resolving the ones now in the app (FR-LBX-07)."""
+        still_open: list[LetterboxdEntry] = []
+        resolved_any = False
+        for entry in self._repository.list_open():
+            film_id = match_film(
+                self._repository, film_slug(entry.film_url), entry.film_title, entry.film_year
+            )
+            if film_id is not None and self._repository.has_watch_on(film_id, entry.watched_date):
+                entry.resolved_at = utc_now()
+                resolved_any = True
+            else:
+                still_open.append(entry)
+        if resolved_any:
+            self._repository.commit()
+
+        titles = self._repository.primary_titles(
+            {entry.suggested_film_id for entry in still_open if entry.suggested_film_id is not None}
+        )
+        return [
+            LetterboxdEntryRead(
+                id=entry.id,
+                film_title=entry.film_title,
+                film_year=entry.film_year,
+                film_url=entry.film_url,
+                watched_date=entry.watched_date,
+                rating=float(entry.rating) if entry.rating is not None else None,
+                rewatch=entry.rewatch,
+                suggested_film=(
+                    SuggestedFilmRead(
+                        id=entry.suggested_film_id, title=titles[entry.suggested_film_id]
+                    )
+                    if entry.suggested_film_id is not None and entry.suggested_film_id in titles
+                    else None
+                ),
+            )
+            for entry in still_open
+        ]
+
+    def assign(self, entry_id: uuid.UUID, film_id: uuid.UUID) -> None:
+        """Add the entry's watch to ``film_id`` and resolve it (FR-LBX-06).
+
+        An unknown film raises ``FilmNotFoundError`` from ``add_rating`` before
+        anything is committed, so the entry stays open.
+        """
+        entry = self._open_entry(entry_id)
+        entry.resolved_at = utc_now()
+        self._films.add_rating(film_id, entry.rating, entry.watched_date)
+        if self._films.get_detail(film_id).letterboxd_url is None:
+            self._films.update(film_id, FilmUpdate(letterboxd_url=entry.film_url))
+        self._repository.commit()
+
+    def dismiss(self, entry_id: uuid.UUID) -> None:
+        """Resolve the entry without adding anything (FR-LBX-06)."""
+        self._open_entry(entry_id).resolved_at = utc_now()
+        self._repository.commit()
+
+    def _open_entry(self, entry_id: uuid.UUID) -> LetterboxdEntry:
+        entry = self._repository.get(entry_id)
+        if entry is None:
+            raise EntryNotFoundError(entry_id)
+        if entry.resolved_at is not None:
+            raise EntryResolvedError(entry_id)
+        return entry
