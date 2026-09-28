@@ -459,6 +459,23 @@ describe('FilmForm', () => {
       );
     });
 
+    it('keeps an edited film’s empty Letterboxd link empty, ignoring a stray ?letterboxdLink= query param', async () => {
+      const filmFacade = stubFilmFacade({ ...STORED, letterboxdUrl: null });
+      const element = await render(filmFacade, '', STORED.id);
+      currentFixture.componentRef.setInput('letterboxdLink', 'https://letterboxd.com/film/heat/');
+      await settle();
+
+      expect(element.querySelector<HTMLInputElement>('.film-form__letterboxd input')?.value).toBe('');
+
+      element.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await settle();
+
+      expect(filmFacade.update).toHaveBeenCalledWith(
+        STORED.id,
+        expect.objectContaining<Partial<FilmPatch>>({ letterboxdUrl: null }),
+      );
+    });
+
     it('drops the create-only rating block — an edit logs no watch', async () => {
       const element = await render(stubFilmFacade(STORED), '', STORED.id);
 

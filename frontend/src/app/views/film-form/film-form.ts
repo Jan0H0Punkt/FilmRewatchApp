@@ -296,7 +296,11 @@ export class FilmForm {
   protected readonly selectedGenres = linkedSignal<readonly string[]>(() => this.film()?.genres ?? []);
   protected readonly selectedTags = linkedSignal<readonly string[]>(() => this.film()?.tags ?? []);
   protected readonly posterImage = linkedSignal(() => this.film()?.posterImage ?? '');
-  protected readonly letterboxdUrl = linkedSignal(() => this.film()?.letterboxdUrl ?? this.letterboxdLink() ?? '');
+  protected readonly letterboxdUrl = linkedSignal(() => {
+    const film = this.film();
+    if (film !== null) return film.letterboxdUrl ?? '';
+    return this.letterboxdLink() ?? '';
+  });
   protected readonly owned = linkedSignal(() => this.film()?.owned ?? false);
   protected readonly today = new Date();
   protected readonly watchDate = linkedSignal<Date | null>(() => parseIsoDate(this.watchedOn()) ?? this.today);
