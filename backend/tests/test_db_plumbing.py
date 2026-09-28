@@ -6,13 +6,14 @@ Needs no database — the engine is created lazily, on first use.
 from app.core.db import Base, get_session
 from app.films.models import Film, Title
 from app.genres.models import FilmGenre, Genre
+from app.letterboxd.models import LetterboxdEntry
 from app.ratings.models import RatingEntry
 from app.rewatch.models import RewatchSuggestion
 from app.settings.models import Settings
 from app.tags.models import FilmTag, Tag
 
 
-def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection_and_settings() -> (
+def test_metadata_defines_exactly_the_domain_tables_plus_the_projection_settings_and_letterboxd() -> (
     None
 ):
     # One table per entity/join (REQ §4.1-4.5), plus the M4 rewatch projection
@@ -32,6 +33,7 @@ def test_metadata_defines_exactly_the_seven_domain_tables_plus_the_projection_an
     assert set(Base.metadata.tables) == {model.__tablename__ for model in domain_models} | {
         RewatchSuggestion.__tablename__,
         Settings.__tablename__,
+        LetterboxdEntry.__tablename__,
     }
 
 

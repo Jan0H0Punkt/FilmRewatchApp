@@ -24,6 +24,7 @@ from sqlalchemy.pool import NullPool
 # it emits a DROP for every existing table.
 import app.films.models
 import app.genres.models
+import app.letterboxd.models
 import app.ratings.models
 import app.rewatch.models
 import app.settings.models

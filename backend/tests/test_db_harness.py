@@ -42,6 +42,7 @@ def test_migrated_schema_has_the_domain_tables_and_the_projection_and_settings(
         "film_genres",
         "rewatch_suggestions",
         "settings",
+        "letterboxd_entries",
         "alembic_version",
     }
 
