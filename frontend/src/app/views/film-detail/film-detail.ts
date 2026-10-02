@@ -32,6 +32,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 
@@ -42,6 +43,9 @@ import { GenreFacade } from '../../domain/genre/facade';
 import type { FilmDetail as FilmDetailModel, FilmPatch, RatingHistoryEntry } from '../../domain/film/model';
 import { RatingFacade } from '../../domain/rating/facade';
 import { EARLIER_WATCH_DATE, type RatingDraft } from '../../domain/rating/model';
+import { SettingsFacade } from '../../domain/settings/facade';
+import { paceMessage } from '../../domain/settings/pace';
+import { StatsFacade } from '../../domain/stats/facade';
 import { TagFacade } from '../../domain/tag/facade';
 import { ConfirmDialog, type ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { EditableChips } from '../../shared/editable-chips/editable-chips';
@@ -252,6 +256,9 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 export class FilmDetail {
   private readonly films = inject(FilmFacade);
   private readonly clock = inject(ClockService);
+  private readonly settings = inject(SettingsFacade);
+  private readonly stats = inject(StatsFacade);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly ratings = inject(RatingFacade);
   private readonly tags = inject(TagFacade);
   private readonly genres = inject(GenreFacade);
@@ -398,11 +405,30 @@ export class FilmDetail {
         this.isSubmittingRating.set(false);
         this.addRatingError.set(null);
         onLogged?.();
+        this.announcePace();
       },
       error: (error: unknown) => {
         this.isSubmittingRating.set(false);
         this.addRatingError.set(extractErrorMessage(error, 'The rating could not be saved.'));
       },
+    });
+  }
+
+  /**
+   * FR-RW-09: after a logged watch, tells the user where they stand against
+   * their pace. Waits on `StatsFacade.refresh()` so the count already includes
+   * the new watch; a failed reload shows nothing.
+   */
+  private announcePace(): void {
+    const interval = this.settings.watchIntervalDays();
+    if (interval === null) return;
+    const today = new Date();
+    this.stats.refresh().subscribe({
+      next: (stats) => {
+        const watches = stats.years.find((y) => y.year === today.getFullYear())?.watches ?? 0;
+        this.snackBar.open(paceMessage(interval, watches, today), undefined, { duration: 5000 });
+      },
+      error: () => undefined,
     });
   }
 

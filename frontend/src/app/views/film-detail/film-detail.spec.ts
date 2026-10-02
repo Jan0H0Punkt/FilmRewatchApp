@@ -8,13 +8,17 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { type Observable, of, throwError } from 'rxjs';
 
 import { FilmFacade } from '../../domain/film/facade';
 import type { FilmDetail as FilmDetailModel } from '../../domain/film/model';
 import { GenreFacade } from '../../domain/genre/facade';
 import { RatingFacade } from '../../domain/rating/facade';
+import { SettingsFacade } from '../../domain/settings/facade';
+import { StatsFacade } from '../../domain/stats/facade';
+import type { Stats } from '../../domain/stats/model';
 import { TagFacade } from '../../domain/tag/facade';
 import type { ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { FilmDetail } from './film-detail';
@@ -87,6 +91,17 @@ function stubMatDialog(confirmed: boolean) {
   return { open: vi.fn().mockReturnValue({ afterClosed: () => of(confirmed) }) };
 }
 
+/** FR-RW-09 inputs: the pace setting, and what the post-log stats refresh emits. */
+interface PaceInputs {
+  readonly interval?: number | null;
+  readonly refresh?: Observable<Stats>;
+}
+
+/** The year block's `watches` is all the snackbar reads, so the rest of `Stats` is left unfilled. */
+function statsWithWatches(year: number, watches: number): Stats {
+  return { years: [{ year, watches }] } as unknown as Stats;
+}
+
 /** The most recently created fixture — lets a test await a later change after its own interaction. */
 let currentFixture: ComponentFixture<FilmDetail>;
 
@@ -94,6 +109,8 @@ async function render(
   filmFacade: ReturnType<typeof stubFilmFacade>,
   ratingFacade: ReturnType<typeof stubRatingFacade> = stubRatingFacade(),
   dialog: ReturnType<typeof stubMatDialog> | undefined = undefined,
+  pace: PaceInputs = {},
+  snackBar: { open: ReturnType<typeof vi.fn> } = { open: vi.fn() },
 ): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [FilmDetail],
@@ -104,6 +121,12 @@ async function render(
       { provide: RatingFacade, useValue: ratingFacade },
       { provide: TagFacade, useValue: stubLabelFacade(['heist', 'neo-noir']) },
       { provide: GenreFacade, useValue: stubLabelFacade(['Crime', 'Drama']) },
+      { provide: SettingsFacade, useValue: { watchIntervalDays: signal(pace.interval ?? null) } },
+      {
+        provide: StatsFacade,
+        useValue: { refresh: vi.fn().mockReturnValue(pace.refresh ?? of(statsWithWatches(0, 0))) },
+      },
+      { provide: MatSnackBar, useValue: snackBar },
       ...(dialog ? [{ provide: MatDialog, useValue: dialog }] : []),
     ],
   });
@@ -392,6 +415,55 @@ describe('FilmDetail', () => {
       await settle();
 
       expect(ratingFacade.add).toHaveBeenCalledWith(HEAT.id, expect.objectContaining({ value: null }));
+    });
+
+    describe('pace snackbar (FR-RW-09)', () => {
+      async function logUnrated(pace: PaceInputs, snackBar: { open: ReturnType<typeof vi.fn> }): Promise<void> {
+        const element = await render(stubFilmFacade(HEAT), stubRatingFacade(), undefined, pace, snackBar);
+        element.querySelector<HTMLButtonElement>('.rating-form__unrated')?.click();
+        await settle();
+        element
+          .querySelector('form.rating-form')
+          ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await settle();
+      }
+
+      it('opens with the pace text from the fresh stats once a watch is logged', async () => {
+        const snackBar = { open: vi.fn() };
+        const year = new Date().getFullYear();
+
+        await logUnrated({ interval: 1, refresh: of(statsWithWatches(year, 0)) }, snackBar);
+
+        // Day-of-year >= 1 watches expected at 1 film/day, 0 logged -> behind (message text is covered in pace.spec.ts).
+        expect(snackBar.open).toHaveBeenCalledTimes(1);
+        expect(snackBar.open).toHaveBeenCalledWith(expect.stringMatching(/ behind pace \(0 of \d+\)$/), undefined, {
+          duration: 5000,
+        });
+      });
+
+      it('treats a missing year block as zero watches', async () => {
+        const snackBar = { open: vi.fn() };
+
+        await logUnrated({ interval: 1, refresh: of(statsWithWatches(1999, 40)) }, snackBar);
+
+        expect(snackBar.open).toHaveBeenCalledWith(expect.stringContaining('(0 of'), undefined, expect.anything());
+      });
+
+      it('stays silent when the pace is Off', async () => {
+        const snackBar = { open: vi.fn() };
+
+        await logUnrated({ interval: null }, snackBar);
+
+        expect(snackBar.open).not.toHaveBeenCalled();
+      });
+
+      it('stays silent when the stats reload fails', async () => {
+        const snackBar = { open: vi.fn() };
+
+        await logUnrated({ interval: 1, refresh: throwError(() => new Error('down')) }, snackBar);
+
+        expect(snackBar.open).not.toHaveBeenCalled();
+      });
     });
 
     it('surfaces the add-rating error message from the error envelope', async () => {

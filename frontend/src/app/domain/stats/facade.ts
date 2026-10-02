@@ -1,5 +1,6 @@
 /** The stats facade (DESIGN §6.1) — the single API `views/stats/` calls. */
 import { Injectable, computed, inject } from '@angular/core';
+import { map, tap, type Observable } from 'rxjs';
 
 import { StatsApi } from './api';
 import { toStats } from './mapper';
@@ -16,6 +17,18 @@ export class StatsFacade {
 
   reload(): void {
     this.api.stats.reload();
+  }
+
+  /**
+   * Fetches fresh stats and emits them once, also publishing them to `stats`.
+   * Unlike `reload()`, the caller can wait for the new numbers instead of
+   * reading the stale ones (FR-RW-09's post-log snackbar); errors on the stream.
+   */
+  refresh(): Observable<Stats> {
+    return this.api.fetch().pipe(
+      tap((dto) => this.api.stats.value.set(dto)),
+      map(toStats),
+    );
   }
 
   private hasOpened = false;

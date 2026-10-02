@@ -1,6 +1,7 @@
 /** Stats data access (DESIGN §6.1) — the only place that speaks the wire shape. */
-import { httpResource } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import type { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
@@ -43,6 +44,13 @@ export interface StatsDto {
 
 @Injectable({ providedIn: 'root' })
 export class StatsApi {
+  private readonly http = inject(HttpClient);
+
   /** `GET /stats` — an `httpResource` for its loading/error signals, as `RewatchApi.list`. */
   readonly stats = httpResource<StatsDto>(() => `${environment.apiBaseUrl}/stats`);
+
+  /** One-shot `GET /stats`, for a caller that must await the fresh numbers (`StatsFacade.refresh`). */
+  fetch(): Observable<StatsDto> {
+    return this.http.get<StatsDto>(`${environment.apiBaseUrl}/stats`);
+  }
 }
