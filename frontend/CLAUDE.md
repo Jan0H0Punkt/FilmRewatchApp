@@ -3,7 +3,8 @@
 Guidance for the Angular client under `frontend/`. See the repo-root `CLAUDE.md` for cross-cutting orientation, the design-doc-driven / milestone-sequenced workflow, and the `docs/` map.
 
 **The Rewatch, Library, Film Detail and Film Form views are built**, as is the
-§6.5 adaptive navigation (bottom bar below 900px, permanent sidebar above).
+§6.5 adaptive navigation (tab bar below 768px, icon rail above; VS Code-style
+panels where only the content panel scrolls — the app's one `cdkScrollable`).
 `film-form/` serves two routes: `films/new` creates, `film/:id/edit` edits —
 one component, told apart by the `id` route param. Still ahead: search filters
 beyond the title search, and the cache/sync + PWA layer (M5).
