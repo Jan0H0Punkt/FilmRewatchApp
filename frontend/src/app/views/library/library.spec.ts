@@ -23,6 +23,7 @@ const HEAT: Film = {
   owned: true,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
   updatedAt: '2024-01-01T00:00:00Z',
+  lastActivityAt: '2024-01-01T00:00:00Z',
 };
 
 /** Carries an alternative (non-primary) title, distinct from its primary one — proves FR-SF-01 matches beyond `primaryTitle`. */
@@ -44,6 +45,7 @@ const SEVEN: Film = {
     { value: 'Seven', isPrimary: false, isOriginal: false },
   ],
   updatedAt: '2024-01-01T00:00:00Z',
+  lastActivityAt: '2024-01-01T00:00:00Z',
 };
 
 /** Stands in for the facade so the view is tested without HTTP. */
@@ -108,6 +110,22 @@ describe('Library', () => {
     expect(rating?.getAttribute('aria-label')).toBe('Average rating: 4.0 out of 5');
     expect(element.querySelector('.film__favorite')).not.toBeNull();
     expect(element.querySelector('.film__owned')).not.toBeNull();
+  });
+
+  it('moves a film to the top as soon as it gets new activity, without a reload', async () => {
+    const facade = stubFacade([HEAT, SEVEN]);
+    const element = await render(facade);
+    const titles = () => [...element.querySelectorAll('.film__title')].map((title) => title.textContent?.trim());
+    const before = titles();
+
+    // What applyRatingAdded or a Letterboxd assign does to the second film: a newer watch.
+    const bumped = before[1] === 'Heat' ? HEAT : SEVEN;
+    facade.films.update((films) =>
+      films.map((film) => (film === bumped ? { ...film, lastActivityAt: '2024-06-01T00:00:00Z' } : film)),
+    );
+    await currentFixture.whenStable();
+
+    expect(titles()).toEqual([before[1], before[0]]);
   });
 
   it('links each row to its film detail route', async () => {

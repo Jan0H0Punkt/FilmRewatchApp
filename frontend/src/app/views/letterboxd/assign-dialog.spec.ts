@@ -27,6 +27,7 @@ function film(id: string, primaryTitle: string, altTitle?: string): Film {
         ]
       : [{ value: primaryTitle, isPrimary: true, isOriginal: false }],
     updatedAt: '2024-01-01T00:00:00Z',
+    lastActivityAt: '2024-01-01T00:00:00Z',
   };
 }
 

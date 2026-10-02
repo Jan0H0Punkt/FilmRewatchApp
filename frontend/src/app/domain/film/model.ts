@@ -34,8 +34,10 @@ export interface Film {
    * (FR-SF-01), so the list model has to carry them.
    */
   readonly titles: readonly FilmTitle[];
-  /** Last edit to the film record (§7.3) — the Library's default order, newest first. Rating writes don't bump it. */
+  /** Last edit to the film record (§7.3). Rating writes don't bump it. */
   readonly updatedAt: string;
+  /** The later of `updatedAt` and the newest watch's `created_at` — the Library's default order, newest first. */
+  readonly lastActivityAt: string;
 }
 
 /** One title of a film (REQ §4.1 Title object) — the detail view lists all of them. */

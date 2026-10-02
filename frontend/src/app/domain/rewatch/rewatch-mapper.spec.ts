@@ -17,6 +17,7 @@ const HEAT: Film = {
   owned: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: true }],
   updatedAt: '2024-01-01T00:00:00Z',
+  lastActivityAt: '2024-01-01T00:00:00Z',
 };
 
 describe('toRewatchSuggestion', () => {

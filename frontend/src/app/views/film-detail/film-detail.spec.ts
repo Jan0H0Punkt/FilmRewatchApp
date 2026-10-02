@@ -48,6 +48,7 @@ const HEAT: FilmDetailModel = {
   ],
   createdAt: '2024-01-01T10:00:00Z',
   updatedAt: '2024-01-02T10:00:00Z',
+  lastActivityAt: '2024-01-02T10:00:00Z',
 };
 
 /** Matches a route in the test router config below without pulling in a real view. */

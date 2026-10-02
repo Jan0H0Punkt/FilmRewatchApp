@@ -39,6 +39,7 @@ const CREATED: Film = {
   owned: false,
   titles: [{ value: 'Heat', isPrimary: true, isOriginal: false }],
   updatedAt: '2024-01-01T00:00:00Z',
+  lastActivityAt: '2024-01-01T00:00:00Z',
 };
 
 /** The film edit mode loads. Two titles and a Letterboxd link, so the prefill has something to get wrong. */
@@ -64,6 +65,7 @@ const STORED: FilmDetail = {
   ratingHistory: [],
   createdAt: '2024-01-01T10:00:00Z',
   updatedAt: '2024-01-02T10:00:00Z',
+  lastActivityAt: '2024-01-02T10:00:00Z',
 };
 
 /** Stands in for `FilmFacade` — the facade under test is `FilmForm`, not this one. `detail` starts empty, as it does before the fetch lands. */

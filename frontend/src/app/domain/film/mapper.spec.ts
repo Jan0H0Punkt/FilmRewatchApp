@@ -1,6 +1,6 @@
 /** DTO ↔ domain mapping for `letterboxd_url`/`letterboxdUrl` (mirrors `poster_image`, FR-LIB-14/15) and for film creation. */
 import type { FilmDto } from './api';
-import { toFilmCreateDto, toFilmDetail, toFilmUpdateDto } from './mapper';
+import { toFilm, toFilmCreateDto, toFilmDetail, toFilmUpdateDto } from './mapper';
 import type { FilmCreateInput, FilmPatch } from './model';
 
 function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
@@ -24,6 +24,29 @@ function filmDto(overrides: Partial<FilmDto> = {}): FilmDto {
     ...overrides,
   };
 }
+
+describe('toFilm', () => {
+  it('takes lastActivityAt from the newest watch when it was logged after the last edit', () => {
+    const film = toFilm(
+      filmDto({
+        rating_history: [
+          { id: 'r2', value: 4, watch_date: '2024-03-01', created_at: '2024-03-02T00:00:00Z' },
+          { id: 'r1', value: 3, watch_date: '2024-01-01', created_at: '2023-12-01T00:00:00Z' },
+        ],
+      }),
+    );
+    expect(film.lastActivityAt).toBe('2024-03-02T00:00:00Z');
+  });
+
+  it('keeps updated_at as lastActivityAt when the edit is newer than every watch', () => {
+    const film = toFilm(
+      filmDto({
+        rating_history: [{ id: 'r1', value: 3, watch_date: '2023-12-01', created_at: '2023-12-01T00:00:00Z' }],
+      }),
+    );
+    expect(film.lastActivityAt).toBe('2024-01-01T00:00:00Z');
+  });
+});
 
 describe('toFilmDetail', () => {
   it('carries a set letterboxd_url through as letterboxdUrl', () => {

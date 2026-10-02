@@ -40,6 +40,7 @@ function film(id: string, title: string, rating: number | null = 4): Film {
     owned: false,
     titles: [{ value: title, isPrimary: true, isOriginal: true }],
     updatedAt: '2024-01-01T00:00:00Z',
+    lastActivityAt: '2024-01-01T00:00:00Z',
   };
 }
 

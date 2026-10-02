@@ -41,6 +41,9 @@ export function toFilm(dto: FilmDto): Film {
       isOriginal: title.is_original,
     })),
     updatedAt: dto.updated_at,
+    lastActivityAt: [dto.updated_at, ...dto.rating_history.map((entry) => entry.created_at)].reduce((latest, at) =>
+      Date.parse(at) > Date.parse(latest) ? at : latest,
+    ),
   };
 }
 
