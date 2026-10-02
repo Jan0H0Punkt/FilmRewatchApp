@@ -1,37 +1,53 @@
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ScrollToTopFab } from './scroll-to-top-fab';
 
-let fixture: ComponentFixture<ScrollToTopFab>;
+/** Stands in for the shell's content panel, the FAB's scroll container. */
+@Component({
+  imports: [CdkScrollable, ScrollToTopFab],
+  template: '<div cdkScrollable><app-scroll-to-top-fab /></div>',
+})
+class Panel {}
+
+let fixture: ComponentFixture<Panel>;
 
 function render(): HTMLElement {
-  TestBed.configureTestingModule({ imports: [ScrollToTopFab] });
-  fixture = TestBed.createComponent(ScrollToTopFab);
+  TestBed.configureTestingModule({ imports: [Panel] });
+  fixture = TestBed.createComponent(Panel);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
 
+/** Scrolls the panel and waits out the `ScrollDispatcher`'s 20ms audit time. */
+async function scrollPanel(element: HTMLElement, top: number): Promise<void> {
+  const panel = element.querySelector<HTMLElement>('[cdkScrollable]')!;
+  panel.scrollTop = top;
+  panel.dispatchEvent(new Event('scroll'));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  fixture.detectChanges();
+}
+
 describe('ScrollToTopFab', () => {
-  it('stays hidden until the page has scrolled past the threshold', () => {
+  it('stays hidden until the panel has scrolled past the threshold', async () => {
     const element = render();
     expect(element.querySelector('button')).toBeNull();
 
-    Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 });
-    window.dispatchEvent(new Event('scroll'));
-    fixture.detectChanges();
+    await scrollPanel(element, 500);
 
     expect(element.querySelector('button')).not.toBeNull();
   });
 
-  it('scrolls back to the top on click', () => {
+  it('scrolls the panel back to the top on click', async () => {
     const element = render();
-    Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 });
-    window.dispatchEvent(new Event('scroll'));
-    fixture.detectChanges();
+    await scrollPanel(element, 500);
 
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const panel = element.querySelector<HTMLElement>('[cdkScrollable]')!;
+    const scrollTo = vi.fn();
+    panel.scrollTo = scrollTo;
     element.querySelector('button')?.dispatchEvent(new Event('click'));
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0, behavior: 'smooth' }));
   });
 });

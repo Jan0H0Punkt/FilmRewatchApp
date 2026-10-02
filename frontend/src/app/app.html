@@ -1,5 +1,4 @@
 <nav class="app-nav" aria-label="Primary">
-  <img class="app-nav__brand" src="logo.svg" [alt]="appName" />
   @for (destination of destinations; track destination.path) {
     @let count = badgeCount(destination.path);
     <a
@@ -9,6 +8,9 @@
       [routerLink]="['/', destination.path]"
       [attr.aria-current]="active.isActive ? 'page' : null"
       [attr.aria-label]="count ? destination.label + ', ' + count + ' to review' : null"
+      [matTooltip]="destination.label"
+      matTooltipClass="app-nav__tooltip"
+      matTooltipPosition="right"
     >
       <mat-icon aria-hidden="true" [matBadge]="count" [matBadgeHidden]="!count" matBadgeSize="small">{{
         destination.icon
@@ -16,9 +18,21 @@
       <span class="app-nav__label">{{ destination.label }}</span>
     </a>
   }
+  <!-- Rail only (≥768px); the phone's tab bar has no room, so there it sits in the app bar instead. -->
+  <button
+    class="app-nav__theme"
+    matIconButton
+    type="button"
+    [attr.aria-label]="'Colour theme: ' + theme() + '. Click to switch.'"
+    [matTooltip]="themeTooltip()"
+    matTooltipPosition="right"
+    (click)="cycleTheme()"
+  >
+    <mat-icon>{{ themeIcon() }}</mat-icon>
+  </button>
 </nav>
 
-<div class="app-shell">
+<div class="app-content" cdkScrollable>
   <header class="app-bar">
     <div class="app-bar__heading">
       @if (showBackControl()) {
@@ -29,6 +43,7 @@
       <h1 class="app-bar__title">{{ pageTitle() }}</h1>
     </div>
     <button
+      class="app-bar__theme"
       matIconButton
       type="button"
       [attr.aria-label]="'Colour theme: ' + theme() + '. Click to switch.'"

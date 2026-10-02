@@ -87,36 +87,26 @@ body {
   width: 1px;
 }
 
-/* `.app-main` caps at 60rem (below) for Library/Rewatch's comfortable list
-   width, but Film Detail's two-column layout wants to fill the screen, not
-   stop at another arbitrary number — global, not `app.scss`, because
-   Angular's emulated view encapsulation would stop a selector there from
-   matching `.film-detail-page`, which is FilmDetail's own template, not
-   App's. `.app-shell` (its real parent) is prefixed on purpose: Angular's
+/* `.app-main` caps at 60rem (`app.scss`) for Library/Rewatch's comfortable list
+   width, but Film Detail's two-column layout wants to fill the panel, not stop
+   at another arbitrary number — global, not `app.scss`, because Angular's
+   emulated view encapsulation would stop a selector there from matching
+   `.film-detail-page`, which is FilmDetail's own template, not App's.
+   `.app-content` (its real ancestor) is prefixed on purpose: Angular's
    `[_ngcontent-*]` attribute makes `app.scss`'s own `.app-main` rule exactly
    as specific as a bare `.app-main:has(...)` here, so without it this rule's
    effect depends on injection order rather than actually winning. */
 @media (min-width: 1100px) {
-  .app-shell .app-main:has(.film-detail-page) {
-    margin: 0; // `.app-main`'s own `margin: 0 auto` would otherwise center it, eating the width `max-width: none` just freed
-    max-width: none;
-  }
-
-  /* Both cards fill the page height (with `.app-main`'s own padding as the
-     margin), rather than shrink to content: the shell becomes a full-height
-     flex column, `.app-main` and `.film-detail-page` each take the rest of
-     it in turn, and `.film-detail-page`'s `align-items: stretch` (its own
-     file) makes the grid's two cards match that height. */
-  .app-shell:has(.film-detail-page) {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-  }
-
-  .app-shell:has(.film-detail-page) .app-main {
+  /* Both cards fill the panel's height (with `.app-main`'s own padding as the
+     margin), rather than shrink to content: `.app-content` is already a flex
+     column (`app.scss`), so `.app-main` and `.film-detail-page` each take the
+     rest of it in turn, and `.film-detail-page`'s `align-items: stretch` (its
+     own file) makes the grid's two cards match that height. */
+  .app-content .app-main:has(.film-detail-page) {
     display: flex;
     flex: 1;
     flex-direction: column;
+    max-width: none;
   }
 
   /* `flex: 1` only does anything on a flex CONTAINER's direct child — and
@@ -133,6 +123,21 @@ body {
 
   .app-main .film-detail-page {
     flex: 1;
+  }
+}
+
+/* The nav panel's height as a tab bar (`app.scss`), which `ScrollToTopFab`
+   clears too. */
+html {
+  --app-nav-height: 4rem;
+}
+
+/* Phone: the tab bar shows its labels, so a long-press tooltip repeating one
+   only gets in the way. Doubled class: the CDK's later-injected overlay
+   styles would win a tie. */
+@media (max-width: 767.98px) {
+  .app-nav__tooltip.app-nav__tooltip {
+    display: none;
   }
 }
 

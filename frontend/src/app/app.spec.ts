@@ -1,4 +1,4 @@
-/** The app shell: the branding, the theme control, and the §6.5 navigation. */
+/** The app shell: the theme control, and the §6.5 navigation. */
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -23,10 +23,6 @@ async function render(routes: Parameters<typeof provideRouter>[0] = []): Promise
 class StubView {}
 
 describe('App', () => {
-  it('renders the logo as the sidebar branding, named by the app name', async () => {
-    expect((await render()).querySelector('img.app-nav__brand')?.getAttribute('alt')).toBe('Film Rewatch');
-  });
-
   it("shows the active route's title in the app bar, not the app name", async () => {
     TestBed.configureTestingModule({
       imports: [App],

@@ -1,12 +1,16 @@
 /**
  * Root component — the app bar, the §6.5 navigation, and the router outlet.
  *
- * The navigation adapts by viewport in CSS alone (`app.scss`): a bottom bar on
- * a phone, a permanent left sidebar from 900px up. The design names
+ * The navigation adapts by viewport in CSS alone (`app.scss`): a tab bar on a
+ * phone, a permanent icon rail from 768px up. The design names
  * `mat-sidenav mode="side"` for the wide case, but a drawer that is always open
  * and never toggles is a static sidebar — the container, the breakpoint
  * observer and the `mode` binding would all render the same thing.
+ *
+ * Only the content panel scrolls, not the window: it is the app's one
+ * `cdkScrollable`, which `ScrollMemoryService` and `ScrollToTopFab` look up.
  */
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { ChangeDetectionStrategy, Component, computed, inject, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -38,6 +42,7 @@ const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
 @Component({
   selector: 'app-root',
   imports: [
+    CdkScrollable,
     MatBadgeModule,
     MatButtonModule,
     MatIconModule,
@@ -51,9 +56,6 @@ const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  /** Alt text of the sidebar logo — the app bar itself carries the current page's title instead. */
-  protected readonly appName = 'Film Rewatch';
-
   private readonly router = inject(Router);
 
   /**

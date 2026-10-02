@@ -1,11 +1,91 @@
+/* §6.5 navigation, VS Code style: the nav and the content are separate rounded
+   panels on a slightly darker backdrop, and only the content panel scrolls.
+   Mobile-first: content above a tab bar, becoming an icon rail beside it (labels
+   in tooltips) at 768px. One element, two layouts — only the CSS branches. */
+:host {
+  background: light-dark(var(--mat-sys-surface-container-high), var(--mat-sys-surface-container-lowest));
+  box-sizing: border-box;
+  display: grid;
+  gap: 8px;
+  grid-template-areas: 'content' 'nav';
+  grid-template-rows: 1fr var(--app-nav-height);
+  height: 100dvh;
+  padding: 8px;
+}
+
+.app-nav,
+.app-content {
+  background: var(--mat-sys-surface);
+  border-radius: 8px;
+}
+
+/* A flex column so Film Detail can stretch to the panel's height (`styles.scss`). */
+.app-content {
+  display: flex;
+  flex-direction: column;
+  grid-area: content;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.app-nav {
+  align-items: center;
+  display: flex;
+  grid-area: nav;
+  padding: 0 8px;
+}
+
+.app-nav__link {
+  align-items: center;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font: var(--mat-sys-label-medium);
+  gap: 4px;
+  min-width: 0;
+  text-decoration: none;
+}
+
+/* M3's active-indicator pill. The icon box is 48px tall on the rail, so the
+   link stays at the 48px target floor (NFR-A11Y) without its label. */
+.app-nav__link mat-icon {
+  border-radius: 16px;
+  box-sizing: content-box;
+  padding: 4px 20px;
+}
+
+.app-nav__link:hover mat-icon {
+  background: var(--mat-sys-surface-container-high);
+}
+
+.app-nav__link--active {
+  color: var(--mat-sys-on-surface);
+}
+
+.app-nav__link--active mat-icon {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.app-nav__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-nav__theme {
+  display: none;
+}
+
 .app-bar {
   align-items: center;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 1rem 1rem 0;
 }
 
 /* Groups the back control with the title so `justify-content: space-between`
@@ -16,9 +96,8 @@
   gap: 1.25rem;
 }
 
-/* Pulls the icon button's own padding back to the bar's edge — same trick as
-   the old `.film-detail__nav` this replaced. Only present with a back
-   control, so a title-only bar (Rewatch, Library) is unaffected. */
+/* Pulls the icon button's own padding back to the bar's edge. Only present
+   with a back control, so a title-only bar (Rewatch, Library) is unaffected. */
 .app-bar__back {
   margin-left: -0.25rem;
 }
@@ -28,87 +107,45 @@
   margin: 0;
 }
 
-/* §6.5 navigation. Mobile-first: a fixed bottom bar, becoming a permanent left
-   sidebar at the 900px breakpoint. One element, two layouts — the markup does
-   not branch, only the CSS does. */
-.app-nav {
-  background: var(--mat-sys-surface-container);
-  border-top: 1px solid var(--mat-sys-outline-variant);
-  bottom: 0;
-  display: flex;
-  justify-content: space-around;
-  left: 0;
-  position: fixed;
-  right: 0;
-  z-index: 2;
-}
-
-/* Branding earns its place only in the sidebar layout — a fixed mobile bottom
-   bar has no room to spare for it alongside the two nav destinations. */
-.app-nav__brand {
-  display: none;
-}
-
-.app-nav__link {
-  align-items: center;
-  color: var(--mat-sys-on-surface-variant);
-  display: flex;
-  flex-direction: column;
-  font: var(--mat-sys-label-medium);
-  gap: 0.125rem;
-  justify-content: center;
-  /* The M7 a11y pass sets the definitive figure; 48px is the floor (NFR-A11Y). */
-  min-height: 48px;
-  min-width: 48px;
-  padding: 0.5rem 1rem;
-  text-decoration: none;
-}
-
-.app-nav__link--active {
-  color: var(--mat-sys-primary);
-}
-
 .app-main {
+  box-sizing: border-box;
   margin: 0 auto;
   max-width: 60rem;
-  /* Clear the fixed bottom bar so the last row is never hidden behind it. */
-  padding: 1.5rem 1rem 5rem;
+  padding: 1.5rem 1rem;
+  width: 100%;
 }
 
-@media (min-width: 1100px) {
-  .app-nav {
-    border-right: 1px solid var(--mat-sys-outline-variant);
-    border-top: none;
-    flex-direction: column;
-    justify-content: flex-start;
-    padding-top: 1rem;
-    right: auto;
-    top: 0;
-    width: 11rem;
+@media (min-width: 768px) {
+  :host {
+    grid-template-areas: 'nav content';
+    grid-template-columns: 56px 1fr;
+    grid-template-rows: none;
   }
 
-  .app-nav__brand {
-    display: block;
-    height: 4rem;
-    margin: 0 1rem 1rem;
-    width: 4rem;
+  .app-nav {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
   }
 
   .app-nav__link {
-    align-items: center;
-    box-sizing: border-box;
-    flex-direction: row;
-    gap: 0.75rem;
-    justify-content: flex-start;
-    width: 100%;
+    flex: none;
   }
 
-  /* The sidebar is fixed, so the content is inset rather than pushed. */
-  .app-shell {
-    padding-left: 11rem;
+  .app-nav__link mat-icon {
+    padding: 12px 8px;
   }
 
-  .app-main {
-    padding-bottom: 1.5rem;
+  .app-nav__label {
+    display: none;
+  }
+
+  .app-nav__theme {
+    display: inline-flex;
+    margin-top: auto;
+  }
+
+  .app-bar__theme {
+    display: none;
   }
 }

@@ -13,7 +13,7 @@
  * There is deliberately no refresh control (§7.1) — the list re-reads when the
  * view opens, and the backend recomputes once a day (§5.8).
  */
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MAT_NATIVE_DATE_FORMATS, provideNativeDateAdapter, type MatDateFormats } from '@angular/material/core';
@@ -80,7 +80,6 @@ export class Rewatch {
   private readonly settings = inject(SettingsFacade);
   private readonly scrollMemory = inject(ScrollMemoryService);
   private readonly dialog = inject(MatDialog);
-  private hasRestoredScroll = false;
 
   /** The algorithm's due-list, before the §Cap filter — `cards` below is what's actually shown. */
   private readonly allCards = this.rewatch.cards;
@@ -144,15 +143,7 @@ export class Rewatch {
     this.stats.onViewOpened();
     this.settings.onViewOpened();
 
-    // Restores the scroll offset saved when this view was last left — waits
-    // for loading to finish so it lands in the real list, not the loading state.
-    effect(() => {
-      if (this.isLoading() || this.hasRestoredScroll) return;
-      this.hasRestoredScroll = true;
-      window.scrollTo(0, this.scrollMemory.restore(SCROLL_KEY));
-    });
-
-    inject(DestroyRef).onDestroy(() => this.scrollMemory.save(SCROLL_KEY, window.scrollY));
+    this.scrollMemory.remember(SCROLL_KEY, this.isLoading);
   }
 
   protected reload(): void {

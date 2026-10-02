@@ -13,7 +13,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   effect,
   inject,
   signal,
@@ -101,7 +100,6 @@ export class Library {
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private hasFocusedSearch = false;
-  private hasRestoredScroll = false;
 
   /**
    * Up/Down roves focus across the search field, the "Add new film" link, and the
@@ -130,15 +128,7 @@ export class Library {
       input.nativeElement.focus();
     });
 
-    // Restores the scroll offset saved when this view was last left — waits
-    // for loading to finish so it lands in the real list, not the loading state.
-    effect(() => {
-      if (this.isLoading() || this.hasRestoredScroll) return;
-      this.hasRestoredScroll = true;
-      window.scrollTo(0, this.scrollMemory.restore(SCROLL_KEY));
-    });
-
-    inject(DestroyRef).onDestroy(() => this.scrollMemory.save(SCROLL_KEY, window.scrollY));
+    this.scrollMemory.remember(SCROLL_KEY, this.isLoading);
   }
 
   protected readonly criteria = signal<LibraryCriteria>(NO_CRITERIA);
