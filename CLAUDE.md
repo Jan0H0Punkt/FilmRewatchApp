@@ -22,7 +22,7 @@ Development is **design-doc-driven**. Before writing feature code, read the rele
 - `docs/designs/DESIGN_V1.md` — the authoritative technical design. Code and commit messages reference its sections (`§5.1`, `§5.7`) and requirement IDs (`NFR-MAINT-03`, `FR-LIB-04`) pervasively; keep doing so.
 - `docs/requirements/REQUIREMENTS_V1.md`, `docs/requirements/OPEN_DECISIONS_V1.md`, `docs/requirements/FUTURE_WORK_V1.md`.
 
-**The core domain (M1) and the rewatch engine (M4), scoring included, are built.** The milestone documents for those are gone — the code is the record. What is still open is listed in `docs/requirements/OPEN_DECISIONS_V1.md`, ordered by the milestone it is due at, and in the root `OPEN_WORK.md`. Do not add logic to a milestone that doesn't own it. This discipline applies to **both tiers**.
+**The core domain (M1) and the rewatch engine (M4), scoring included, are built.** The milestone documents for those are gone — the code is the record. What is still open is listed in `docs/requirements/OPEN_DECISIONS_V1.md`, ordered by the milestone it is due at, and in the root `todo.md`. Do not add logic to a milestone that doesn't own it. This discipline applies to **both tiers**.
 
 ## Workflow
 
