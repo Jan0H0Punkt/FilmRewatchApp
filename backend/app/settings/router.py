@@ -1,7 +1,7 @@
-"""Presentation layer for the settings module (DESIGN §5.1, §5.3, FR-RW-08).
+"""Presentation layer for the settings module (DESIGN §5.1, §5.3, FR-RW-08, FR-RW-09).
 
 Two routes under ``/api/v1/settings``: read the single row, replace it. The
-range/step validation (0-100 in steps of 10) happens in :class:`SettingsBody`
+range validation (share 0-100 in steps of 10, pace >= 1) happens in :class:`SettingsBody`
 before the service ever sees an out-of-range value; the DB's CHECK constraint
 is the backstop.
 """
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.get(
     "",
     summary="Get settings",
-    description="The stored app settings, currently just the rewatch share (FR-RW-08).",
+    description="The stored app settings, the rewatch share and watch pace (FR-RW-08, FR-RW-09).",
 )
 def read_settings(
     service: Annotated[SettingsService, Depends(get_settings_service)],
@@ -39,4 +39,4 @@ def replace_settings(
     body: SettingsBody,
     service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> SettingsBody:
-    return SettingsBody.model_validate(service.update(body.rewatch_share))
+    return SettingsBody.model_validate(service.update(body.rewatch_share, body.watch_interval_days))

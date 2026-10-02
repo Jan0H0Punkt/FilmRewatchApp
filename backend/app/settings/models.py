@@ -1,7 +1,7 @@
-"""Settings module table (DESIGN §5.2, FR-RW-08).
+"""Settings module table (DESIGN §5.2, FR-RW-08, FR-RW-09).
 
-A single-row table for app-wide settings — currently just the rewatch share,
-which the Rewatch view uses to cap its due list. The row is seeded by
+A single-row table for app-wide settings — the rewatch share and the watch
+pace, which the Rewatch view uses to cap its due list. The row is seeded by
 migration ``0009_settings`` and only ever updated, never inserted or deleted
 again (``id`` is pinned to ``1`` by a CHECK).
 """
@@ -15,7 +15,7 @@ from app.core.db import Base, utc_now
 
 
 class Settings(Base):
-    """The single settings row (FR-RW-08)."""
+    """The single settings row (FR-RW-08, FR-RW-09)."""
 
     __tablename__ = "settings"
     __table_args__ = (
@@ -26,8 +26,13 @@ class Settings(Base):
             "rewatch_share BETWEEN 0 AND 100 AND rewatch_share % 10 = 0",
             name="ck_settings_rewatch_share_range_step",
         ),
+        CheckConstraint(
+            "watch_interval_days >= 1",
+            name="ck_settings_watch_interval_days_min",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     rewatch_share: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    watch_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

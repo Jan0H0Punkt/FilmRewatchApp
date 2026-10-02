@@ -22,10 +22,11 @@ class SettingsRepository:
         """The single settings row, seeded by the migration."""
         return self._session.get_one(Settings, 1)
 
-    def update(self, rewatch_share: int | None) -> Settings:
-        """Overwrite the row's value and stamp it (FR-RW-08)."""
+    def update(self, rewatch_share: int | None, watch_interval_days: int | None) -> Settings:
+        """Overwrite the row's values and stamp it (FR-RW-08, FR-RW-09)."""
         row = self.get()
         row.rewatch_share = rewatch_share
+        row.watch_interval_days = watch_interval_days
         row.updated_at = utc_now()
         return row
 
