@@ -493,6 +493,13 @@ application must honour when integrating it.
   a re-sort) to only as many films as it takes for this year's share of rewatches among all watches to reach the target, showing none
   once already at or above it; `Off` leaves the view uncapped, and the cap fails open (uncapped) if this year's watch/rewatch counts cannot
   be loaded. See §7.1 for the cap's display.
+- **FR-RW-09:** The user may set a **watch pace** — `null` (Off, default) or a whole number `N ≥ 1` meaning "1 film every N days" — stored
+  server-side alongside the rewatch share (FR-RW-08). The expected watches so far this year are `E = floor(dayOfYear / N)` (1 Jan = day 1).
+  (a) When both pace and rewatch share are set, the FR-RW-08 cap becomes `max(0, ceil(E × share/100 − R))`, where `R` is this year's
+  rewatches — the rewatches the user should have by now minus those they have; with pace `Off` the FR-RW-08 formula is unchanged, and with
+  share `Off` there is no cap. (b) After a watch is logged, a snackbar compares this year's watches `W` with `E`: "On pace · W films this
+  year" (`W = E`), "d film(s) behind pace (W of E)" (`W < E`), or "d film(s) ahead of pace (W of E)" (`W > E`); no snackbar is shown when
+  pace is `Off` or this year's stats cannot be loaded.
 
 ---
 
@@ -671,7 +678,8 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
 - An **empty state** is shown when no suggestions are returned (FR-RW-06).
 - An **error state** is shown if the algorithm fails (FR-RW-07), without hiding the cards from the previous successful run.
 - When the rewatch-share cap (FR-RW-08) hides at least one due film, a note above the list reads "Showing k of n due films · t% rewatch
-  target"; at `k = 0` this note replaces the empty state, explaining why the list is empty instead of showing an unexplained one.
+  target"; at `k = 0` this note replaces the empty state, explaining why the list is empty instead of showing an unexplained one. When a
+  watch pace (FR-RW-09) is set, the note gains a suffix: "Showing k of n due films · t% rewatch target · 1 film every N days".
 
 ---
 
@@ -760,6 +768,7 @@ element — a **navigation drawer** on desktop and a **bottom navigation bar** o
   **"Don't rate this"** choice — FR-RAT-12) and `watch_date` (date picker, no future dates).
 - The rating history is never empty — a film always has at least one rating (FR-LIB-03) — so no empty-history state is needed. Deleting the
   last remaining rating deletes the film (FR-RAT-07).
+- After a watch is logged, a snackbar reports the user's standing against the watch pace (FR-RW-09); it is omitted when pace is Off.
 
 ---
 

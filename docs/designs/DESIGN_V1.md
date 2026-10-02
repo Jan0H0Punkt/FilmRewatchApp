@@ -310,8 +310,8 @@ All endpoints are namespaced under `/api/v1` (§3.2, FR-EXT-11) and documented a
 | `GET /tags`                   | List tags (supports `?prefix=` for autocomplete)                           | FR-TAG-06                      |
 | `GET /genres`                 | List genres (supports `?prefix=` for autocomplete)                         | FR-SF-07 (filter/autocomplete) |
 | `GET /rewatch-suggestions`    | Latest daily-computed due-list (`film_id` + `days_until_rewatch`, ordered) | FR-RW-*, §5.8                  |
-| `GET /settings`               | The stored app settings (currently just the rewatch share)                | FR-RW-08                       |
-| `PUT /settings`               | Replace the stored settings; returns the stored state                     | FR-RW-08                       |
+| `GET /settings`               | The stored app settings (rewatch share, watch pace)                       | FR-RW-08, FR-RW-09             |
+| `PUT /settings`               | Replace the stored settings; returns the stored state                     | FR-RW-08, FR-RW-09             |
 | `GET /letterboxd/entries`     | Open review-list entries, newest watch first, auto-resolving matched ones | FR-LBX-05..07                  |
 | `POST /letterboxd/entries/{id}/assign` | Add the entry's watch to `film_id` and resolve it                | FR-LBX-06                      |
 | `POST /letterboxd/entries/{id}/dismiss` | Resolve the entry without adding a watch                        | FR-LBX-06                      |
