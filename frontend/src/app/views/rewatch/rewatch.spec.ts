@@ -39,6 +39,7 @@ const HEAT: RewatchCardVm = {
  */
 interface CapInputs {
   readonly rewatchShare?: number | null;
+  readonly watchIntervalDays?: number | null;
   readonly stats?: Stats | null;
 }
 
@@ -70,7 +71,11 @@ async function render(
       },
       {
         provide: SettingsFacade,
-        useValue: { rewatchShare: signal(cap.rewatchShare ?? null), onViewOpened: (): void => undefined },
+        useValue: {
+          rewatchShare: signal(cap.rewatchShare ?? null),
+          watchIntervalDays: signal(cap.watchIntervalDays ?? null),
+          onViewOpened: (): void => undefined,
+        },
       },
       {
         provide: StatsFacade,
@@ -257,6 +262,23 @@ describe('Rewatch view', () => {
       expect(element.querySelectorAll('.rewatch__card')).toHaveLength(0);
       expect(element.textContent).toContain('Showing 0 of 2 due films · 0% rewatch target');
       expect(element.textContent).not.toContain('Nothing due right now');
+    });
+
+    it('appends the watch pace to the note (FR-RW-09), "day" for a one-day pace', async () => {
+      // share 0% -> cap 0 whatever the date, so the test is clock-independent.
+      const weekly = await render([HEAT, SEVEN], false, undefined, stubMatDialog(), {
+        rewatchShare: 0,
+        watchIntervalDays: 7,
+        stats: statsWithYear(0, 0),
+      });
+      expect(weekly.textContent).toContain('Showing 0 of 2 due films · 0% rewatch target · 1 film every 7 days');
+
+      const daily = await render([HEAT, SEVEN], false, undefined, stubMatDialog(), {
+        rewatchShare: 0,
+        watchIntervalDays: 1,
+        stats: statsWithYear(0, 0),
+      });
+      expect(daily.textContent).toContain('0% rewatch target · 1 film every day');
     });
 
     it('shows no note when the cap hides nothing', async () => {

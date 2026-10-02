@@ -95,7 +95,12 @@ export class Rewatch {
     const stats = this.stats.stats();
     if (stats === null) return null;
     const year = stats.years.find((y) => y.year === new Date().getFullYear());
-    return rewatchCap(this.settings.rewatchShare(), year?.watches ?? 0, year?.rewatches ?? 0);
+    return rewatchCap(
+      this.settings.rewatchShare(),
+      year?.watches ?? 0,
+      year?.rewatches ?? 0,
+      this.settings.watchIntervalDays(),
+    );
   });
 
   /** The §7.1 grid: the due-list's prefix (FR-RW-04 never re-sorts), capped per FR-RW-08. */
@@ -112,7 +117,7 @@ export class Rewatch {
     return `${due} film${due === 1 ? '' : 's'} due`;
   });
   /**
-   * "Showing k of n due films · t% rewatch target" (FR-RW-08) — `null` when
+   * "Showing k of n due films · t% rewatch target[ · 1 film every N days]" (FR-RW-08/09) — `null` when
    * there is no cap or the cap hides nothing, which is also when
    * `capNote()`'s caller falls back to the plain count/empty-state text
    * instead. Replaces `countLabel` rather than sitting beside it: both say
@@ -122,7 +127,9 @@ export class Rewatch {
     const cap = this.cap();
     const total = this.allCards().length;
     if (cap === null || cap >= total) return null;
-    return `Showing ${cap} of ${total} due film${total === 1 ? '' : 's'} · ${this.settings.rewatchShare()}% rewatch target`;
+    const days = this.settings.watchIntervalDays();
+    const pace = days === null ? '' : ` · 1 film every ${days === 1 ? 'day' : `${days} days`}`;
+    return `Showing ${cap} of ${total} due film${total === 1 ? '' : 's'} · ${this.settings.rewatchShare()}% rewatch target${pace}`;
   });
   protected readonly isLoading = this.rewatch.isLoading;
   protected readonly error = this.rewatch.error;
