@@ -7,7 +7,8 @@
  * form itself, so there is exactly one path into the create flow. Per §6.1
  * the view calls the facade only and holds no rules — the ViewModel shaping
  * (the parts of a film this list actually prints) and the filtering
- * (`filters.ts`) both live here.
+ * (`filters.ts`) both live here. Rows render in pages of 50, appending
+ * another page as the user scrolls near the end.
  */
 import {
   ChangeDetectionStrategy,
@@ -15,10 +16,13 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   viewChild,
-  type ElementRef,
+  ElementRef,
 } from '@angular/core';
+import { ScrollDispatcher } from '@angular/cdk/scrolling';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -38,6 +42,16 @@ import { filterFilms, hasActiveCriteria, NO_CRITERIA, type LibraryCriteria } fro
 
 /** Key under which this view's scroll offset is remembered (`ScrollMemoryService`). */
 const SCROLL_KEY = 'library';
+
+/**
+ * Rows rendered initially, and appended per load-more. Paged rather than
+ * `cdk-virtual-scroll-viewport`: row heights vary (the genre and tag chip sets
+ * are optional and wrap), and CDK's only stable scroll strategy needs a fixed one.
+ */
+const PAGE_SIZE = 50;
+
+/** Load the next page once the scroll position is this close to the bottom. */
+const NEAR_END_PX = 1500;
 
 /** One row of the result list (§7.2 "Film Result Item"). */
 interface FilmRowVm {
@@ -128,10 +142,24 @@ export class Library {
       input.nativeElement.focus();
     });
 
-    this.scrollMemory.remember(SCROLL_KEY, this.isLoading);
+    this.scrollMemory.remember(SCROLL_KEY, this.isLoading, this.renderLimit);
+
+    // Same containment filter as the scroll-to-top FAB: only the shell's content panel counts.
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    inject(ScrollDispatcher)
+      .scrolled()
+      .pipe(takeUntilDestroyed())
+      .subscribe((target) => {
+        const scroller = target?.getElementRef().nativeElement;
+        if (!scroller?.contains(host)) return;
+        const nearEnd = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < NEAR_END_PX;
+        if (nearEnd && this.renderLimit() < this.matches().length) this.renderLimit.update((n) => n + PAGE_SIZE);
+      });
   }
 
   protected readonly criteria = signal<LibraryCriteria>(NO_CRITERIA);
+  /** How many matches are rendered; resets on a new search, not when the film list reloads. */
+  protected readonly renderLimit = linkedSignal({ source: this.criteria, computation: () => PAGE_SIZE });
   private readonly matches = computed(() => filterFilms(this.films.films(), this.criteria()));
   protected readonly isFiltered = computed(() => hasActiveCriteria(this.criteria()));
   protected readonly totalCount = computed(() => this.films.films().length);
@@ -153,19 +181,21 @@ export class Library {
 
   protected readonly rows = computed<readonly FilmRowVm[]>(() => {
     const now = this.clock.now();
-    return this.matches().map((film) => ({
-      id: film.id,
-      title: film.primaryTitle,
-      posterImage: film.posterImage,
-      subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' • '),
-      genres: film.genres,
-      tags: film.tags,
-      ratingStars: ratingStarsFor(film.averageRating),
-      ratingLabel: ratingLabelFor(film.averageRating),
-      isFavorite: film.isFavorite,
-      owned: film.owned,
-      endTime: endTimeFrom(now, film.runtimeMinutes),
-    }));
+    return this.matches()
+      .slice(0, this.renderLimit())
+      .map((film) => ({
+        id: film.id,
+        title: film.primaryTitle,
+        posterImage: film.posterImage,
+        subtitle: [String(film.releaseYear), film.director, `${film.runtimeMinutes} min`].join(' • '),
+        genres: film.genres,
+        tags: film.tags,
+        ratingStars: ratingStarsFor(film.averageRating),
+        ratingLabel: ratingLabelFor(film.averageRating),
+        isFavorite: film.isFavorite,
+        owned: film.owned,
+        endTime: endTimeFrom(now, film.runtimeMinutes),
+      }));
   });
 
   protected reload(): void {

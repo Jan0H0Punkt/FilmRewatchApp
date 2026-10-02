@@ -1,5 +1,6 @@
 /** Library view: the ViewModel shaping, the search filter (FR-SF-01..05), and the list states (REQ §7.2). */
-import { signal } from '@angular/core';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -75,6 +76,23 @@ async function search(element: HTMLElement, query: string): Promise<void> {
   input.dispatchEvent(new Event('input'));
   await currentFixture.whenStable();
 }
+
+/** `count` distinct films cloned from HEAT; titles are "Film 0".."Film N-1". */
+function manyFilms(count: number): Film[] {
+  return Array.from({ length: count }, (_, i) => ({
+    ...HEAT,
+    id: `f${i}`,
+    primaryTitle: `Film ${i}`,
+    titles: [{ value: `Film ${i}`, isPrimary: true, isOriginal: true }],
+  }));
+}
+
+/** Puts the view inside a `cdkScrollable`, standing in for the shell's content panel. */
+@Component({
+  imports: [CdkScrollable, Library],
+  template: '<div cdkScrollable><app-library /></div>',
+})
+class ScrollHost {}
 
 describe('Library', () => {
   afterEach(() => TestBed.resetTestingModule());
@@ -212,6 +230,65 @@ describe('Library', () => {
 
       expect(element.querySelectorAll('.film__title')).toHaveLength(2);
       expect(element.querySelector('.library__count')?.textContent).toBe('2 films');
+    });
+  });
+
+  describe('incremental rendering', () => {
+    async function renderScrollable(films: readonly Film[]): Promise<{ element: HTMLElement; scroller: HTMLElement }> {
+      // jsdom has no `scrollTo`, which scroll restoration calls on the scroller.
+      HTMLElement.prototype.scrollTo = vi.fn();
+      TestBed.configureTestingModule({
+        imports: [ScrollHost],
+        providers: [provideRouter([]), { provide: FilmFacade, useValue: stubFacade(films) }],
+      });
+      const fixture = TestBed.createComponent(ScrollHost);
+      await fixture.whenStable();
+      currentFixture = fixture as unknown as ComponentFixture<Library>;
+      const element = fixture.nativeElement as HTMLElement;
+      return { element, scroller: element.querySelector<HTMLElement>('[cdkscrollable]')! };
+    }
+
+    /** `scrolled()` audits by 20 ms, so wait it out before settling. */
+    async function scrollToEnd(scroller: HTMLElement): Promise<void> {
+      scroller.dispatchEvent(new Event('scroll'));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await currentFixture.whenStable();
+    }
+
+    it('renders only the first 50 rows while the count still covers every film', async () => {
+      const element = await render(stubFacade(manyFilms(120)));
+
+      expect(element.querySelectorAll('.film__title')).toHaveLength(50);
+      expect(element.querySelector('.library__count')?.textContent).toBe('120 films');
+    });
+
+    it('appends 50 more rows when scrolled near the end', async () => {
+      const { element, scroller } = await renderScrollable(manyFilms(120));
+
+      await scrollToEnd(scroller);
+
+      expect(element.querySelectorAll('.film__title')).toHaveLength(100);
+    });
+
+    it('keeps the loaded rows when the view is left and revisited, so the restored offset still fits', async () => {
+      const first = await renderScrollable(manyFilms(120));
+      await scrollToEnd(first.scroller);
+      // The root-provided ScrollMemoryService outlives the view; only the view is torn down.
+      currentFixture.destroy();
+
+      const fixture = TestBed.createComponent(ScrollHost);
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('.film__title')).toHaveLength(100);
+    });
+
+    it('resets to 50 rows when the search changes', async () => {
+      const { element, scroller } = await renderScrollable(manyFilms(120));
+      await scrollToEnd(scroller);
+
+      await search(element, 'film');
+
+      expect(element.querySelectorAll('.film__title')).toHaveLength(50);
     });
   });
 });
