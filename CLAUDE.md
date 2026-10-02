@@ -11,6 +11,10 @@ It is a monorepo with **per-tier guidance** — when working inside a tier, read
 - **`backend/CLAUDE.md`** — the FastAPI backend (layering, `core/`, migrations, strict typing).
 - **`frontend/CLAUDE.md`** — the Angular client (strict TS, §6.1 layering, route registry, `environment.ts` wiring).
 
+## Todo list
+
+At the start of every conversation, read the root `todo.md` and tell Jan which open todos are in it before doing anything else. Each bullet is a todo with a 1–3 sentence description.
+
 ## Design-doc-driven
 
 Development is **design-doc-driven**. Before writing feature code, read the relevant sections of `docs/`:
