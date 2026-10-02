@@ -22,6 +22,37 @@
   </div>
 </mat-card>
 
+<mat-card class="setting">
+  <h2 class="setting__title">Watch pace</h2>
+  <p class="setting__sentence">
+    <label for="watch-interval">Watch 1 film every</label>
+    <mat-form-field class="setting__number" subscriptSizing="dynamic">
+      <input
+        #pace
+        matInput
+        id="watch-interval"
+        type="number"
+        min="1"
+        step="1"
+        aria-describedby="watch-interval-hint"
+        [attr.aria-invalid]="paceInvalid() ? 'true' : null"
+        [value]="paceText()"
+        (change)="onWatchPaceChange(pace.value)"
+      />
+    </mat-form-field>
+    <span>days</span>
+  </p>
+  <p id="watch-interval-hint" class="setting__hint">
+    How many films you aim to watch. Sets how many rewatches the Rewatch list offers so far this year, and you get a
+    snackbar after each logged watch.
+  </p>
+  @if (paceInvalid()) {
+    <p class="settings__error" role="alert">Enter a whole number of days, 1 or more — or leave it empty for Off.</p>
+  } @else if (filmsPerYear(); as perYear) {
+    <p class="setting__hint">≈ {{ perYear }} films per year</p>
+  }
+</mat-card>
+
 @if (error()) {
   <p class="settings__error" role="alert">{{ error() }}</p>
 }

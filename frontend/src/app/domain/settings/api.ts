@@ -13,6 +13,8 @@ import { environment } from '../../../environments/environment';
 /** Mirrors the backend's settings read/write shape. */
 export interface SettingsDto {
   readonly rewatch_share: number | null;
+  /** FR-RW-09: aim of one watch every N days; `null` is Off. */
+  readonly watch_interval_days: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

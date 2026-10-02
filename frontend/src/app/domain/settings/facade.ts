@@ -1,11 +1,13 @@
 /**
  * The settings facade (DESIGN §6.1) — the single API `views/settings/` and
- * `views/rewatch/` call for the FR-RW-08 rewatch-share setting.
+ * `views/rewatch/` call for the FR-RW-08 rewatch-share (FR-RW-08) and
+ * watch-pace (FR-RW-09) settings.
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { SettingsApi } from './api';
 import { toSettings, toSettingsDto } from './mapper';
+import type { Settings } from './model';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsFacade {
@@ -17,30 +19,45 @@ export class SettingsFacade {
    * view's cap fails open on a `null` exactly the way it already does for a
    * failed `/stats` load (§Cap).
    */
-  readonly rewatchShare = computed<number | null>(() =>
-    this.api.settings.hasValue() ? toSettings(this.api.settings.value()).rewatchShare : null,
+  private readonly current = computed<Settings>(() =>
+    this.api.settings.hasValue()
+      ? toSettings(this.api.settings.value())
+      : { rewatchShare: null, watchIntervalDays: null },
   );
 
-  /** Set only by a failed `setRewatchShare` — a failed *load* leaves `rewatchShare` at `null`, same as Off, with nothing to alert on. */
+  readonly rewatchShare = computed<number | null>(() => this.current().rewatchShare);
+
+  /** FR-RW-09 — same `null` semantics as `rewatchShare`: not loaded, load error and Off all read `null`. */
+  readonly watchIntervalDays = computed<number | null>(() => this.current().watchIntervalDays);
+
+  /** Set only by a failed save — a failed *load* leaves the settings at `null`, same as Off, with nothing to alert on. */
   readonly error = signal<string | null>(null);
 
-  /**
-   * `PUT /settings`. Applies the new value immediately, so the Settings
-   * view's `mat-select` reflects the pick with no round-trip delay, and rolls
-   * it back on failure — the same optimistic-write/rollback shape as
-   * `FilmFacade.update`. The rollback is also what restores the `mat-select`:
-   * its `[value]` binding reads this signal, so setting it back to `previous`
-   * re-selects that option without the view doing anything itself.
-   */
   setRewatchShare(value: number | null): void {
-    const previous = this.rewatchShare();
+    this.save({ ...this.current(), rewatchShare: value }, 'The rewatch share could not be saved.');
+  }
+
+  setWatchIntervalDays(value: number | null): void {
+    this.save({ ...this.current(), watchIntervalDays: value }, 'The watch pace could not be saved.');
+  }
+
+  /**
+   * `PUT /settings` (one row, so both settings travel together). Applies the
+   * new row immediately, so the Settings view's controls reflect the change
+   * with no round-trip delay, and rolls it back on failure — the same
+   * optimistic-write/rollback shape as `FilmFacade.update`. The rollback is
+   * also what restores the controls: they read these signals, so setting the
+   * previous row back re-selects it without the view doing anything itself.
+   */
+  private save(next: Settings, failure: string): void {
+    const previous = this.current();
     this.error.set(null);
-    this.api.settings.value.set(toSettingsDto(value));
-    this.api.save(toSettingsDto(value)).subscribe({
+    this.api.settings.value.set(toSettingsDto(next));
+    this.api.save(toSettingsDto(next)).subscribe({
       next: (dto) => this.api.settings.value.set(dto),
       error: () => {
         this.api.settings.value.set(toSettingsDto(previous));
-        this.error.set('The rewatch share could not be saved.');
+        this.error.set(failure);
       },
     });
   }

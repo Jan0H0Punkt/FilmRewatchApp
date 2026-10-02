@@ -1,10 +1,14 @@
 :host {
-  display: block;
+  // Cards sit side by side, centred, and wrap to one column on narrow screens.
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 400px));
+  justify-content: center;
+  align-items: start;
+  gap: 16px;
   padding: 16px;
 }
 
 .setting {
-  max-inline-size: 560px;
   padding: 16px;
 }
 
@@ -47,4 +51,22 @@ mat-slider {
 
 .settings__error {
   color: var(--mat-sys-error);
+}
+
+// The view-level save error spans the whole grid row instead of taking a card slot.
+:host > .settings__error {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+.setting__sentence {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block: 8px 0;
+  font: var(--mat-sys-body-large);
+}
+
+.setting__number {
+  inline-size: 96px;
 }
