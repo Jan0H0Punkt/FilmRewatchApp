@@ -47,10 +47,10 @@ _EXPECTED_ROUTES = {
     ("GET", "/api/v1/rewatch-suggestions"),
     # The statistics view (2026-09-25-statistics-design.md).
     ("GET", "/api/v1/stats"),
-    # The rewatch-share setting (2026-09-25-rewatch-share-design.md, FR-RW-08).
+    # The rewatch-share setting (FR-RW-08).
     ("GET", "/api/v1/settings"),
     ("PUT", "/api/v1/settings"),
-    # The Letterboxd sync (2026-09-28-letterboxd-sync-design.md, REQ §5.7).
+    # The Letterboxd sync (REQ §5.7, DESIGN §5.9).
     ("GET", "/api/v1/letterboxd/entries"),
     ("POST", "/api/v1/letterboxd/entries/{entry_id}/assign"),
     ("POST", "/api/v1/letterboxd/entries/{entry_id}/dismiss"),

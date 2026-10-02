@@ -557,7 +557,7 @@ application must honour when integrating it.
 ### 5.7 Letterboxd Sync
 
 The user also logs films on Letterboxd. New Letterboxd diary entries are brought into the app one way (Letterboxd → app) and
-**only with the user's approval**. Design: `docs/superpowers/specs/2026-09-28-letterboxd-sync-design.md`.
+**only with the user's approval**. Design: DESIGN §5.9.
 
 - **FR-LBX-01:** The source is the public RSS feed of the Letterboxd member named by the `LETTERBOXD_USERNAME` setting. With no
   username set, the sync is off. The backend checks hourly and syncs when the last sync is more than 24 hours old, and once on every

@@ -1,6 +1,5 @@
 /**
- * The §Cap due-list cap (FR-RW-08,
- * docs/superpowers/specs/2026-09-25-rewatch-share-design.md) — a pure
+ * The due-list cap (FR-RW-08, DESIGN §6.3) — a pure
  * formula, kept out of `RewatchFacade` because it needs `StatsFacade` and
  * `SettingsFacade` data the rewatch domain otherwise has no reason to read;
  * `views/rewatch/rewatch.ts` calls it directly (§6.1).
