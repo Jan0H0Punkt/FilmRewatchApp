@@ -159,30 +159,6 @@
 .film-detail__rating-text {
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-large);
-  opacity: 1;
-  transition:
-    opacity 150ms ease,
-    visibility 150ms ease;
-  visibility: visible;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .film-detail__rating-text {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  .film-detail__rating:hover .film-detail__rating-text,
-  .film-detail__rating:focus-within .film-detail__rating-text {
-    opacity: 1;
-    visibility: visible;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .film-detail__rating-text {
-    transition: none;
-  }
 }
 
 // The two editable chip rows; the shared component reads these colours as
